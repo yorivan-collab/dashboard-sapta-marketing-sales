@@ -506,9 +506,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="6" rx="1"></rect><rect x="3" y="15" width="6" height="6" rx="1"></rect><rect x="15" y="15" width="6" height="6" rx="1"></rect><path d="M12 9v3M12 12H6v3M12 12h6v3"></path></svg>
       Struktur Organisasi
     </div>
-    <div class="navitem" data-view="users" id="nav-users-item" onclick="switchView('users')" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-      Kelola Pengguna
+    <div id="nav-users-section" style="display:none;">
+      <div class="nav-label">Kelola Pengguna</div>
+      <div class="navtree">
+        <div class="navsub" data-view="users" onclick="switchView('users')">Tambah User</div>
+        <div class="navsub" data-view="admin-approval" onclick="switchView('admin-approval')">User Request <span class="nav-badge" id="nav-admin-approval-count"></span></div>
+      </div>
     </div>
     <div class="navitem" data-view="comparison" id="nav-comparison-item" onclick="switchView('comparison')" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
@@ -517,6 +520,10 @@
     <div class="navitem" data-view="monitoring" id="nav-monitoring-item" onclick="switchView('monitoring')" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
       Monitoring User
+    </div>
+    <div class="navitem" data-view="request-admin" id="nav-request-admin-item" onclick="switchView('request-admin')" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      Ajukan Admin Baru
     </div>
 
     <div class="sidebar-foot">
@@ -927,6 +934,50 @@
       </div>
     </div>
 
+    <!-- AJUKAN ADMIN BARU (Supervisor) -->
+    <div class="view" id="view-request-admin">
+      <div class="topbar">
+        <div>
+          <div class="title">Ajukan Admin Baru</div>
+          <div class="subtitle">Isi data calon sales, nanti direview Master/Super Admin</div>
+        </div>
+      </div>
+      <div class="panel" style="max-width:420px;">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama lengkap</label>
+            <input type="text" id="ra-name" placeholder="Nama calon admin/sales" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Email</label>
+            <input type="email" id="ra-email" placeholder="email@contoh.com" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+          </div>
+          <div id="ra-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+        </div>
+        <div class="modal-actions" style="padding:0; margin-top:12px;">
+          <button class="primary" onclick="submitAdminRequest()">Ajukan</button>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:16px;">
+        <div class="subtitle" style="margin-bottom:8px;">Riwayat pengajuan saya</div>
+        <div id="my-admin-requests-list"></div>
+      </div>
+    </div>
+
+    <!-- APPROVAL ADMIN BARU (Master/Super Admin) -->
+    <div class="view" id="view-admin-approval">
+      <div class="topbar">
+        <div>
+          <div class="title">Approval Admin Baru</div>
+          <div class="subtitle">Pengajuan admin baru dari Supervisor</div>
+        </div>
+        <button class="icon-btn" onclick="renderAdminApprovalView()" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        </button>
+      </div>
+      <div id="admin-approval-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -989,6 +1040,20 @@
       <button class="primary" onclick="submitFocusFilter()">Terapkan</button>
       <button onclick="clearMasterFocusFilter()">Reset (lihat semua)</button>
       <button onclick="closeFocusFilterModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="admin-approved-modal">
+  <div class="modal-card">
+    <div class="modal-title">Akun berhasil dibuat</div>
+    <div class="modal-sub">Ini cuma ditampilin SEKALI. Salin dan kirim ke orangnya langsung (WA/telepon), jangan lewat tempat yang gampang dilihat orang lain.</div>
+    <div style="display:flex; flex-direction:column; gap:8px; margin:14px 0; font-size:13px;">
+      <div><span style="color:var(--muted);">Email:</span> <b id="admin-approved-email"></b></div>
+      <div><span style="color:var(--muted);">Password sementara:</span> <b id="admin-approved-password" style="font-family:monospace; font-size:14px;"></b></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="closeAdminApprovedModal()">Sudah disalin, tutup</button>
     </div>
   </div>
 </div>
@@ -1302,6 +1367,8 @@ function switchView(view, force){
   if(view==='comparison') renderComparisonView();
   if(view==='monitoring') renderMonitoringView(); else stopMonitoringPoll();
   if(view==='structure') renderStructureView();
+  if(view==='request-admin') renderRequestAdminView();
+  if(view==='admin-approval') renderAdminApprovalView();
   sendHeartbeat(false);
 }
 
@@ -2655,9 +2722,14 @@ function applyRoleRestrictions(){
   if(isSales && leadsTitleEl) leadsTitleEl.dataset.rolePrefix = 'Leads saya';
   else if(isSupervisor && leadsTitleEl) leadsTitleEl.dataset.rolePrefix = 'Leads tim saya';
   else if(leadsTitleEl) delete leadsTitleEl.dataset.rolePrefix;
-  const usersNav = document.getElementById('nav-users-item');
-  if(usersNav) usersNav.style.display = canManageUsers ? '' : 'none';
+  const usersSection = document.getElementById('nav-users-section');
+  if(usersSection) usersSection.style.display = canManageUsers ? '' : 'none';
   if(!canManageUsers && document.getElementById('view-users').classList.contains('active')) switchView('overview', true);
+  const requestAdminNav = document.getElementById('nav-request-admin-item');
+  if(requestAdminNav) requestAdminNav.style.display = isSupervisor ? '' : 'none';
+  if(!isSupervisor && document.getElementById('view-request-admin') && document.getElementById('view-request-admin').classList.contains('active')) switchView('overview', true);
+  if(!canManageUsers && document.getElementById('view-admin-approval') && document.getElementById('view-admin-approval').classList.contains('active')) switchView('overview', true);
+  if(canManageUsers) refreshAdminApprovalCount();
 }
 
 function getFocusableUserList(){
@@ -3683,6 +3755,172 @@ async function deleteLead(){
   formDirty = false;
   switchView('leads', true);
   showToast('Dihapus: '+name);
+}
+
+// ============================================================
+// AJUKAN ADMIN BARU (Supervisor) + APPROVAL (Master/Super Admin)
+// ============================================================
+
+function adminRequestStatusBadgeHTML(status){
+  const map = {
+    pending: {label:'Menunggu', color:'var(--warm)', bg:'var(--warm-bg)'},
+    approved: {label:'Disetujui', color:'var(--success)', bg:'var(--success-bg)'},
+    rejected: {label:'Ditolak', color:'var(--hot)', bg:'var(--hot-bg)'}
+  };
+  const s = map[status] || {label:status, color:'var(--muted)', bg:'var(--border-soft)'};
+  return '<span style="display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; background:'+s.bg+'; color:'+s.color+'; font-weight:600; white-space:nowrap;">'+s.label+'</span>';
+}
+
+async function submitAdminRequest(){
+  const nameEl = document.getElementById('ra-name');
+  const emailEl = document.getElementById('ra-email');
+  const errEl = document.getElementById('ra-error');
+  const name = nameEl.value.trim();
+  const email = emailEl.value.trim();
+  errEl.style.display = 'none';
+  if(!name || !email){
+    errEl.textContent = 'Nama dan email wajib diisi.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if(!currentUser || currentUser.role !== 'supervisor'){
+    showToast('Cuma Supervisor yang bisa ngajuin admin baru');
+    return;
+  }
+  const { error } = await supabaseClient.from('admin_requests').insert({
+    requested_name: name,
+    requested_email: email,
+    requested_by: currentUser.name
+  });
+  if(error){
+    errEl.textContent = 'Gagal kirim pengajuan: '+error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+  nameEl.value = '';
+  emailEl.value = '';
+  showToast('Pengajuan terkirim, tunggu di-review Master/Super Admin');
+  renderRequestAdminView();
+}
+
+async function renderRequestAdminView(){
+  const wrap = document.getElementById('my-admin-requests-list');
+  if(!wrap || !currentUser) return;
+  wrap.innerHTML = '<div style="color:var(--muted); font-size:12.5px;">Memuat...</div>';
+  const { data, error } = await supabaseClient
+    .from('admin_requests')
+    .select('*')
+    .eq('requested_by', currentUser.name)
+    .order('created_at', {ascending:false});
+  const stillActive = document.getElementById('view-request-admin');
+  if(!stillActive || !stillActive.classList.contains('active')) return;
+  if(error){
+    wrap.innerHTML = '<div style="color:var(--hot); font-size:12.5px;">Gagal memuat riwayat: '+error.message+'</div>';
+    return;
+  }
+  if(!data || !data.length){
+    wrap.innerHTML = '<div style="color:var(--muted); font-size:12.5px;">Belum ada pengajuan.</div>';
+    return;
+  }
+  wrap.innerHTML = data.map(r=>{
+    let extra = '';
+    if(r.status==='rejected' && r.reject_reason) extra += '<div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Alasan: '+r.reject_reason+'</div>';
+    if(r.status!=='pending') extra += '<div style="font-size:11px; color:var(--muted); margin-top:2px;">Direview oleh '+(r.reviewed_by||'-')+'</div>';
+    return '<div style="padding:10px 0; border-bottom:1px solid var(--border-soft);">'
+      + '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">'
+      + '<div><b>'+r.requested_name+'</b> <span style="color:var(--muted); font-size:12px;">('+r.requested_email+')</span></div>'
+      + adminRequestStatusBadgeHTML(r.status)
+      + '</div>' + extra + '</div>';
+  }).join('');
+}
+
+async function refreshAdminApprovalCount(){
+  const badge = document.getElementById('nav-admin-approval-count');
+  if(!badge || !currentUser) return;
+  if(!(currentUser.role==='master_admin' || currentUser.role==='super_admin')) return;
+  const { count, error } = await supabaseClient
+    .from('admin_requests')
+    .select('id', {count:'exact', head:true})
+    .eq('status','pending');
+  if(error) return;
+  badge.textContent = count ? count : '';
+}
+
+async function renderAdminApprovalView(){
+  const wrap = document.getElementById('admin-approval-list');
+  if(!wrap || !currentUser) return;
+  wrap.innerHTML = '<div style="color:var(--muted); font-size:12.5px;">Memuat...</div>';
+  const { data, error } = await supabaseClient
+    .from('admin_requests')
+    .select('*')
+    .order('created_at', {ascending:false});
+  const stillActive = document.getElementById('view-admin-approval');
+  if(!stillActive || !stillActive.classList.contains('active')) return;
+  if(error){
+    wrap.innerHTML = '<div style="color:var(--hot); font-size:12.5px;">Gagal memuat: '+error.message+'</div>';
+    return;
+  }
+  if(!data || !data.length){
+    wrap.innerHTML = '<div class="panel" style="color:var(--muted); font-size:12.5px;">Belum ada pengajuan.</div>';
+    return;
+  }
+  const rank = s => s==='pending' ? 0 : 1;
+  data.sort((a,b)=> rank(a.status)-rank(b.status) || (new Date(b.created_at)-new Date(a.created_at)));
+  wrap.innerHTML = '<div class="panel">' + data.map(r=>{
+    let actions;
+    if(r.status==='pending'){
+      actions = '<div style="display:flex; gap:8px; margin-top:8px;">'
+        + '<button class="primary" style="padding:6px 14px; font-size:12.5px;" onclick="approveAdminRequest('+r.id+', this)">Approve</button>'
+        + '<button style="padding:6px 14px; font-size:12.5px;" onclick="rejectAdminRequest('+r.id+')">Reject</button>'
+        + '</div>';
+    } else {
+      const extra = (r.status==='rejected' && r.reject_reason) ? ('<div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Alasan: '+r.reject_reason+'</div>') : '';
+      actions = '<div style="font-size:11.5px; color:var(--muted); margin-top:4px;">Direview oleh '+(r.reviewed_by||'-')+'</div>' + extra;
+    }
+    return '<div style="padding:12px 0; border-bottom:1px solid var(--border-soft);">'
+      + '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">'
+      + '<div><b>'+r.requested_name+'</b> <span style="color:var(--muted); font-size:12px;">('+r.requested_email+')</span>'
+      + '<div style="font-size:11.5px; color:var(--muted);">Diajukan oleh '+r.requested_by+'</div></div>'
+      + adminRequestStatusBadgeHTML(r.status)
+      + '</div>' + actions + '</div>';
+  }).join('') + '</div>';
+  refreshAdminApprovalCount();
+}
+
+async function approveAdminRequest(id, btnEl){
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Memproses...'; }
+  const { data, error } = await supabaseClient.functions.invoke('approve-admin-request', {
+    body: { request_id: id }
+  });
+  if(error || !data || data.error){
+    showToast('Gagal approve: '+(error ? error.message : (data && data.error)));
+    if(btnEl){ btnEl.disabled = false; btnEl.textContent = 'Approve'; }
+    return;
+  }
+  document.getElementById('admin-approved-email').textContent = data.email;
+  document.getElementById('admin-approved-password').textContent = data.temp_password;
+  document.getElementById('admin-approved-modal').style.display = 'flex';
+  renderAdminApprovalView();
+}
+
+function closeAdminApprovedModal(){
+  document.getElementById('admin-approved-modal').style.display = 'none';
+}
+
+async function rejectAdminRequest(id){
+  const reason = prompt('Alasan reject (opsional, boleh dikosongin):') || null;
+  const { error } = await supabaseClient.from('admin_requests').update({
+    status: 'rejected',
+    reviewed_by: currentUser ? currentUser.name : '-',
+    reviewed_at: new Date().toISOString(),
+    reject_reason: reason
+  }).eq('id', id);
+  if(error){
+    showToast('Gagal reject: '+error.message);
+    return;
+  }
+  showToast('Pengajuan ditolak');
+  renderAdminApprovalView();
 }
 
 // init
