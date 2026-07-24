@@ -530,7 +530,7 @@
     <div class="view active" id="view-overview">
       <div class="topbar">
         <div>
-          <div class="title" id="overview-title">Leads audit SMK3</div>
+          <div class="title" id="overview-title">Leads Sales & Marketing</div>
           <div class="subtitle" id="overview-date"></div>
         </div>
         <div style="position:relative;">
@@ -2651,7 +2651,7 @@ function applyRoleRestrictions(){
   });
   const overviewTitle = document.getElementById('overview-title');
   const leadsTitleEl = document.getElementById('leads-title');
-  if(overviewTitle) overviewTitle.textContent = isSales ? 'Overview saya' : (isSupervisor ? 'Overview tim saya' : 'Leads audit SMK3');
+  if(overviewTitle) overviewTitle.textContent = isSales ? 'Overview saya' : (isSupervisor ? 'Overview tim saya' : 'Leads Sales & Marketing');
   if(isSales && leadsTitleEl) leadsTitleEl.dataset.rolePrefix = 'Leads saya';
   else if(isSupervisor && leadsTitleEl) leadsTitleEl.dataset.rolePrefix = 'Leads tim saya';
   else if(leadsTitleEl) delete leadsTitleEl.dataset.rolePrefix;
