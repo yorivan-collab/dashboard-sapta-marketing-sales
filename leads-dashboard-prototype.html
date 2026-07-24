@@ -1,0 +1,3677 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sapta Mutu - Leads Dashboard Prototype</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --sidebar-bg:#15131f; --sidebar-bg-2:#1d1a2b; --sidebar-text:#a8a3ba; --sidebar-text-active:#ffffff; --sidebar-active-bg:#2a2440;
+    --accent:#7c5cff; --accent-2:#9b7fff; --accent-soft:#efeaff; --accent-text:#5b3df0;
+    --bg:#eae8f2; --surface:#ffffff; --zebra:#f7f6fb; --row-hover:#efecfa;
+    --border:#e2dfed; --border-soft:#eeecf5;
+    --text:#181723; --text-2:#6d6a80; --muted:#a3a0b3;
+    --cold:#6b7280; --cold-bg:#eef0f4; --cold-soft:#f4f4f7;
+    --warm:#c9820a; --warm-bg:#fdf2df;
+    --hot:#e3436b; --hot-bg:#fde8ee;
+    --success:#1a9a6c; --success-bg:#e3f7ee;
+    --highlight-bg:rgba(255,213,0,0.65); --highlight-border:#e65100; --highlight-text:#5d3d00;
+    --label-navy:#0d3b5f; --req-bg:#d6f5ea; --req-text:#0f7a5c; --req-tint:#f2fbf7; --req-border:#bfe8d8;
+    --opt-bg:#eef1f6; --opt-text:#5b6472;
+    --shadow:0 1px 2px rgba(23,20,40,0.05), 0 1px 8px rgba(23,20,40,0.04);
+    --radius:12px; --radius-sm:8px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;}
+  .app{display:grid; grid-template-columns:232px 1fr; min-height:100vh;}
+
+  /* SIDEBAR */
+  .sidebar{background:linear-gradient(180deg,var(--sidebar-bg),var(--sidebar-bg-2)); padding:1.4rem 1rem; display:flex; flex-direction:column; gap:2px; position:sticky; top:0; height:100vh; overflow-y:auto;}
+  .brand{display:flex; align-items:center; gap:10px; padding:0 6px; margin-bottom:26px;}
+  .brand-mark{width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,var(--accent),#ff6fa5); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;}
+  .brand-name{color:#fff; font-size:14.5px; font-weight:600;}
+  .brand-sub{color:var(--sidebar-text); font-size:11px;}
+  .nav-label{color:#6f6b85; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; padding:14px 10px 6px;}
+  .navitem{display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm); color:var(--sidebar-text); font-size:13.5px; cursor:pointer; user-select:none; position:relative;}
+  .navitem svg{width:16px; height:16px; flex-shrink:0; opacity:0.8;}
+  .navitem:hover{background:rgba(255,255,255,0.05); color:#fff;}
+  .navitem.active{background:var(--sidebar-active-bg); color:#fff;}
+  .navitem.active svg{opacity:1; color:var(--accent-2);}
+  .navitem.active::before{content:""; position:absolute; left:-10px; top:8px; bottom:8px; width:3px; border-radius:3px; background:var(--accent-2);}
+  .nav-badge{margin-left:auto; background:rgba(255,255,255,0.08); color:var(--sidebar-text); font-size:10.5px; padding:1px 7px; border-radius:20px;}
+  .navitem.active .nav-badge{background:rgba(124,92,255,0.25); color:#fff;}
+  .navtree{display:flex; flex-direction:column; gap:1px; margin:2px 0 4px 0;}
+  .navsub{display:flex; align-items:center; gap:8px; padding:7px 10px 7px 30px; border-radius:var(--radius-sm); color:var(--sidebar-text); font-size:12.5px; cursor:pointer; user-select:none; position:relative;}
+  .navsub:hover{background:rgba(255,255,255,0.05); color:#fff;}
+  .navsub.active{background:var(--sidebar-active-bg); color:#fff; font-weight:600;}
+  .navsub.active::before{content:""; position:absolute; left:-10px; top:6px; bottom:6px; width:3px; border-radius:3px; background:var(--accent-2);}
+  .navsub-dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+  .navsub-sep{height:1px; background:rgba(255,255,255,0.08); margin:5px 22px 5px 30px;}
+  .sidebar-foot{margin-top:auto; padding-top:14px; border-top:1px solid rgba(255,255,255,0.06);}
+  .user-chip{display:flex; align-items:center; gap:9px; padding:8px 6px;}
+  .user-avatar{width:28px; height:28px; border-radius:50%; background:#3a3555; color:#fff; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center;}
+  .user-name{color:#fff; font-size:12.5px; font-weight:500;}
+  .user-role{color:var(--sidebar-text); font-size:11px;}
+
+  /* MAIN */
+  .main{padding:1.75rem 2.25rem;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;}
+  .title{font-size:21px; font-weight:700; letter-spacing:-0.01em;}
+  .subtitle{font-size:12.5px; color:var(--muted); margin-top:3px;}
+  .icon-btn{width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:10px; flex-shrink:0;}
+  .icon-btn svg{width:18px; height:18px;}
+
+  button{font-family:inherit; font-size:13px; font-weight:500; padding:9px 15px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; transition:background .12s, box-shadow .12s;}
+  #btn-bulk-delete{color:var(--hot); border-color:var(--hot-bg); background:var(--hot-bg); opacity:0.55;}
+  #btn-bulk-delete.active{opacity:1; background:var(--hot); color:#fff; border-color:var(--hot);}
+  .rowlist-header.selectable,.lead-row.selectable{grid-template-columns:28px 38px 1.5fr 0.75fr 0.7fr 0.55fr 0.85fr 18px;}
+  .lead-select-cell{width:24px; height:24px; border-radius:7px; border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:var(--muted); cursor:pointer; background:var(--surface);}
+  .lead-select-cell:hover{border-color:var(--accent); color:var(--accent-text);}
+  .lead-select-cell.checked{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .lead-select-cell svg{width:13px; height:13px;}
+  .rowlist-selectall-cell input{accent-color:var(--accent); cursor:pointer; margin:0;}
+  button:hover{background:var(--bg);}
+  button.primary{background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 2px 8px rgba(124,92,255,0.35);}
+  button.primary:hover{background:#6a4bff;}
+  button.danger-btn{color:var(--hot); border-color:#f4d3dc;}
+  button.danger-btn:hover{background:var(--hot-bg);}
+
+  input,select,textarea{font-family:inherit; font-size:13px; padding:8px 11px; border-radius:9px; border:1px solid var(--border); background:var(--surface); color:var(--text); width:100%;}
+  textarea{resize:vertical;}
+  .height-pills{display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;}
+  .height-pill{font-size:11.5px; font-weight:500; padding:5px 12px; border-radius:20px; background:var(--surface); border:1px solid var(--border); color:var(--text-2); cursor:pointer;}
+  .height-pill.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .height-pill:not(.active):hover{background:var(--bg);}
+  input:focus,select:focus,textarea:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+  label{font-size:10.5px; color:var(--label-navy); display:flex; align-items:center; gap:6px; margin-bottom:5px; font-weight:700; text-transform:uppercase; letter-spacing:0.035em;}
+  .req-pill,.opt-pill{font-size:9.5px; font-weight:700; text-transform:none; letter-spacing:0; padding:1px 8px; border-radius:20px; flex-shrink:0;}
+  .req-pill{background:var(--req-bg); color:var(--req-text);}
+  .opt-pill{background:var(--opt-bg); color:var(--opt-text);}
+  input.f-req,select.f-req,textarea.f-req{background:var(--req-tint); border-color:var(--req-border);}
+  input.f-req:focus,select.f-req:focus,textarea.f-req:focus{background:var(--surface);}
+  .row3.editing-active input,.row3.editing-active select{background:var(--accent-soft)!important; border-color:var(--accent)!important; box-shadow:0 0 0 1px var(--accent) inset; color:var(--hot)!important; font-weight:600;}
+
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:18px;}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.1rem; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;}
+  .card:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(23,20,40,0.10);}
+  .card-icon{width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center;}
+  .card-icon svg{width:15px; height:15px;}
+  .card .label{font-size:12px; color:var(--text-2); font-weight:500;}
+  .card .value{font-size:25px; font-weight:700; letter-spacing:-0.01em;}
+  .card .foot{font-size:11.5px;}
+
+  .temps{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px;}
+  .temp-card{border-radius:var(--radius); padding:1rem 1.1rem; box-shadow:var(--shadow); background:var(--surface); border:1px solid var(--border); border-left:4px solid transparent;}
+  .temp-card .th{display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; margin-bottom:6px;}
+  .temp-card .th .dot{width:8px; height:8px; border-radius:50%;}
+  .temp-card .num{font-size:24px; font-weight:700;}
+  .temp-card .foot{font-size:11.5px; margin-top:2px;}
+
+  /* DASHBOARD ANALYTICS CARDS */
+  .analytics-grid{display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:14px; align-items:start;}
+  .dash-card{background:var(--surface); border-radius:16px; padding:1.1rem 1.2rem; box-shadow:0 4px 20px rgba(23,20,40,0.06); margin-bottom:14px;}
+  .dash-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;}
+  .dash-card-title{font-size:13px; font-weight:700; color:var(--text);}
+  .period-toggle{display:flex; gap:3px; background:var(--bg); border:1px solid var(--border); padding:3px; border-radius:20px; flex-wrap:wrap;}
+  .period-toggle button{font-family:inherit; font-size:11px; font-weight:600; padding:5px 11px; border-radius:20px; border:none; cursor:pointer; background:transparent; color:var(--text-2);}
+  .period-toggle button.active{background:var(--accent); color:#fff;}
+  .status-toggle{display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
+  .status-toggle span{font-size:11px; font-weight:600; padding:5px 12px; border-radius:20px; cursor:pointer; border:1.5px solid var(--border); color:var(--muted); background:transparent;}
+  .dash-legend{display:flex; gap:14px; justify-content:center; margin-top:10px; font-size:11px; color:var(--text-2); flex-wrap:wrap;}
+  .dash-legend span{display:flex; align-items:center; gap:5px;}
+  .dash-legend .dot{width:8px; height:8px; border-radius:2px; display:inline-block;}
+  .admin-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .admin-table thead td{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; padding:0 6px 8px; border-bottom:1px solid var(--border);}
+  .admin-table tbody td{padding:10px 6px; border-bottom:1px solid var(--border-soft); color:var(--text-2);}
+  .admin-table tbody tr:last-child td{border-bottom:none;}
+  .admin-name{display:inline-flex; align-items:center; gap:8px; font-weight:600; color:var(--text);}
+  .admin-avatar{width:24px; height:24px; border-radius:7px; font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .admin-omzet{color:var(--success); font-weight:700;}
+  .dash-hint{font-size:11px; color:var(--muted); margin-top:2px;}
+  .role-badge{display:inline-block; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px;}
+  .role-badge.master_admin{background:var(--accent); color:#fff;}
+  .role-badge.super_admin{background:var(--accent-soft); color:var(--accent-text);}
+  .role-badge.supervisor{background:#DFF3EC; color:#0B6B54;}
+  .role-badge.sales{background:var(--border-soft); color:var(--text-2);}
+  .perf-badge{display:inline-block; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:20px; margin-left:6px; text-transform:uppercase; letter-spacing:0.03em; vertical-align:1px;}
+  .perf-badge.gold{background:#FCEFD2; color:#8A5A00;}
+  .perf-badge.silver{background:#E8E8ED; color:#54545C;}
+  .perf-badge.bronze{background:#F3E1D3; color:#8C4A1E;}
+  .status-badge-user{display:inline-block; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px;}
+  .status-badge-user.active{background:var(--success-bg); color:var(--success);}
+  .status-badge-user.nonaktif{background:var(--cold-bg); color:var(--muted);}
+  .user-action-link{font-size:11.5px; font-weight:600; color:var(--accent-text); cursor:pointer; margin-right:10px;}
+  .user-action-link:last-child{margin-right:0;}
+  .user-action-link.danger{color:var(--hot);}
+  .user-action-link.disabled{color:var(--muted); cursor:default; pointer-events:none;}
+  .overview-settings-popover{position:absolute; top:44px; right:0; z-index:40; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 10px 30px rgba(23,20,40,0.14); padding:0.7rem 0.5rem; min-width:240px;}
+  .overview-settings-popover .ospop-title{font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; padding:2px 10px 8px;}
+  .ospop-item{display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; font-size:12.5px; color:var(--text); user-select:none;}
+  .ospop-item:hover{background:var(--bg);}
+  .ospop-item input{width:auto; accent-color:var(--accent); cursor:pointer; margin:0; flex-shrink:0;}
+  .ospop-move{width:22px; height:22px; padding:0; border-radius:6px; font-size:9px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); flex-shrink:0; line-height:1;}
+  .ospop-move:hover{background:var(--bg);}
+  .ospop-move:disabled{opacity:0.3; cursor:default;}
+  .ospop-move:disabled:hover{background:var(--surface);}
+  .section-reorder-bar{display:flex; justify-content:flex-end; align-items:center; gap:5px; margin-bottom:5px;}
+  .section-reorder-bar .section-move-btn{width:20px; height:18px; padding:0; border-radius:5px; font-size:8px; border:1px solid var(--border); background:var(--surface); color:var(--muted); line-height:1; opacity:0.55;}
+  .section-reorder-bar .section-move-btn:hover{background:var(--bg); color:var(--text-2); opacity:1;}
+  .section-reorder-bar .section-move-btn:disabled{opacity:0.15; cursor:default;}
+  .section-reorder-bar .section-move-btn:disabled:hover{background:var(--surface); color:var(--muted);}
+  .section-reorder-bar .drag-handle{width:20px; height:18px; border-radius:5px; font-size:11px; letter-spacing:-2px; display:flex; align-items:center; justify-content:center; color:var(--muted); cursor:grab; opacity:0.55; user-select:none;}
+  .section-reorder-bar .drag-handle:hover{background:var(--bg); color:var(--text-2); opacity:1;}
+  .section-reorder-bar .drag-handle:active{cursor:grabbing;}
+  .section-close-btn{width:18px; height:18px; padding:0; border-radius:5px; font-size:12px; border:1px solid var(--border); background:var(--surface); color:var(--muted); line-height:1; opacity:0.55;}
+  .section-close-btn:hover{background:var(--hot-bg); color:var(--hot); border-color:var(--hot-bg); opacity:1;}
+  [id^="section-"]{transition:outline .1s ease;}
+  .section-drag-over{outline:2px dashed var(--accent); outline-offset:3px; border-radius:12px;}
+  .section-dragging{opacity:0.45;}
+
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.95rem 1.15rem; margin-bottom:12px; box-shadow:var(--shadow);}
+  .panel-title{font-size:12.5px; color:var(--text); margin-bottom:10px; font-weight:600;}
+
+  /* ROW LIST */
+  .rowlist-header{display:grid; grid-template-columns:38px 1.5fr 0.75fr 0.7fr 0.55fr 0.85fr 18px; gap:12px; padding:0 6px 8px; font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid var(--border); margin-bottom:2px;}
+  .rowlist{display:flex; flex-direction:column;}
+  .lead-row{display:grid; grid-template-columns:38px 1.5fr 0.75fr 0.7fr 0.55fr 0.85fr 18px; align-items:center; gap:12px; padding:11px 6px; border-radius:10px; cursor:pointer; transition:background .15s, box-shadow .15s; border-bottom:1px solid var(--border-soft);}
+  .lead-row:last-child{border-bottom:none;}
+  .lead-row:nth-child(even){background:var(--zebra);}
+  .lead-row:hover{background:var(--row-hover);}
+  @keyframes justPulse{ 0%,100%{ box-shadow:inset 6px 0 0 var(--highlight-border); } 50%{ box-shadow:inset 6px 0 0 var(--highlight-border), 0 0 0 3px rgba(230,81,0,0.4); } }
+  .lead-row.just-viewed{background:var(--highlight-bg) !important; box-shadow:inset 6px 0 0 var(--highlight-border);}
+  .lead-row.just-pulse{animation:justPulse 0.8s ease-in-out 3;}
+  .avatar{width:36px; height:36px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12.5px; font-weight:700;}
+  .lead-info{min-width:0;}
+  .lead-name{font-size:13.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .lead-sub{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;}
+  .lead-note{font-size:12px; color:var(--text-2); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .lead-entrydate{font-size:12px; color:var(--text-2); white-space:nowrap;}
+  .source-pill{font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; background:var(--bg); color:var(--text-2); white-space:nowrap; justify-self:start;}
+  .lead-followup{font-size:12px; text-align:left;}
+  .chev{color:var(--muted); flex-shrink:0; justify-self:end;}
+  .chev svg{width:16px; height:16px;}
+  .just-tag{display:none; font-size:9.5px; font-weight:700; color:#fff3c4; background:#5d3d00; padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:middle; text-transform:uppercase; letter-spacing:0.02em;}
+  .owner-tag{display:inline-block; font-size:10px; font-weight:600; color:var(--text-2); background:var(--border-soft); padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:middle;}
+  .lead-row.just-viewed .just-tag{display:inline-block;}
+
+  .badge{font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; white-space:nowrap; justify-self:start;}
+  .badge.cold{background:var(--cold-bg); color:var(--cold);}
+  .badge.warm{background:var(--warm-bg); color:var(--warm);}
+  .badge.hot{background:var(--hot-bg); color:var(--hot);}
+  .chan-tag{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:20px; background:var(--accent-soft); color:var(--accent-text); white-space:nowrap;}
+
+  .activitylog-row{display:flex; align-items:center; gap:12px; padding:11px 6px; border-radius:10px; cursor:pointer; border-bottom:1px solid var(--border-soft);}
+  .activitylog-row:last-child{border-bottom:none;}
+  .activitylog-row:nth-child(even){background:var(--zebra);}
+  .activitylog-row:hover{background:var(--row-hover);}
+  .activitylog-info{flex:1; min-width:0;}
+  .activitylog-company{font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .activitylog-text{font-size:12.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;}
+  .activitylog-time{font-size:11.5px; color:var(--muted); white-space:nowrap; flex-shrink:0;}
+
+  .leads-split{display:grid; grid-template-columns:260px 1fr; gap:16px; align-items:start;}
+  .leads-split.full-form{grid-template-columns:1fr;}
+  .leads-split.full-form .split-list-col{display:none;}
+  .split-list-col{position:sticky; top:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); max-height:calc(100vh - 40px); overflow-y:auto; padding:6px;}
+  .split-name-item{display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:9px; cursor:pointer; font-size:12.5px; color:var(--text); border-bottom:1px solid var(--border-soft);}
+  .split-name-item:last-child{border-bottom:none;}
+  .split-name-item:hover{background:var(--row-hover);}
+  .split-name-item.active{background:var(--accent-soft); color:var(--accent-text); font-weight:600;}
+  .split-name-item .avatar{width:26px; height:26px; font-size:10.5px; flex-shrink:0;}
+  .split-name-item .sn-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0;}
+  .split-status-dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+  .split-form-col{min-width:0;}
+
+  .toolbar{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;}
+  .search-wrap{position:relative; flex:1; min-width:200px;}
+  .search-wrap svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--muted);}
+  .search-wrap input{padding-left:34px; border-radius:20px;}
+  .segmented{display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); padding:3px; border-radius:20px; box-shadow:var(--shadow);}
+  .quick-filter-bar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;}
+  .quick-filter-bar select{width:auto; min-width:130px; font-size:12px; padding:7px 10px; border-radius:20px; background:var(--surface); border:1px solid var(--border); color:var(--text-2);}
+  .admin-locked-badge{display:none; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:6px 13px; border-radius:20px; background:var(--accent-soft); color:var(--accent-text); white-space:nowrap;}
+  .focus-filter-badge{display:none; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:6px 13px; border-radius:20px; background:var(--accent-soft); color:var(--accent-text); white-space:nowrap; cursor:pointer;}
+  .focus-filter-badge:hover{background:var(--accent);}
+  .focus-filter-badge:hover, .focus-filter-badge:hover .focus-reset-x{color:#fff;}
+  .focus-reset-x{border:none; background:none; padding:0; margin-left:2px; font-size:13px; line-height:1; color:var(--accent-text); cursor:pointer;}
+  .focus-checklist{display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:12px;}
+  .focus-checklist label{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2);}
+  .focus-checklist input{width:auto; margin:0;}
+  .lead-group-header{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; padding:10px 4px 6px; border-bottom:1px solid var(--border-soft);}
+  .lead-group-header .lgh-count{font-weight:600; text-transform:none; letter-spacing:0; color:var(--muted);}
+  .compare-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:16px;}
+  .compare-card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.2rem 1.1rem; text-align:center;}
+  .compare-photo{display:flex; justify-content:center; margin-bottom:10px;}
+  .avatar-placeholder{border-radius:50%; background:var(--border-soft); color:var(--muted); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .compare-name{font-size:14px; font-weight:600; color:var(--text); margin-bottom:10px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px;}
+  .compare-stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .compare-stat{background:var(--bg); border-radius:8px; padding:8px 10px;}
+  .cs-label{font-size:10.5px; color:var(--muted); margin-bottom:2px;}
+  .cs-value{font-size:14px; font-weight:600; color:var(--text);}
+  .status-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:1px;}
+  .status-dot.active{background:var(--success);}
+  .status-dot.idle{background:var(--warm);}
+  .status-dot.offline{background:var(--muted);}
+  .monitor-list{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--surface); position:relative;}
+  .monitor-row{display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border-soft); background:var(--surface); position:relative; will-change:transform;}
+  .monitor-row:last-child{border-bottom:none;}
+  .monitor-rank{width:20px; flex-shrink:0; text-align:center; font-size:11.5px; font-weight:700; color:var(--muted);}
+  .monitor-avatar{width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; flex-shrink:0;}
+  .monitor-info{flex:1; min-width:0;}
+  .monitor-name{font-size:13.5px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .monitor-sub{font-size:12px; color:var(--muted); margin-top:2px;}
+  .monitor-status{font-size:12px; color:var(--text-2); white-space:nowrap;}
+  .monitor-seen{font-size:11.5px; color:var(--muted); white-space:nowrap; min-width:80px; text-align:right;}
+  .struct-wrap{display:flex; flex-direction:column; align-items:center; gap:0; padding:8px 0 24px;}
+  .struct-tier{display:flex; justify-content:center; flex-wrap:wrap; gap:14px;}
+  .struct-connector{width:1px; height:24px; background:var(--border);}
+  .struct-node{padding:12px 20px; border-radius:12px; text-align:center; min-width:150px;}
+  .struct-node .struct-name{font-size:14px; font-weight:600;}
+  .struct-node .struct-name .struct-tag{font-size:10px; font-weight:500; opacity:0.8; margin-left:4px;}
+  .struct-node .struct-role{font-size:11.5px; margin-top:2px;}
+  .struct-node.master_admin{background:var(--accent); color:#fff;}
+  .struct-node.master_admin .struct-role{color:rgba(255,255,255,0.85);}
+  .struct-node.super_admin{background:var(--accent-soft); color:var(--accent-text);}
+  .struct-node.supervisor{background:#DFF3EC; color:#0B6B54;}
+  .struct-node.sales{background:var(--border-soft); color:var(--text-2);}
+  .struct-groups{display:flex; justify-content:center; gap:28px; flex-wrap:wrap; margin-top:4px;}
+  .struct-group{display:flex; flex-direction:column; align-items:center; gap:0;}
+  .struct-team{display:flex; flex-direction:column; gap:10px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--border);}
+  .struct-team-label{font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:8px;}
+  .struct-team-empty{font-size:11.5px; color:var(--muted); margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
+  .login-option-btn{width:100%; text-align:left; padding:10px 14px; display:flex; align-items:center; gap:10px; border-radius:12px;}
+  .login-option-btn:hover{background:var(--bg); border-color:var(--accent);}
+  .login-option-avatar{width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0;}
+  .filter-pill{font-size:12px; font-weight:500; padding:6px 13px; border-radius:20px; color:var(--text-2); cursor:pointer; white-space:nowrap;}
+  .filter-pill.active{background:var(--accent); color:#fff;}
+  .filter-pill:not(.active):hover{background:var(--bg);}
+
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  .row4{display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px;}
+  .field{margin-bottom:9px;}
+  .field:last-child{margin-bottom:0;}
+
+  .history-item{display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-soft);}
+  .history-item:last-child{border-bottom:none;}
+  .history-num{width:20px; height:20px; border-radius:50%; background:var(--bg); color:var(--text-2); font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;}
+  .history-content{flex:1; min-width:0;}
+  .history-head{display:flex; align-items:center; gap:8px; margin-bottom:2px;}
+  .history-date{font-size:11.5px; color:var(--muted); font-weight:500; white-space:nowrap; flex-shrink:0; text-align:right; padding-top:1px;}
+  .history-note{font-size:13px; color:var(--text);}
+  .form-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:16px;}
+  .empty-note{font-size:12.5px; color:var(--muted); padding:8px 0;}
+  .footnote{font-size:11px; color:var(--muted); margin-top:6px;}
+  .banner{background:var(--accent-soft); border-radius:var(--radius); padding:0.9rem 1.1rem; font-size:12.5px; color:var(--accent-text); margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+  .history-scroll{max-height:230px; overflow-y:auto; padding-right:4px;}
+
+  .product-item{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-soft); flex-wrap:wrap;}
+  .product-item:last-child{border-bottom:none;}
+  .product-badge{font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:20px; flex-shrink:0; white-space:nowrap;}
+  .product-badge.smk3{background:#e6f0fd; color:#1e5fbf;}
+  .product-badge.iso{background:#fdeee0; color:#c9660a;}
+  .product-info{flex:1; min-width:0; display:flex; gap:16px; align-items:center; flex-wrap:wrap;}
+  .product-price{font-size:12.5px;}
+  .product-price .lbl{color:var(--muted); margin-right:4px;}
+  .product-price .val{font-weight:600; color:var(--text);}
+  .product-price .val.deal{color:var(--success);}
+  .product-price .val.empty{color:var(--muted); font-weight:500;}
+  .product-remove{background:transparent; border:none; color:var(--muted); padding:4px; width:26px; height:26px; border-radius:7px; flex-shrink:0; font-size:16px; line-height:1;}
+  .product-remove:hover{background:var(--hot-bg); color:var(--hot);}
+  .product-edit{background:transparent; border:none; color:var(--accent-text); padding:4px; width:26px; height:26px; border-radius:7px; flex-shrink:0; font-size:13px; line-height:1;}
+  .product-edit:hover{background:var(--accent-soft);}
+
+  .calendar-panel{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:1rem 1.1rem; margin-bottom:14px;}
+  .calendar-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .calendar-head .cal-month{font-size:15px; font-weight:700; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;}
+  .cal-today-btn{width:100%; font-size:11px; font-weight:600; padding:6px; border-radius:8px; background:var(--accent-soft); color:var(--accent-text); border:1px solid var(--border); cursor:pointer; margin-bottom:10px;}
+  .cal-today-btn:hover{background:var(--accent); color:#fff;}
+  .cal-monthyear-picker{display:none; gap:6px; margin-bottom:10px;}
+  .cal-monthyear-picker.open{display:flex;}
+  .cal-monthyear-picker select{flex:1; font-size:11.5px; padding:5px 6px; min-width:0;}
+  .calendar-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px;}
+  .calendar-weekdays span{font-size:10.5px; font-weight:700; color:var(--muted); text-align:center; text-transform:uppercase; display:block;}
+  .calendar-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .cal-day{position:relative; aspect-ratio:1; border-radius:9px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:12.5px; cursor:pointer; border:1px solid transparent; color:var(--text);}
+  .cal-day.other-month{color:var(--muted); opacity:0.35; cursor:default;}
+  .cal-day:hover:not(.other-month){background:var(--row-hover);}
+  .cal-day.today{border-color:var(--accent); font-weight:700;}
+  .cal-day.selected{background:var(--accent); color:#fff;}
+  .cal-day .cal-dot-row{display:flex; gap:2px; margin-top:2px;}
+  .cal-day .cal-dot{width:5px; height:5px; border-radius:50%; background:var(--hot);}
+  .cal-day.selected .cal-dot{background:#fff;}
+  .calendar-legend{display:flex; gap:14px; margin-top:12px; font-size:11px; color:var(--muted); flex-wrap:wrap;}
+  .calendar-legend span{display:flex; align-items:center; gap:5px;}
+  .calendar-legend .dot{width:7px; height:7px; border-radius:50%;}
+
+  .followup-layout{display:grid; grid-template-columns:minmax(200px,20%) 1fr; gap:16px; align-items:start;}
+  .followup-layout .calendar-panel{position:sticky; top:20px; padding:0.9rem 0.85rem; margin-bottom:0;}
+  .followup-layout .calendar-head .cal-month{font-size:13px;}
+  .followup-layout .calendar-grid{gap:3px;}
+  .followup-layout .cal-day{font-size:10.5px; border-radius:7px;}
+  .followup-layout .cal-day .cal-dot{width:4px; height:4px;}
+  .followup-layout .calendar-legend{flex-direction:column; gap:6px; margin-top:10px;}
+  .followup-right-col{min-width:0;}
+  .followup-right-col .leads-split{grid-template-columns:150px 1fr;}
+  .followup-right-col .split-list-col{padding:4px;}
+  .followup-right-col .split-name-item{padding:6px; gap:6px; font-size:11px;}
+  .followup-right-col .split-name-item .avatar{width:22px; height:22px; font-size:9px;}
+
+  .active-filter-chip{display:inline-flex; align-items:center; gap:8px; background:var(--accent-soft); color:var(--accent-text); font-size:12.5px; font-weight:500; padding:6px 8px 6px 14px; border-radius:20px;}
+  .active-filter-chip button{background:transparent; border:none; color:var(--accent-text); font-size:16px; line-height:1; padding:2px 6px; border-radius:50%; cursor:pointer;}
+  .active-filter-chip button:hover{background:rgba(124,92,255,0.15);}
+
+  .toast{position:fixed; bottom:24px; right:24px; background:#20202b; color:#fff; padding:12px 18px; border-radius:11px; font-size:13px; font-weight:500; box-shadow:0 10px 28px rgba(15,12,30,0.28); opacity:0; transform:translateY(12px); transition:opacity .25s ease, transform .25s ease; pointer-events:none; z-index:80; display:flex; align-items:center; gap:9px;}
+  .toast.show{opacity:1; transform:translateY(0);}
+  .toast .tdot{width:8px; height:8px; border-radius:50%; background:var(--highlight-border); flex-shrink:0;}
+
+  .modal-overlay{display:none; position:fixed; inset:0; background:rgba(15,12,30,0.45); z-index:200; align-items:center; justify-content:center; padding:20px;}
+  .modal-card{background:var(--surface); border-radius:var(--radius); padding:1.4rem 1.5rem; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(15,12,30,0.32);}
+  .modal-title{font-size:14.5px; font-weight:700; color:var(--text); margin-bottom:6px; line-height:1.4;}
+  .modal-sub{font-size:12px; color:var(--text-2); margin-bottom:16px; line-height:1.4;}
+  .modal-actions{display:flex; flex-direction:column; gap:8px;}
+  .modal-actions button{width:100%;}
+
+  /* MOBILE FAB NAV (hidden on desktop) */
+  .mobile-fab-wrap{display:none;}
+  .mobile-client-header{display:none;}
+
+  @media (max-width: 768px){
+    .app{display:block;}
+    .sidebar{display:none;}
+    .main{padding:0.9rem 0.9rem 110px 0.9rem;}
+    .title{font-size:18px;}
+
+    .kpis{grid-template-columns:repeat(2, 1fr); gap:8px;}
+    .card{padding:0.85rem;}
+    .card .value{font-size:19px;}
+    .temps{grid-template-columns:1fr; gap:8px;}
+
+    .row2,.row3,.row4{grid-template-columns:1fr;}
+    .analytics-grid{grid-template-columns:1fr;}
+    .dash-card{padding:0.9rem 1rem;}
+    .form-actions{flex-direction:column;}
+    .form-actions button{width:100%;}
+
+    .rowlist-header{display:none;}
+    .lead-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+    .lead-entrydate,.source-pill{display:none;}
+    .lead-info{flex:1; min-width:0;}
+    .lead-followup{font-size:11px; flex-shrink:0;}
+
+    .calendar-grid{gap:3px;}
+    .cal-day{font-size:10.5px;}
+
+    .followup-layout{grid-template-columns:1fr;}
+    .followup-layout .calendar-panel{position:sticky; top:0; z-index:5; padding:0.6rem 0.65rem; margin-bottom:10px;}
+    .followup-layout .calendar-head{margin-bottom:8px;}
+    .followup-layout .calendar-head .cal-month{font-size:12px;}
+    .followup-layout .icon-btn{width:28px; height:28px;}
+    .followup-layout .icon-btn svg{width:14px; height:14px;}
+    .followup-layout .calendar-weekdays span{font-size:8.5px;}
+    .followup-layout .calendar-grid{gap:2px;}
+    .followup-layout .cal-day{font-size:9px; border-radius:5px;}
+    .followup-layout .calendar-legend{flex-direction:row; gap:8px; font-size:9px; margin-top:6px;}
+    .followup-layout .cal-today-btn{font-size:10px; padding:5px; margin-bottom:6px;}
+    .followup-right-col .leads-split{grid-template-columns:1fr;}
+
+    .leads-split{grid-template-columns:1fr; gap:10px;}
+    .split-list-col{display:none;}
+    .mobile-client-header{display:flex; align-items:center; gap:11px; background:var(--accent); color:#fff; padding:14px 16px; border-radius:var(--radius); margin-bottom:14px; font-size:16px; font-weight:700; box-shadow:0 4px 14px rgba(124,92,255,0.35);}
+    .mobile-client-header .avatar{background:rgba(255,255,255,0.22); color:#fff; flex-shrink:0;}
+    .mobile-client-header .mch-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+    .mobile-fab-wrap{display:block; position:fixed; right:16px; bottom:16px; z-index:100;}
+    .mobile-fab-btn{width:54px; height:54px; border-radius:50%; background:var(--accent); color:#fff; border:none; box-shadow:0 8px 22px rgba(124,92,255,0.45); font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
+    .mobile-fab-menu{position:absolute; bottom:66px; right:0; display:none; flex-direction:column; align-items:flex-end; gap:7px; max-height:65vh; overflow-y:auto; padding:4px;}
+    .mobile-fab-menu.open{display:flex;}
+    .mobile-fab-item{background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:20px; padding:9px 16px; font-size:13px; font-weight:600; box-shadow:var(--shadow); white-space:nowrap; cursor:pointer;}
+    .mobile-fab-item.accent{background:var(--accent); color:#fff; border-color:var(--accent);}
+    .mobile-fab-item .fdot{width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:7px;}
+    .mobile-fab-sep{height:1px; background:rgba(24,23,35,0.12); width:70%; margin:1px 0;}
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="position:fixed; inset:0; z-index:500; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:16px; padding:2rem 2.2rem; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(15,12,30,0.18);">
+    <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:4px;">Sapta Mutu - Leads Workspace</div>
+    <div style="font-size:12.5px; color:var(--muted); margin-bottom:20px;">Masuk pakai email &amp; password.</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Email</label>
+        <input type="email" id="login-email" placeholder="nama@sapta.com" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Password</label>
+        <input type="password" id="login-password" placeholder="********" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;" onkeydown="if(event.key==='Enter') attemptLogin();">
+      </div>
+      <div id="login-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+      <button class="primary" onclick="attemptLogin()" style="margin-top:4px;">Masuk</button>
+    </div>
+    <div style="font-size:10.5px; color:var(--muted); margin-top:16px; line-height:1.5;">Login ini nyambung ke Supabase Auth beneran. Lupa password? Hubungi Master Admin.</div>
+  </div>
+</div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SM</div>
+      <div>
+        <div class="brand-name">Sapta Mutu</div>
+        <div class="brand-sub">Leads workspace</div>
+      </div>
+    </div>
+
+    <div class="nav-label">Menu</div>
+    <div class="navitem active" data-view="overview" onclick="switchView('overview')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+      Overview
+    </div>
+    <div class="navitem" data-view="leads" data-filter="all" onclick="goToFilter('all')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3-3 4-3 7a3 3 0 0 0 6 0c0-1-.5-2-1-2.5.8.3 3 2 3 5.5a5 5 0 0 1-10 0c0-4 2-6 5-10z"></path></svg>
+      Leads <span class="nav-badge" id="nav-leads-count"></span>
+    </div>
+    <div class="navtree">
+      <div class="navsub" data-filter="cold" onclick="goToFilter('cold')"><span class="navsub-dot" style="background:var(--cold)"></span>Cold</div>
+      <div class="navsub" data-filter="warm" onclick="goToFilter('warm')"><span class="navsub-dot" style="background:var(--warm)"></span>Warm</div>
+      <div class="navsub" data-filter="hot" onclick="goToFilter('hot')"><span class="navsub-dot" style="background:var(--hot)"></span>Hot</div>
+    </div>
+
+    <div class="nav-label">Follow up</div>
+    <div class="navtree">
+      <div class="navsub" data-view="followup" onclick="switchView('followup')">Rencana follow up <span class="nav-badge" id="nav-followup-count"></span></div>
+      <div class="navsub" data-filter="overdue" onclick="goToFilter('overdue')">Follow up telat</div>
+      <div class="navsub" data-filter="no-interaction" onclick="goToFilter('no-interaction')">Belum ada interaksi</div>
+    </div>
+
+    <div class="nav-label">Omzet</div>
+    <div class="navtree">
+      <div class="navsub" data-filter="has-product" onclick="goToFilter('has-product')">Rencana omzet</div>
+      <div class="navsub" data-filter="has-deal" onclick="goToFilter('has-deal')">Omzet deal</div>
+      <div class="navsub" data-filter="dp" onclick="goToFilter('dp')">Sudah DP</div>
+      <div class="navsub" data-filter="lunas" onclick="goToFilter('lunas')">Sudah lunas</div>
+    </div>
+
+    <div class="navitem" data-view="activitylog" onclick="switchView('activitylog')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      Log Aktivitas <span class="nav-badge" id="nav-activitylog-count"></span>
+    </div>
+    <div class="navitem" data-view="structure" onclick="switchView('structure')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="6" rx="1"></rect><rect x="3" y="15" width="6" height="6" rx="1"></rect><rect x="15" y="15" width="6" height="6" rx="1"></rect><path d="M12 9v3M12 12H6v3M12 12h6v3"></path></svg>
+      Struktur Organisasi
+    </div>
+    <div class="navitem" data-view="users" id="nav-users-item" onclick="switchView('users')" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      Kelola Pengguna
+    </div>
+    <div class="navitem" data-view="comparison" id="nav-comparison-item" onclick="switchView('comparison')" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      Perbandingan Kinerja
+    </div>
+    <div class="navitem" data-view="monitoring" id="nav-monitoring-item" onclick="switchView('monitoring')" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      Monitoring User
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="user-chip" id="sidebar-user-chip"></div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- OVERVIEW -->
+    <div class="view active" id="view-overview">
+      <div class="topbar">
+        <div>
+          <div class="title" id="overview-title">Leads audit SMK3</div>
+          <div class="subtitle" id="overview-date"></div>
+        </div>
+        <div style="position:relative;">
+          <button class="icon-btn" onclick="toggleOverviewSettings()" aria-label="Kustomisasi tampilan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+          <div id="overview-settings-popover" class="overview-settings-popover" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="quick-filter-bar" style="margin-bottom:14px;">
+        <div class="search-wrap" style="flex:1; min-width:160px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="overview-search-input" placeholder="Cari nama PT / PIC..." oninput="renderOverview()">
+        </div>
+        <select id="overview-admin-filter-select" onchange="setQuickFilterAdmin(this.value)"></select>
+        <span class="admin-locked-badge" id="admin-locked-badge-overview"></span>
+        <span class="focus-filter-badge" id="master-focus-badge-overview" onclick="openFocusFilterModal()"></span>
+        <select id="overview-pic-filter-select" onchange="setQuickFilterPic(this.value)"></select>
+        <select id="overview-location-filter-select" onchange="setQuickFilterLocation(this.value)"></select>
+      </div>
+
+      <div id="section-kpi">
+        <div class="kpis" id="kpi-row"></div>
+      </div>
+      <div id="section-temp">
+        <div class="temps" id="temp-row"></div>
+      </div>
+
+      <div id="section-growth" class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Pertumbuhan leads &amp; closing rate</div>
+          <div class="period-toggle" id="growth-period-toggle"></div>
+        </div>
+        <div class="status-toggle" id="growth-status-toggle"></div>
+        <div style="position:relative; height:220px;">
+          <canvas id="growth-chart"></canvas>
+        </div>
+      </div>
+
+      <div id="section-omzet" class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Omzet deal</div>
+          <div class="period-toggle" id="omzet-period-toggle"></div>
+        </div>
+        <div style="position:relative; height:190px; max-width:520px;">
+          <canvas id="omzet-chart"></canvas>
+        </div>
+        <div class="dash-hint">Dihitung dari harga deal produk, berdasarkan tanggal input lead.</div>
+      </div>
+
+      <div id="section-produk" class="dash-card">
+        <div class="dash-card-title" style="margin-bottom:12px;">Komposisi produk</div>
+        <div style="position:relative; height:170px; max-width:220px; margin:0 auto; display:flex; align-items:center; justify-content:center;">
+          <canvas id="produk-chart"></canvas>
+        </div>
+        <div class="dash-legend" id="produk-legend"></div>
+      </div>
+
+      <div id="section-admin" class="dash-card">
+        <div class="dash-card-title" style="margin-bottom:12px;">Performa admin sales</div>
+        <table class="admin-table">
+          <thead><tr><td>Admin</td><td>Leads</td><td>Sudah DP</td><td>Omzet deal</td></tr></thead>
+          <tbody id="admin-performance-body"></tbody>
+        </table>
+      </div>
+
+      <div id="section-actionlist">
+        <div class="panel">
+          <div class="panel-title">Leads hot &amp; warm - butuh aksi</div>
+          <div class="rowlist-header">
+            <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+          </div>
+          <div class="rowlist" id="overview-rowlist"></div>
+        </div>
+        <div class="banner" id="cold-banner"></div>
+      </div>
+    </div>
+
+    <!-- LEADS LIST -->
+    <div class="view" id="view-leads">
+      <div class="topbar">
+        <div class="title" id="leads-title">Daftar leads</div>
+        <div style="display:flex; gap:8px;">
+          <button id="btn-bulk-delete" onclick="bulkDeleteLeads()">Hapus lead (<span id="bulk-delete-count">0</span>)</button>
+          <button onclick="exportData()">Export data</button>
+          <button onclick="document.getElementById('import-file').click()">Import data</button>
+          <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
+          <button class="primary" onclick="openNewLeadForm()">+ Tambah lead</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="search-input" placeholder="Cari nama perusahaan atau PIC..." oninput="refreshLeadsListing()">
+        </div>
+        <div class="segmented">
+          <span class="filter-pill active" data-status="all" onclick="setFilter('all')">Semua <span id="count-all"></span></span>
+          <span class="filter-pill" data-status="cold" onclick="setFilter('cold')">Cold <span id="count-cold"></span></span>
+          <span class="filter-pill" data-status="warm" onclick="setFilter('warm')">Warm <span id="count-warm"></span></span>
+          <span class="filter-pill" data-status="hot" onclick="setFilter('hot')">Hot <span id="count-hot"></span></span>
+        </div>
+      </div>
+      <div class="quick-filter-bar" style="margin-bottom:10px;">
+        <select id="admin-filter-select" onchange="setQuickFilterAdmin(this.value)"></select>
+        <span class="admin-locked-badge" id="admin-locked-badge-leads"></span>
+        <span class="focus-filter-badge" id="master-focus-badge-leads" onclick="openFocusFilterModal()"></span>
+        <span class="filter-pill" id="group-by-admin-toggle" onclick="toggleGroupByAdmin()">Kelompokkan per admin</span>
+        <select id="pic-filter-select" onchange="setQuickFilterPic(this.value)"></select>
+        <select id="location-filter-select" onchange="setQuickFilterLocation(this.value)"></select>
+      </div>
+      <div id="filter-chip-wrap" style="display:none; margin-bottom:10px;"></div>
+
+      <div id="leads-fulllist-wrap">
+        <div class="panel">
+          <div class="rowlist-header selectable">
+            <span class="rowlist-selectall-cell"><input type="checkbox" id="leads-selectall" onclick="toggleSelectAll()"></span><span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+          </div>
+          <div class="rowlist" id="leads-rowlist"></div>
+        </div>
+      </div>
+
+      <div class="leads-split" id="leads-split-wrap" style="display:none;">
+        <div class="split-list-col">
+          <div class="split-namelist" id="split-namelist"></div>
+        </div>
+        <div class="split-form-col" id="leads-split-form-col">
+          <div class="lead-form-panel">
+            <div class="mobile-client-header" id="mobile-client-header"></div>
+            <div class="topbar">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <button class="icon-btn" onclick="goBack()" aria-label="Kembali ke daftar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div>
+                  <div class="title" id="form-title">Input / update lead</div>
+                  <div class="subtitle" id="form-subtitle"></div>
+                </div>
+              </div>
+              <span class="badge" id="form-status-badge"></span>
+            </div>
+
+            <div class="row2">
+              <div class="panel">
+                <div class="panel-title">Data perusahaan</div>
+                <div class="field"><label>Nama badan usaha <span class="req-pill">Wajib</span></label><input type="text" id="f-company" class="f-req"></div>
+                <div class="field"><label>Alamat <span class="opt-pill">Opsional</span></label><input type="text" id="f-address"></div>
+                <div class="row2">
+                  <div class="field"><label>Kabupaten / kota <span class="opt-pill">Opsional</span></label><input type="text" id="f-city"></div>
+                  <div class="field"><label>Provinsi <span class="opt-pill">Opsional</span></label><input type="text" id="f-province"></div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-title">Kontak PIC</div>
+                <div class="field"><label>Nama PIC <span class="opt-pill">Opsional</span></label><input type="text" id="f-pic"></div>
+                <div class="field"><label>No. telepon <span class="req-pill">Wajib</span></label><input type="text" id="f-phone" class="f-req"></div>
+                <div class="field"><label>Email <span class="opt-pill">Opsional</span></label><input type="text" id="f-email"></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">Status lead</div>
+              <div class="row4">
+                <div class="field"><label>Suhu lead <span class="req-pill">Wajib</span></label>
+                  <select id="f-status" class="f-req">
+                    <option value="cold">Cold</option>
+                    <option value="warm">Warm</option>
+                    <option value="hot">Hot</option>
+                  </select>
+                </div>
+                <div class="field"><label>Sumber lead <span class="req-pill">Wajib</span></label>
+                  <select id="f-source" class="f-req">
+                    <option value="website">Website</option>
+                    <option value="sosmed">Sosial media</option>
+                    <option value="wa">WhatsApp</option>
+                    <option value="langsung">Kontak langsung</option>
+                  </select>
+                </div>
+                <div class="field"><label>Tanggal input awal <span class="opt-pill">Otomatis</span></label><input type="date" id="f-entrydate"></div>
+                <div class="field"><label>Follow-up berikutnya <span class="opt-pill">Opsional</span></label><input type="date" id="f-followup"></div>
+              </div>
+              <div class="row4" style="margin-top:9px;">
+                <div class="field"><label>Admin sales <span class="opt-pill">Otomatis</span></label>
+                  <select id="f-admin" onchange="handleAdminSelectChange(this)"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">Kelompok produk</div>
+              <div class="row3" id="product-form-row3">
+                <div class="field"><label>Jenis produk <span class="req-pill">Wajib</span></label>
+                  <select id="f-product-type" class="f-req">
+                    <option value="smk3">SMK3</option>
+                    <option value="iso">ISO</option>
+                  </select>
+                </div>
+                <div class="field"><label>Harga penawaran (Rp) <span class="req-pill">Wajib</span></label><input type="number" id="f-product-penawaran" class="f-req" min="0" step="100000" placeholder="0"></div>
+                <div class="field"><label>Harga deal (Rp) <span class="opt-pill">Opsional</span></label><input type="number" id="f-product-deal" min="0" step="100000" placeholder="Isi kalau sudah closing" oninput="toggleLunasCheckboxVisibility()"></div>
+              </div>
+              <label for="f-product-lunas" id="product-lunas-wrap" style="display:none; align-items:center; gap:8px; margin-top:6px; margin-bottom:0; text-transform:none; font-weight:500; font-size:12.5px; color:var(--text); cursor:pointer;">
+                <input type="checkbox" id="f-product-lunas" style="width:auto; accent-color:var(--accent); cursor:pointer;">
+                Tandai sudah lunas (pelunasan penuh)
+              </label>
+              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
+                <button id="btn-product-cancel" onclick="cancelEditProduct()" style="display:none;">Batal edit</button>
+                <button class="primary" id="btn-product-submit" onclick="addProductLine()">+ Tambah produk</button>
+              </div>
+              <div class="product-list" id="product-list" style="margin-top:8px;"></div>
+              <div class="footnote">Harga penawaran jadi basis rencana omzet, harga deal jadi omzet realisasi di Overview. Satu lead bisa punya lebih dari satu produk.</div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">Tambah data percakapan</div>
+              <div class="row3">
+                <div class="field"><label>Tanggal percakapan <span class="req-pill">Wajib</span></label><input type="date" id="f-note-date" class="f-req"></div>
+                <div class="field"><label>Sumber percakapan <span class="req-pill">Wajib</span></label>
+                  <select id="f-note-channel" class="f-req">
+                    <option value="wa">Pesan WhatsApp</option>
+                    <option value="website">Pesan dari website</option>
+                    <option value="call">Catatan telepon</option>
+                    <option value="lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div class="field" style="display:flex; align-items:flex-end;">
+                  <div class="footnote" style="margin-top:0;">Tanggal ini yang dipakai di riwayat, bukan tanggal hari ini otomatis.</div>
+                </div>
+              </div>
+              <div class="field"><label>Laporan follow up <span class="req-pill">Wajib</span></label>
+              <textarea id="f-new-note" class="f-req" rows="2" placeholder="Isi pesan WA / pesan website / ringkasan telepon..."></textarea></div>
+              <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                <button class="primary" onclick="addFollowUpLog()">Update riwayat follow-up</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">History percakapan pesan</div>
+              <div class="height-pills">
+                <span class="height-pill" data-size="short" onclick="setChatLogHeight('short')">Short</span>
+                <span class="height-pill active" data-size="medium" onclick="setChatLogHeight('medium')">Medium</span>
+                <span class="height-pill" data-size="tall" onclick="setChatLogHeight('tall')">Tall</span>
+                <span class="height-pill" data-size="xtall" onclick="setChatLogHeight('xtall')">Extra tall</span>
+              </div>
+              <textarea id="f-chatlog" style="min-height:150px; height:150px;" placeholder="Tempel/ketik transkrip percakapan WA di sini, diupdate berkala..."></textarea>
+              <div class="footnote">Catatan bebas, bukan bagian dari riwayat follow-up yang terstruktur. Bisa di-resize manual juga lewat pojok kanan bawah.</div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">Riwayat follow-up</div>
+              <div class="history-scroll" id="history-list"></div>
+            </div>
+
+            <div class="form-actions">
+              <button class="danger-btn" id="btn-delete" onclick="deleteLead()">Hapus lead</button>
+              <button onclick="goBack()">Batal</button>
+              <button class="primary" onclick="saveLead()">Simpan lead</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RENCANA FOLLOW UP -->
+    <div class="view" id="view-followup">
+      <div class="topbar">
+        <div>
+          <div class="title">Rencana Follow Up</div>
+          <div class="subtitle">Kalender jadwal follow-up semua lead</div>
+        </div>
+      </div>
+
+      <div class="followup-layout">
+        <div class="calendar-panel">
+          <div class="calendar-head">
+            <button class="icon-btn" onclick="changeCalendarMonth(-1)" aria-label="Bulan sebelumnya">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="cal-month" id="cal-month-label" onclick="toggleMonthYearPicker()"></div>
+            <button class="icon-btn" onclick="changeCalendarMonth(1)" aria-label="Bulan berikutnya">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+          <div class="cal-monthyear-picker" id="cal-monthyear-picker">
+            <select id="cal-picker-month" onchange="applyMonthYearPicker()"></select>
+            <select id="cal-picker-year" onchange="applyMonthYearPicker()"></select>
+          </div>
+          <button class="cal-today-btn" onclick="goToToday()">Hari ini</button>
+          <div class="calendar-weekdays">
+            <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid"></div>
+          <div class="calendar-legend">
+            <span><span class="dot" style="background:var(--hot)"></span>Ada follow-up terjadwal</span>
+            <span><span class="dot" style="background:var(--surface); border:2px solid var(--accent);"></span>Hari ini</span>
+          </div>
+        </div>
+
+        <div class="followup-right-col">
+          <div class="panel" id="followup-list-panel">
+            <div class="panel-title" id="followup-list-title">Follow-up mendatang</div>
+            <div class="rowlist-header">
+              <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+            </div>
+            <div class="rowlist" id="followup-rowlist"></div>
+          </div>
+
+          <div class="leads-split" id="followup-split-wrap" style="display:none;">
+            <div class="split-list-col">
+              <div class="split-namelist" id="followup-split-namelist"></div>
+            </div>
+            <div class="split-form-col" id="followup-split-form-col"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG AKTIVITAS -->
+    <div class="view" id="view-activitylog">
+      <div class="topbar">
+        <div>
+          <div class="title">Log Aktivitas</div>
+          <div class="subtitle">Semua perubahan di semua lead, urut dari yang terbaru</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="rowlist" id="activitylog-rowlist"></div>
+      </div>
+    </div>
+
+    <!-- KELOLA PENGGUNA -->
+    <div class="view" id="view-users">
+      <div class="topbar">
+        <div>
+          <div class="title">Kelola Pengguna</div>
+          <div class="subtitle">Atur siapa yang bisa masuk workspace ini dan levelnya</div>
+        </div>
+        <button class="primary" onclick="openUserForm()">+ Tambah user</button>
+      </div>
+      <div class="panel">
+        <table class="admin-table">
+          <thead><tr><td>Nama</td><td>Email</td><td>Role</td><td>Status</td><td>Aksi</td></tr></thead>
+          <tbody id="users-table-body"></tbody>
+        </table>
+      </div>
+      <div class="dash-hint" style="margin-top:10px;">Ini masih simulasi tampilan (data reset kalau halaman di-refresh). Login beneran per-user baru aktif begitu masuk Supabase Auth.</div>
+    </div>
+
+    <!-- PERBANDINGAN KINERJA -->
+    <div class="view" id="view-comparison">
+      <div class="topbar">
+        <div>
+          <div class="title">Perbandingan Kinerja</div>
+          <div class="subtitle">Pilih 2 orang atau lebih buat disanding-sandingkan</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="focus-checklist" id="compare-picker-checklist" style="margin-bottom:0;"></div>
+        <div class="modal-actions" style="padding:0; margin-top:10px;">
+          <button class="primary" onclick="renderComparisonResult()">Bandingkan</button>
+        </div>
+      </div>
+      <div id="compare-result-wrap"></div>
+    </div>
+
+    <!-- MONITORING USER -->
+    <div class="view" id="view-monitoring">
+      <div class="topbar">
+        <div>
+          <div class="title">Monitoring User</div>
+          <div class="subtitle">Siapa lagi aktif, siapa cuma login diem aja</div>
+        </div>
+        <button class="icon-btn" onclick="renderMonitoringView()" aria-label="Refresh status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        </button>
+      </div>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-bottom:12px;">
+        <span><span class="status-dot active"></span>Aktif -- baru interaksi &lt;2 menit</span>
+        <span><span class="status-dot idle"></span>Diam -- login tapi gak megang &gt;2 menit</span>
+        <span><span class="status-dot offline"></span>Offline -- logout / gak ada tanda &gt;3 menit</span>
+      </div>
+      <div class="monitor-list" id="monitoring-list"></div>
+    </div>
+
+    <!-- STRUKTUR ORGANISASI -->
+    <div class="view" id="view-structure">
+      <div class="topbar">
+        <div>
+          <div class="title">Struktur Organisasi</div>
+          <div class="subtitle" id="structure-subtitle"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="struct-wrap" id="structure-tree"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="user-form-modal">
+  <div class="modal-card">
+    <div class="modal-title" id="user-form-title">Tambah user</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin:14px 0;">
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama</label>
+        <input type="text" id="uf-name" placeholder="Nama lengkap" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Email</label>
+        <input type="email" id="uf-email" placeholder="nama@saptamutu.com" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Role</label>
+        <select id="uf-role" onchange="onUserFormRoleChange()" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+          <option value="sales">Sales</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="super_admin">Super Admin</option>
+        </select>
+      </div>
+      <div id="uf-team-wrap" style="display:none;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Anggota tim (sales yang jadi tanggung jawabnya)</label>
+        <div id="uf-team-checklist" style="display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Kepala Cabang? (opsional, label doang - gak ngaruh ke akses data)</label>
+        <select id="uf-branch" onchange="handleBranchSelectChange(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
+      </div>
+      <div id="uf-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitUserForm()">Simpan</button>
+      <button onclick="closeUserForm()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="unsaved-modal">
+  <div class="modal-card">
+    <div class="modal-title">Anda melakukan perubahan, apakah mau simpan lead?</div>
+    <div class="modal-sub">Perubahan belum disimpan. Pilih salah satu sebelum meninggalkan halaman ini.</div>
+    <div class="modal-actions">
+      <button class="primary" onclick="unsavedModalSaveAndLeave()">Ya, simpan lead</button>
+      <button onclick="unsavedModalDiscardAndLeave()">Tidak, jangan simpan</button>
+      <button onclick="unsavedModalStay()">Periksa kembali</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="focus-filter-modal">
+  <div class="modal-card">
+    <div class="modal-title">Fokus tampilan</div>
+    <div class="modal-sub">Pilih siapa aja yang mau kamu lihat. Kosongkan semua buat balik lihat semua orang.</div>
+    <div class="focus-checklist" id="focus-filter-checklist"></div>
+    <div id="focus-filter-error" style="display:none; font-size:11.5px; color:var(--hot); margin-bottom:10px;"></div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitFocusFilter()">Terapkan</button>
+      <button onclick="clearMasterFocusFilter()">Reset (lihat semua)</button>
+      <button onclick="closeFocusFilterModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-fab-wrap">
+  <div class="mobile-fab-menu" id="mobile-fab-menu">
+    <div class="mobile-fab-item accent" onclick="openNewLeadForm(); closeMobileFab();">+ Tambah lead</div>
+    <div class="mobile-fab-item" onclick="switchView('overview'); closeMobileFab();">Overview</div>
+    <div class="mobile-fab-item" onclick="switchView('followup'); closeMobileFab();">Rencana Follow Up</div>
+    <div class="mobile-fab-item" onclick="switchView('activitylog'); closeMobileFab();">Log Aktivitas</div>
+    <div class="mobile-fab-item" onclick="goToFilter('all'); closeMobileFab();">Semua leads</div>
+    <div class="mobile-fab-item" onclick="goToFilter('cold'); closeMobileFab();"><span class="fdot" style="background:var(--cold)"></span>Cold</div>
+    <div class="mobile-fab-item" onclick="goToFilter('warm'); closeMobileFab();"><span class="fdot" style="background:var(--warm)"></span>Warm</div>
+    <div class="mobile-fab-item" onclick="goToFilter('hot'); closeMobileFab();"><span class="fdot" style="background:var(--hot)"></span>Hot</div>
+    <div class="mobile-fab-sep"></div>
+    <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah DP</div>
+    <div class="mobile-fab-item" onclick="goToFilter('overdue'); closeMobileFab();">Follow up telat</div>
+    <div class="mobile-fab-item" onclick="goToFilter('no-interaction'); closeMobileFab();">Belum ada interaksi</div>
+  </div>
+  <button class="mobile-fab-btn" id="mobile-fab-btn" onclick="toggleMobileFab()" aria-label="Buka menu">&#9776;</button>
+</div>
+
+<script>
+let leadsLoadedFromSupabase = false;
+function dbRowToLead(row){
+  return {
+    id: row.id,
+    company: row.company || '',
+    pic: row.pic || '',
+    address: row.address || '',
+    city: row.city || '',
+    province: row.province || '',
+    phone: row.phone || '',
+    email: row.email || '',
+    status: row.status || 'cold',
+    source: row.source || '',
+    followUp: row.follow_up || '',
+    admin: row.admin || '',
+    entryDate: row.entry_date || '',
+    chatLog: row.chat_log || '',
+    products: row.products || [],
+    history: row.history || [],
+    activityLog: []
+  };
+}
+function leadToDbRow(data){
+  return {
+    company: data.company,
+    pic: data.pic || null,
+    address: data.address || null,
+    city: data.city || null,
+    province: data.province || null,
+    phone: data.phone || null,
+    email: data.email || null,
+    status: data.status || 'cold',
+    source: data.source || null,
+    follow_up: data.followUp ? data.followUp : null,
+    admin: data.admin || null,
+    entry_date: data.entryDate ? data.entryDate : null,
+    chat_log: data.chatLog || null,
+    products: data.products || [],
+    history: data.history || []
+  };
+}
+function persistLeadFields(l, fields){
+  supabaseClient.from('leads').update(fields).eq('id', l.id).then(({error})=>{
+    if(error) showToast('Gagal simpan perubahan ke server: '+error.message);
+  });
+}
+
+async function fetchLeadsFromSupabase(){
+  const { data, error } = await supabaseClient.from('leads').select('*').order('id', {ascending:true});
+  if(error){
+    showToast('Gagal memuat data lead dari server: '+error.message);
+    leads = [];
+    leadsLoadedFromSupabase = false;
+    return;
+  }
+  leads = (data||[]).map(dbRowToLead);
+  leadsLoadedFromSupabase = true;
+}
+
+let leads = [];
+
+let nextId = 34;
+let currentFilter = "all";
+let currentEditId = null;
+let lastViewedId = null;
+let originView = "leads";
+let toastTimer = null;
+let editingProductId = null;
+let formDirty = false;
+let pendingLeaveAction = null;
+let calendarYear = new Date().getFullYear();
+let calendarMonth = new Date().getMonth();
+let calendarSelectedDate = null;
+let selectedLeadIds = new Set();
+const MONTH_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const AVATAR_COLORS = ["#7c5cff","#0d9488","#2563eb","#f0653b","#d6336c","#16a34a","#475569","#c9820a"];
+const CHANNEL_LABELS = {wa:"WhatsApp", website:"Website", call:"Telepon", lainnya:"Lainnya"};
+const SOURCE_LABELS = {website:"Website", sosmed:"Sosial media", wa:"WhatsApp", langsung:"Kontak langsung"};
+const PRODUCT_LABELS = {smk3:"SMK3", iso:"ISO"};
+const FIELD_CHANGE_LABELS = {company:'Nama perusahaan', address:'Alamat', city:'Kota', province:'Provinsi', pic:'PIC', phone:'No. telepon', email:'Email', source:'Sumber lead', admin:'Admin sales'};
+
+function avatarColor(str){
+  let sum=0; for(let i=0;i<str.length;i++) sum+=str.charCodeAt(i);
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+}
+function initials(name){
+  const clean = name.replace(/^-\s*\(PIC:\s*/,'').replace(/\)$/,'').replace(/^PT\.?\s*/i,'').replace(/^CV\.?\s*/i,'');
+  const parts = clean.trim().split(/\s+/).filter(Boolean);
+  if(!parts.length) return "?";
+  return (parts[0][0]+(parts[1]?parts[1][0]:'')).toUpperCase();
+}
+function todayIsoStr(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(iso){
+  if(!iso) return "-";
+  const d = new Date(iso+"T00:00:00");
+  const months = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  return d.getDate()+" "+months[d.getMonth()]+" "+d.getFullYear();
+}
+function formatRupiah(num){
+  const n = Number(num)||0;
+  return 'Rp ' + n.toLocaleString('id-ID');
+}
+function isOverdue(iso){
+  if(!iso) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(iso+"T00:00:00");
+  return d < today;
+}
+function daysOverdue(iso){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(iso+"T00:00:00");
+  return Math.round((today-d)/(1000*60*60*24));
+}
+function badge(status){
+  const label = status.charAt(0).toUpperCase()+status.slice(1);
+  return '<span class="badge '+status+'">'+label+'</span>';
+}
+function lastNote(lead){
+  if(!lead.history.length) return '<span style="color:var(--muted)">Belum ada catatan</span>';
+  return lead.history[lead.history.length-1].note;
+}
+function hasProduct(l){
+  return !!(l.products && l.products.length);
+}
+function hasDealProduct(l){
+  return !!(l.products && l.products.some(p=>p.hargaDeal>0));
+}
+function isDpLead(l){
+  return hasDealProduct(l);
+}
+function isLunasLead(l){
+  return !!(l.products && l.products.some(p=>p.lunas));
+}
+function isNoInteraction(l){
+  return !(l.history && l.history.length);
+}
+function isTrulyOverdue(l){
+  if(!l.followUp) return false;
+  return isOverdue(l.followUp);
+}
+const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah DP', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'has-product':'Rencana omzet', 'has-deal':'Omzet deal', lunas:'Sudah Lunas'};
+function matchesFilter(l, key){
+  switch(key){
+    case 'all': return true;
+    case 'cold': return l.status==='cold';
+    case 'warm': return l.status==='warm';
+    case 'hot': return l.status==='hot';
+    case 'dp': return isDpLead(l);
+    case 'overdue': return (l.status==='hot'||l.status==='warm') && isTrulyOverdue(l);
+    case 'no-interaction': return isNoInteraction(l);
+    case 'has-product': return hasProduct(l);
+    case 'has-deal': return hasDealProduct(l);
+    case 'lunas': return isLunasLead(l);
+    default: return true;
+  }
+}
+function joinNatural(arr){
+  if(arr.length <= 1) return arr.join('');
+  if(arr.length === 2) return arr[0]+' dan '+arr[1];
+  return arr.slice(0,-1).join(', ')+', dan '+arr[arr.length-1];
+}
+function productStatusPhrase(l){
+  const parts = (l.products||[]).filter(p=>p.hargaDeal>0).map(p=>{
+    const label = PRODUCT_LABELS[p.type]||p.type;
+    return (p.lunas ? 'sudah lunas '+label : 'masih DP '+label);
+  });
+  return joinNatural(parts);
+}
+function followUpChip(l){
+  const phrase = productStatusPhrase(l);
+  if(phrase) return '<span style="color:var(--success); font-weight:600;">'+phrase.charAt(0).toUpperCase()+phrase.slice(1)+'</span>';
+  if(!l.followUp) return '<span style="color:var(--muted)">Belum ada</span>';
+  if(isTrulyOverdue(l)) return '<span style="color:var(--hot); font-weight:600;">'+fmtDate(l.followUp)+'</span><div style="color:var(--hot); font-size:10.5px; font-weight:600; margin-top:1px;">Telat '+daysOverdue(l.followUp)+' hari</div>';
+  return '<span style="color:var(--text-2)">'+fmtDate(l.followUp)+'</span>';
+}
+function productTypesLabel(l){
+  const types = [...new Set((l.products||[]).map(p=>PRODUCT_LABELS[p.type]||p.type))];
+  return types.length ? types.join(', ') : '-';
+}
+
+function leadOwnerLabel(l){
+  if(!l.admin) return 'Belum ada admin';
+  const owner = userAccounts.find(u=>u.name===l.admin);
+  return owner ? (l.admin+' ('+roleLabelOf(owner.role)+')') : l.admin;
+}
+
+function leadRowHTML(l, showNote, selectable, idx){
+  const sub = [l.city, l.phone].filter(Boolean).join(' &middot; ') || 'Belum ada lokasi';
+  const isJust = l.id === lastViewedId;
+  const isChecked = !!(selectable && selectedLeadIds.has(l.id));
+  const selectCell = selectable ? `<div class="lead-select-cell${isChecked?' checked':''}" onclick="toggleLeadSelect(${l.id}, event)">${isChecked ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : idx}</div>` : '';
+  return `<div class="lead-row${selectable ? ' selectable' : ''}${isJust ? ' just-viewed' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
+    ${selectCell}
+    <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
+    <div class="lead-info">
+      <div class="lead-name">${l.company}<span class="just-tag">Baru dibuka</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span></div>
+      <div class="lead-sub">${sub}</div>
+      ${showNote ? '<div class="lead-note">'+lastNote(l)+'</div>' : ''}
+    </div>
+    <div class="lead-entrydate">${fmtDate(l.entryDate)}</div>
+    <span class="source-pill">${productTypesLabel(l)}</span>
+    ${badge(l.status)}
+    <div class="lead-followup">${followUpChip(l)}</div>
+    <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+  </div>`;
+}
+
+function isEditingContext(){
+  const leadsSplit = document.getElementById('leads-split-wrap');
+  const fuSplit = document.getElementById('followup-split-wrap');
+  const leadsVisible = leadsSplit && leadsSplit.style.display !== 'none';
+  const fuVisible = fuSplit && fuSplit.style.display !== 'none';
+  return !!(leadsVisible || fuVisible);
+}
+
+function markFormDirty(){
+  if(isEditingContext()) formDirty = true;
+}
+
+function guardLeave(action){
+  if(formDirty && isEditingContext()){
+    pendingLeaveAction = action;
+    document.getElementById('unsaved-modal').style.display = 'flex';
+  } else {
+    action();
+  }
+}
+
+function unsavedModalSaveAndLeave(){
+  saveLeadDataOnly();
+  document.getElementById('unsaved-modal').style.display = 'none';
+  const action = pendingLeaveAction;
+  pendingLeaveAction = null;
+  formDirty = false;
+  if(action) action();
+}
+
+function unsavedModalDiscardAndLeave(){
+  document.getElementById('unsaved-modal').style.display = 'none';
+  const action = pendingLeaveAction;
+  pendingLeaveAction = null;
+  formDirty = false;
+  if(action) action();
+}
+
+function unsavedModalStay(){
+  document.getElementById('unsaved-modal').style.display = 'none';
+  pendingLeaveAction = null;
+}
+
+function initDirtyTracking(){
+  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note'];
+  fieldIds.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){
+      el.addEventListener('input', markFormDirty);
+      el.addEventListener('change', markFormDirty);
+    }
+  });
+}
+
+window.addEventListener('beforeunload', function(e){
+  if(formDirty && isEditingContext()){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+function switchView(view, force){
+  if(!force && formDirty && isEditingContext()){
+    guardLeave(()=>switchView(view, true));
+    return;
+  }
+  exitSplitMode();
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.navsub').forEach(n=>n.classList.remove('active'));
+  const nav = document.querySelector('.navitem[data-view="'+view+'"]');
+  if(nav) nav.classList.add('active');
+  const navsubView = document.querySelector('.navsub[data-view="'+view+'"]');
+  if(navsubView) navsubView.classList.add('active');
+  if(view==='overview') renderOverview();
+  if(view==='leads') renderLeadsList();
+  if(view==='followup') renderCalendar();
+  if(view==='activitylog') renderActivityLogView();
+  if(view==='users') renderUsersView();
+  if(view==='comparison') renderComparisonView();
+  if(view==='monitoring') renderMonitoringView(); else stopMonitoringPoll();
+  if(view==='structure') renderStructureView();
+  sendHeartbeat(false);
+}
+
+let globalActivityLog = [];
+
+function logGlobalActivity(text, company){
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const changedBy = currentUser ? currentUser.name : '-';
+  globalActivityLog.push({leadId: null, company: company||'-', status: null, date: todayIsoStr(), time: timeStr, text, changedBy});
+  supabaseClient.from('activity_log').insert({
+    lead_id: null, company: company||'-', status: null,
+    log_date: todayIsoStr(), log_time: timeStr, note: text, changed_by: changedBy
+  }).then(({error})=>{ if(error) console.warn('Gagal simpan log ke server:', error.message); });
+}
+
+async function getAllActivityEntries(){
+  const { data, error } = await supabaseClient.from('activity_log').select('*').order('created_at', {ascending:false}).limit(500);
+  if(error){
+    console.warn('Gagal memuat log aktivitas dari server:', error.message);
+    return [];
+  }
+  return (data||[]).map(a=>({
+    leadId: a.lead_id, company: a.company || '-', status: a.status,
+    date: a.log_date, time: a.log_time, text: a.note, changedBy: a.changed_by || '-'
+  }));
+}
+
+async function renderActivityLogView(){
+  const rowlist = document.getElementById('activitylog-rowlist');
+  rowlist.innerHTML = '<div class="empty-note" style="text-align:center; padding:30px;">Memuat...</div>';
+  const list = await getAllActivityEntries();
+  const view = document.getElementById('view-activitylog');
+  if(!view || !view.classList.contains('active')) return;
+  document.getElementById('nav-activitylog-count').textContent = list.length || '';
+  rowlist.innerHTML = list.length ? list.map(a=>{
+    const clickable = a.leadId!==null;
+    return `<div class="activitylog-row" ${clickable ? 'onclick="openLeadForm('+a.leadId+')"' : 'style="cursor:default;"'}>
+      <div class="avatar" style="background:${avatarColor(a.company)}">${initials(a.company)}</div>
+      <div class="activitylog-info">
+        <div class="activitylog-company">${a.company}</div>
+        <div class="activitylog-text">${a.text}</div>
+        <div style="font-size:10px; color:var(--muted); margin-top:2px;">Diubah oleh: ${a.changedBy || '-'}</div>
+      </div>
+      <div class="activitylog-time">${fmtDate(a.date)}${a.time?' &middot; '+a.time:''}</div>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="text-align:center; padding:30px;">Belum ada aktivitas tercatat.</div>';
+}
+
+function changeCalendarMonth(delta){
+  calendarMonth += delta;
+  if(calendarMonth < 0){ calendarMonth = 11; calendarYear--; }
+  if(calendarMonth > 11){ calendarMonth = 0; calendarYear++; }
+  renderCalendar();
+}
+
+function goToToday(){
+  const now = new Date();
+  calendarYear = now.getFullYear();
+  calendarMonth = now.getMonth();
+  document.getElementById('cal-monthyear-picker').classList.remove('open');
+  renderCalendar();
+}
+
+function toggleMonthYearPicker(){
+  const panel = document.getElementById('cal-monthyear-picker');
+  if(panel.classList.contains('open')){
+    panel.classList.remove('open');
+  } else {
+    populateMonthYearPicker();
+    panel.classList.add('open');
+  }
+}
+
+function populateMonthYearPicker(){
+  const monthSel = document.getElementById('cal-picker-month');
+  monthSel.innerHTML = MONTH_NAMES.map((m,i)=>'<option value="'+i+'"'+(i===calendarMonth?' selected':'')+'>'+m+'</option>').join('');
+  const yearSel = document.getElementById('cal-picker-year');
+  const curYear = new Date().getFullYear();
+  const startY = curYear - 5, endY = curYear + 5;
+  let opts = '';
+  for(let y=startY; y<=endY; y++){
+    opts += '<option value="'+y+'"'+(y===calendarYear?' selected':'')+'>'+y+'</option>';
+  }
+  yearSel.innerHTML = opts;
+}
+
+function applyMonthYearPicker(){
+  calendarMonth = parseInt(document.getElementById('cal-picker-month').value, 10);
+  calendarYear = parseInt(document.getElementById('cal-picker-year').value, 10);
+  document.getElementById('cal-monthyear-picker').classList.remove('open');
+  renderCalendar();
+}
+
+function selectCalendarDate(dateStr){
+  calendarSelectedDate = (calendarSelectedDate === dateStr) ? null : dateStr;
+  renderCalendar();
+}
+
+function followupCountByDate(){
+  const map = {};
+  leads.filter(matchesQuickFilters).forEach(l=>{
+    if(l.followUp){
+      map[l.followUp] = (map[l.followUp]||0) + 1;
+    }
+  });
+  return map;
+}
+
+function renderCalendar(){
+  document.getElementById('cal-month-label').textContent = MONTH_NAMES[calendarMonth]+' '+calendarYear;
+  const counts = followupCountByDate();
+  const todayStr = todayIsoStr();
+
+  const firstOfMonth = new Date(calendarYear, calendarMonth, 1);
+  const startWeekday = firstOfMonth.getDay();
+  const daysInMonth = new Date(calendarYear, calendarMonth+1, 0).getDate();
+  const daysInPrevMonth = new Date(calendarYear, calendarMonth, 0).getDate();
+
+  let cells = [];
+  for(let i=startWeekday-1; i>=0; i--){
+    cells.push({day: daysInPrevMonth-i, other:true});
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    cells.push({day:d, other:false});
+  }
+  const remainder = cells.length % 7;
+  if(remainder !== 0){
+    const trailing = 7 - remainder;
+    for(let d=1; d<=trailing; d++){
+      cells.push({day:d, other:true});
+    }
+  }
+
+  document.getElementById('calendar-grid').innerHTML = cells.map(c=>{
+    if(c.other) return `<div class="cal-day other-month">${c.day}</div>`;
+    const mm = String(calendarMonth+1).padStart(2,'0');
+    const dd = String(c.day).padStart(2,'0');
+    const dateStr = calendarYear+'-'+mm+'-'+dd;
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === calendarSelectedDate;
+    const count = counts[dateStr] || 0;
+    return `<div class="cal-day${isToday?' today':''}${isSelected?' selected':''}" onclick="selectCalendarDate('${dateStr}')">
+      <span>${c.day}</span>
+      ${count ? '<div class="cal-dot-row">'+'<span class="cal-dot"></span>'.repeat(Math.min(count,3))+'</div>' : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('nav-followup-count').textContent = leads.filter(l=>l.followUp && matchesQuickFilters(l)).length || '';
+
+  renderFollowupList();
+  const fuSplitWrap = document.getElementById('followup-split-wrap');
+  if(fuSplitWrap && fuSplitWrap.style.display !== 'none'){
+    renderFollowupSplitNameList();
+  }
+}
+
+function getFollowupFilteredList(){
+  const scoped = leads.filter(matchesQuickFilters);
+  if(calendarSelectedDate){
+    return scoped.filter(l=>l.followUp===calendarSelectedDate);
+  }
+  return scoped.filter(l=>l.followUp).sort((a,b)=> new Date(a.followUp)-new Date(b.followUp));
+}
+
+function renderFollowupList(){
+  const list = getFollowupFilteredList();
+  const titleText = calendarSelectedDate
+    ? 'Follow-up tanggal '+fmtDate(calendarSelectedDate)+' ('+list.length+')'
+    : 'Semua follow-up terjadwal ('+list.length+')';
+  document.getElementById('followup-list-title').textContent = titleText;
+  document.getElementById('followup-rowlist').innerHTML = list.length ? list.map(l=>leadRowHTML(l,false)).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Tidak ada follow-up terjadwal'+(calendarSelectedDate?' di tanggal ini':'')+'.</div>';
+}
+
+function goToFilter(key){
+  guardLeave(()=>{
+    switchView('leads', true);
+    setFilter(key);
+  });
+}
+
+function toggleMobileFab(){
+  const menu = document.getElementById('mobile-fab-menu');
+  const btn = document.getElementById('mobile-fab-btn');
+  const isOpen = menu.classList.toggle('open');
+  btn.innerHTML = isOpen ? '&times;' : '&#9776;';
+}
+
+function closeMobileFab(){
+  document.getElementById('mobile-fab-menu').classList.remove('open');
+  document.getElementById('mobile-fab-btn').innerHTML = '&#9776;';
+}
+
+function placeLeadFormPanel(targetId){
+  const panel = document.querySelector('.lead-form-panel');
+  const target = document.getElementById(targetId);
+  if(panel && target && panel.parentElement !== target){
+    target.appendChild(panel);
+  }
+}
+
+function enterSplitMode(fullForm){
+  document.getElementById('leads-fulllist-wrap').style.display = 'none';
+  const wrap = document.getElementById('leads-split-wrap');
+  wrap.style.display = 'grid';
+  wrap.classList.toggle('full-form', !!fullForm);
+  placeLeadFormPanel('leads-split-form-col');
+  renderSplitNameList();
+}
+
+function enterFollowupSplitMode(){
+  document.getElementById('followup-list-panel').style.display = 'none';
+  document.getElementById('followup-split-wrap').style.display = 'grid';
+  placeLeadFormPanel('followup-split-form-col');
+  renderFollowupSplitNameList();
+}
+
+function renderFollowupSplitNameList(){
+  const list = getFollowupFilteredList();
+  document.getElementById('followup-split-namelist').innerHTML = list.length ? list.map(l=>{
+    const isActive = l.id === currentEditId;
+    return `<div class="split-name-item${isActive?' active':''}" onclick="openLeadForm(${l.id})">
+      <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
+      <span class="sn-name">${l.company}</span>
+      <span class="split-status-dot" style="background:var(--${l.status})"></span>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="padding:10px;">Tidak ada follow-up terjadwal</div>';
+}
+
+function exitSplitMode(){
+  const wrap = document.getElementById('leads-split-wrap');
+  const full = document.getElementById('leads-fulllist-wrap');
+  if(wrap) wrap.style.display = 'none';
+  if(full) full.style.display = 'block';
+  const fuWrap = document.getElementById('followup-split-wrap');
+  const fuList = document.getElementById('followup-list-panel');
+  if(fuWrap) fuWrap.style.display = 'none';
+  if(fuList) fuList.style.display = 'block';
+}
+
+function refreshLeadsListing(){
+  renderLeadsList();
+  if(document.getElementById('leads-split-wrap').style.display !== 'none'){
+    renderSplitNameList();
+  }
+}
+
+function renderSplitNameList(){
+  const term = document.getElementById('search-input').value.toLowerCase();
+  const filtered = leads.filter(l=>{
+    const matchStatus = matchesFilter(l, currentFilter);
+    const matchTerm = l.company.toLowerCase().includes(term) || (l.pic||'').toLowerCase().includes(term);
+    return matchStatus && matchTerm;
+  });
+  filtered.sort((a,b)=> new Date(b.entryDate||'1970-01-01') - new Date(a.entryDate||'1970-01-01'));
+  document.getElementById('split-namelist').innerHTML = filtered.length ? filtered.map(l=>{
+    const isActive = l.id === currentEditId;
+    return `<div class="split-name-item${isActive?' active':''}" onclick="openLeadForm(${l.id})">
+      <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
+      <span class="sn-name">${l.company}</span>
+      <span class="split-status-dot" style="background:var(--${l.status})"></span>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="padding:10px;">Tidak ada lead yang cocok</div>';
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.innerHTML = '<span class="tdot"></span>'+msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.classList.remove('show'); }, 3800);
+}
+
+function goBack(action, force){
+  if(!force && formDirty && isEditingContext()){
+    guardLeave(()=>goBack(action, true));
+    return;
+  }
+  action = action || 'view';
+  const lead = lastViewedId!==null ? leads.find(x=>x.id===lastViewedId) : null;
+  switchView(originView, true);
+  if(lead){
+    setTimeout(()=>{
+      const row = document.getElementById('lead-row-'+lead.id);
+      if(row){
+        row.scrollIntoView({block:'center', behavior:'smooth'});
+        row.classList.add('just-pulse');
+        setTimeout(()=>row.classList.remove('just-pulse'), 2600);
+      }
+      showToast((action==='saved' ? 'Tersimpan: ' : 'Kembali ke: ')+lead.company);
+    }, 60);
+  }
+}
+
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+const PERIOD_LABELS = {minggu:'Minggu', bulan:'Bulan', enam_bulan:'6 Bulan', tahun:'Tahun', lima_tahun:'5 Tahun'};
+const STATUS_META = {hot:{label:'Hot'}, warm:{label:'Warm'}, cold:{label:'Cold'}, closing:{label:'Closing rate'}};
+const STATUS_COLORS = {hot:'#e3436b', warm:'#c9820a', cold:'#6b7280', closing:'#1a9a6c'};
+
+let growthChartInstance = null;
+let omzetChartInstance = null;
+let produkChartInstance = null;
+let growthPeriod = 'bulan';
+let omzetPeriod = 'bulan';
+let growthActiveStatus = {hot:true, warm:true, cold:true, closing:true};
+
+function getPeriodBuckets(key){
+  const now = new Date(); now.setHours(0,0,0,0);
+  const buckets = [];
+  if(key==='minggu'){
+    const day = now.getDay();
+    const diffToMonday = (day===0 ? -6 : 1-day);
+    const thisMonday = new Date(now); thisMonday.setDate(now.getDate()+diffToMonday);
+    for(let i=7;i>=0;i--){
+      const start = new Date(thisMonday); start.setDate(thisMonday.getDate()-7*i);
+      const end = new Date(start); end.setDate(start.getDate()+7);
+      buckets.push({label:String(start.getDate()).padStart(2,'0')+'/'+String(start.getMonth()+1).padStart(2,'0'), start, end});
+    }
+  } else if(key==='bulan'){
+    for(let i=5;i>=0;i--){
+      const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      const end = new Date(d.getFullYear(), d.getMonth()+1, 1);
+      buckets.push({label:MONTH_SHORT[d.getMonth()]+' '+String(d.getFullYear()).slice(2), start:d, end});
+    }
+  } else if(key==='enam_bulan'){
+    const curHalf = Math.floor(now.getMonth()/6);
+    for(let i=4;i>=0;i--){
+      let half = curHalf - i;
+      let year = now.getFullYear();
+      while(half<0){ half += 2; year--; }
+      const startMonth = half*6;
+      const start = new Date(year, startMonth, 1);
+      const end = new Date(year, startMonth+6, 1);
+      buckets.push({label:(half===0?'H1':'H2')+' '+String(year).slice(2), start, end});
+    }
+  } else if(key==='tahun'){
+    for(let i=4;i>=0;i--){
+      const y = now.getFullYear()-i;
+      buckets.push({label:String(y), start:new Date(y,0,1), end:new Date(y+1,0,1)});
+    }
+  } else if(key==='lima_tahun'){
+    for(let i=2;i>=0;i--){
+      const endYear = now.getFullYear()-(i*5);
+      const startYear = endYear-4;
+      buckets.push({label:"'"+String(startYear).slice(2)+"-'"+String(endYear).slice(2), start:new Date(startYear,0,1), end:new Date(endYear+1,0,1)});
+    }
+  }
+  return buckets;
+}
+
+function computeGrowthSeries(key, sourceLeads){
+  const src = sourceLeads || leads;
+  const buckets = getPeriodBuckets(key);
+  const hot=[],warm=[],cold=[],closing=[];
+  buckets.forEach(b=>{
+    const inBucket = src.filter(l=>{
+      if(!l.entryDate) return false;
+      const d = new Date(l.entryDate+"T00:00:00");
+      return d>=b.start && d<b.end;
+    });
+    hot.push(inBucket.filter(l=>l.status==='hot').length);
+    warm.push(inBucket.filter(l=>l.status==='warm').length);
+    cold.push(inBucket.filter(l=>l.status==='cold').length);
+    const closed = inBucket.filter(isDpLead).length;
+    closing.push(inBucket.length ? Math.round(closed/inBucket.length*100) : 0);
+  });
+  return {labels:buckets.map(b=>b.label), hot, warm, cold, closing};
+}
+
+function computeOmzetSeries(key, sourceLeads){
+  const src = sourceLeads || leads;
+  const buckets = getPeriodBuckets(key);
+  const values = buckets.map(b=>{
+    return src.reduce((sum,l)=>{
+      if(!l.entryDate) return sum;
+      const d = new Date(l.entryDate+"T00:00:00");
+      if(d<b.start || d>=b.end) return sum;
+      return sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0);
+    },0);
+  });
+  return {labels:buckets.map(b=>b.label), values};
+}
+
+function computeProductMix(sourceLeads){
+  const src = sourceLeads || leads;
+  let smk3=0, iso=0;
+  src.forEach(l=>{
+    (l.products||[]).forEach(p=>{
+      if(p.hargaDeal>0){
+        if(p.type==='smk3') smk3++;
+        else if(p.type==='iso') iso++;
+      }
+    });
+  });
+  return {smk3, iso};
+}
+
+function computeAdminPerformance(sourceLeads){
+  const src = sourceLeads || leads;
+  const names = [...new Set(src.map(l=>l.admin).filter(Boolean))];
+  return names.map(name=>{
+    const own = src.filter(l=>l.admin===name);
+    const dpCount = own.filter(isDpLead).length;
+    const omzet = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+    return {name, leadCount:own.length, dpCount, omzet};
+  }).sort((a,b)=> b.omzet - a.omzet);
+}
+
+function computeSalesBadgeTiers(){
+  const perf = computeAdminPerformance(leads).filter(p=>p.omzet>0);
+  const tiers = {};
+  const order = ['gold','silver','bronze'];
+  perf.slice(0,3).forEach((p,i)=>{ tiers[p.name] = order[i]; });
+  return tiers;
+}
+
+function salesBadgeHTML(name){
+  const tier = computeSalesBadgeTiers()[name];
+  if(!tier) return '';
+  const label = tier==='gold' ? 'Top sales' : (tier==='silver' ? 'Sales unggulan' : 'Sales potensial');
+  return '<span class="perf-badge '+tier+'">'+label+'</span>';
+}
+
+function getComparableUserList(){
+  if(!currentUser) return [];
+  if(currentUser.role==='master_admin'){
+    return userAccounts.filter(u=>u.status==='active');
+  }
+  if(currentUser.role==='super_admin'){
+    return userAccounts.filter(u=>u.status==='active' && u.role!=='master_admin');
+  }
+  if(currentUser.role==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : [];
+    return userAccounts.filter(u=>u.status==='active' && team.includes(u.name));
+  }
+  return [];
+}
+
+function renderComparisonView(){
+  const wrap = document.getElementById('compare-picker-checklist');
+  if(!wrap) return;
+  const people = getComparableUserList();
+  wrap.innerHTML = people.length ? people.map(u=>
+    '<label><input type="checkbox" value="'+u.name+'" class="compare-pick-cb">'+u.name+' ('+roleLabelOf(u.role)+')</label>'
+  ).join('') : '<div style="font-size:12px; color:var(--muted);">Belum ada orang buat dibandingkan.</div>';
+  const resultWrap = document.getElementById('compare-result-wrap');
+  if(resultWrap) resultWrap.innerHTML = '';
+}
+
+async function renderComparisonResult(){
+  const checks = document.querySelectorAll('#compare-picker-checklist input:checked');
+  const names = Array.from(checks).map(c=>c.value);
+  const resultWrap = document.getElementById('compare-result-wrap');
+  if(names.length < 2){
+    resultWrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:20px;">Pilih minimal 2 orang buat dibandingkan.</div>';
+    return;
+  }
+  resultWrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:20px;">Memuat...</div>';
+  const { data: photoRows } = await supabaseClient.from('profiles').select('name, photo_url');
+  const photoMap = {};
+  (photoRows||[]).forEach(r=>{ photoMap[r.name] = r.photo_url; });
+  const perf = computeAdminPerformance(leads);
+  const tiers = computeSalesBadgeTiers();
+  resultWrap.innerHTML = '<div class="compare-grid">' + names.map(name=>{
+    const own = leads.filter(l=>l.admin===name);
+    const cold = own.filter(l=>l.status==='cold').length;
+    const warm = own.filter(l=>l.status==='warm').length;
+    const hot = own.filter(l=>l.status==='hot').length;
+    const p = perf.find(x=>x.name===name) || {leadCount:0, dpCount:0, omzet:0};
+    const closingRate = p.leadCount ? ((p.dpCount/p.leadCount)*100).toFixed(1) : '0.0';
+    const user = userAccounts.find(u=>u.name===name);
+    const tierBadge = tiers[name] ? salesBadgeHTML(name) : '';
+    return '<div class="compare-card">'
+      + '<div class="compare-photo">'+personAvatarHTML(name, photoMap[name], 64)+'</div>'
+      + '<div class="compare-name"><span>'+name+'</span>'+(user?' <span class="role-badge '+user.role+'">'+roleLabelOf(user.role)+'</span>':'')+tierBadge+'</div>'
+      + '<div class="compare-stats-grid">'
+        + '<div class="compare-stat"><div class="cs-label">Total lead</div><div class="cs-value">'+p.leadCount+'</div></div>'
+        + '<div class="compare-stat"><div class="cs-label">Closing rate</div><div class="cs-value">'+closingRate+'%</div></div>'
+        + '<div class="compare-stat"><div class="cs-label">Cold</div><div class="cs-value">'+cold+'</div></div>'
+        + '<div class="compare-stat"><div class="cs-label">Warm</div><div class="cs-value">'+warm+'</div></div>'
+        + '<div class="compare-stat"><div class="cs-label">Hot</div><div class="cs-value">'+hot+'</div></div>'
+        + '<div class="compare-stat"><div class="cs-label">Sudah DP</div><div class="cs-value">'+p.dpCount+'</div></div>'
+        + '<div class="compare-stat" style="grid-column:1 / -1;"><div class="cs-label">Omzet closed</div><div class="cs-value">'+formatRupiah(p.omzet)+'</div></div>'
+      + '</div>'
+    + '</div>';
+  }).join('') + '</div>';
+}
+
+function structNodeHTML(u, tag){
+  return '<div class="struct-node '+u.role+'">'
+    + '<div class="struct-name">'+u.name+(tag?' <span class="struct-tag">'+tag+'</span>':'')+'</div>'
+    + '<div class="struct-role">'+roleLabelOf(u.role)+'</div>'
+  + '</div>';
+}
+
+function renderStructureView(){
+  const wrap = document.getElementById('structure-tree');
+  const subtitleEl = document.getElementById('structure-subtitle');
+  if(!wrap) return;
+  const role = currentUser ? currentUser.role : null;
+  const master = userAccounts.find(u=>u.role==='master_admin' && u.status==='active');
+  const superAdmins = userAccounts.filter(u=>u.role==='super_admin' && u.status==='active');
+  const supervisors = userAccounts.filter(u=>u.role==='supervisor' && u.status==='active');
+  const salesUsers = userAccounts.filter(u=>u.role==='sales' && u.status==='active');
+
+  let html = '';
+  let subtitle = '';
+
+  if(role==='master_admin' || role==='super_admin'){
+    subtitle = role==='master_admin' ? 'Kamu bisa lihat semua orang di struktur ini.' : 'Kamu bisa lihat semua orang di bawah Master Admin.';
+    if(role==='master_admin' && master){
+      html += '<div class="struct-tier">'+structNodeHTML(master)+'</div><div class="struct-connector"></div>';
+    }
+    if(superAdmins.length){
+      html += '<div class="struct-tier">'+superAdmins.map(u=>structNodeHTML(u)).join('')+'</div><div class="struct-connector"></div>';
+    }
+    const assignedNames = new Set();
+    supervisors.forEach(sp=> (sp.team||[]).forEach(n=>assignedNames.add(n)));
+    const orphanSales = salesUsers.filter(s=>!assignedNames.has(s.name));
+    html += '<div class="struct-groups">';
+    supervisors.forEach(sp=>{
+      const teamMembers = salesUsers.filter(s=> (sp.team||[]).includes(s.name));
+      const branchTag = (sp.branch && BRANCH_DEFINITIONS[sp.branch]) ? ('Kepala '+BRANCH_DEFINITIONS[sp.branch].label) : '';
+      html += '<div class="struct-group">'+structNodeHTML(sp, branchTag)
+        + (teamMembers.length ? '<div class="struct-team">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>' : '<div class="struct-team-empty">Belum ada anggota tim</div>')
+      + '</div>';
+    });
+    if(orphanSales.length){
+      html += '<div class="struct-group"><div class="struct-team-label">Belum ada SPV</div><div class="struct-team" style="margin-top:0; padding-top:0; border-top:none;">'+orphanSales.map(s=>structNodeHTML(s)).join('')+'</div></div>';
+    }
+    html += '</div>';
+    if(!supervisors.length && !orphanSales.length) html += '<div class="empty-note" style="margin-top:14px;">Belum ada Supervisor atau Sales terdaftar.</div>';
+  } else if(role==='supervisor'){
+    subtitle = 'Kamu cuma bisa lihat dirimu dan anggota tim kamu sendiri.';
+    const me = userAccounts.find(u=>u.name===currentUser.name && u.role==='supervisor');
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : ((me && me.team) ? me.team : []);
+    const teamMembers = salesUsers.filter(s=> team.includes(s.name));
+    html += '<div class="struct-tier">'+(me ? structNodeHTML(me,'Kamu') : '')+'</div>';
+    html += '<div class="struct-connector"></div>';
+    html += teamMembers.length
+      ? '<div class="struct-team" style="margin:0 auto; border-top:none; padding-top:0;">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>'
+      : '<div class="struct-team-empty" style="border-top:none;">Belum ada anggota tim</div>';
+  } else if(role==='sales'){
+    subtitle = 'Kamu cuma tau siapa Supervisor kamu.';
+    const mySupervisor = supervisors.find(sp=> (sp.team||[]).includes(currentUser.name));
+    if(mySupervisor){
+      html += '<div class="struct-tier">'+structNodeHTML(mySupervisor)+'</div><div class="struct-connector"></div>';
+    } else {
+      html += '<div class="empty-note" style="margin-bottom:14px;">Belum ada Supervisor yang ditugaskan buat kamu.</div>';
+    }
+    const meUser = salesUsers.find(s=>s.name===currentUser.name) || {name:currentUser.name, role:'sales'};
+    html += '<div class="struct-tier">'+structNodeHTML(meUser,'Kamu')+'</div>';
+  } else {
+    subtitle = '';
+    html = '<div class="empty-note">Belum login.</div>';
+  }
+
+  if(subtitleEl) subtitleEl.textContent = subtitle;
+  wrap.innerHTML = html;
+}
+
+function buildPeriodToggle(containerId, activeKey, onSelect){
+  const wrap = document.getElementById(containerId);
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  Object.keys(PERIOD_LABELS).forEach(key=>{
+    const btn = document.createElement('button');
+    btn.textContent = PERIOD_LABELS[key];
+    btn.className = key===activeKey ? 'active' : '';
+    btn.onclick = ()=> onSelect(key);
+    wrap.appendChild(btn);
+  });
+}
+
+function paintStatusToggle(){
+  const wrap = document.getElementById('growth-status-toggle');
+  if(!wrap) return;
+  [...wrap.children].forEach(p=>{
+    const key = p.dataset.key;
+    const on = growthActiveStatus[key];
+    const color = STATUS_COLORS[key];
+    p.style.borderColor = on ? color : 'var(--border)';
+    p.style.color = on ? color : 'var(--muted)';
+    p.style.background = on ? color+'1a' : 'transparent';
+  });
+}
+
+function buildStatusToggle(){
+  const wrap = document.getElementById('growth-status-toggle');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  Object.keys(STATUS_META).forEach(key=>{
+    const pill = document.createElement('span');
+    pill.textContent = STATUS_META[key].label;
+    pill.dataset.key = key;
+    pill.onclick = ()=>{
+      growthActiveStatus[key] = !growthActiveStatus[key];
+      paintStatusToggle();
+      renderGrowthChart();
+    };
+    wrap.appendChild(pill);
+  });
+  paintStatusToggle();
+}
+
+function renderGrowthChart(){
+  const d = computeGrowthSeries(growthPeriod, getOverviewScopedLeads());
+  const ctx = document.getElementById('growth-chart');
+  if(!ctx) return;
+  if(growthChartInstance){
+    growthChartInstance.data.labels = d.labels;
+    growthChartInstance.data.datasets[0].data = d.hot;
+    growthChartInstance.data.datasets[1].data = d.warm;
+    growthChartInstance.data.datasets[2].data = d.cold;
+    growthChartInstance.data.datasets[3].data = d.closing;
+    ['hot','warm','cold','closing'].forEach((key,i)=>{ growthChartInstance.data.datasets[i].hidden = !growthActiveStatus[key]; });
+    growthChartInstance.update();
+  } else {
+    growthChartInstance = new Chart(ctx, {
+      data:{
+        labels:d.labels,
+        datasets:[
+          {type:'line', label:'Hot', data:d.hot, borderColor:STATUS_COLORS.hot, backgroundColor:STATUS_COLORS.hot, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.hot},
+          {type:'line', label:'Warm', data:d.warm, borderColor:STATUS_COLORS.warm, backgroundColor:STATUS_COLORS.warm, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.warm},
+          {type:'line', label:'Cold', data:d.cold, borderColor:STATUS_COLORS.cold, backgroundColor:STATUS_COLORS.cold, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.cold},
+          {type:'line', label:'Closing rate', data:d.closing, borderColor:STATUS_COLORS.closing, backgroundColor:STATUS_COLORS.closing, borderDash:[5,4], tension:0.4, pointRadius:3, yAxisID:'y1', hidden:!growthActiveStatus.closing}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{beginAtZero:true, grid:{color:'#eeecf5'}, ticks:{color:'#a3a0b3', font:{size:10.5}}},
+          y1:{beginAtZero:true, position:'right', grid:{display:false}, ticks:{color:'#a3a0b3', font:{size:10.5}, callback:v=>v+'%'}},
+          x:{grid:{display:false}, ticks:{color:'#a3a0b3', font:{size:10.5}}}
+        }
+      }
+    });
+  }
+}
+
+function setGrowthPeriod(key){
+  growthPeriod = key;
+  buildPeriodToggle('growth-period-toggle', growthPeriod, setGrowthPeriod);
+  renderGrowthChart();
+}
+
+function renderOmzetChart(){
+  const d = computeOmzetSeries(omzetPeriod, getOverviewScopedLeads());
+  const valuesJt = d.values.map(v=> Math.round(v/1000000));
+  const ctx = document.getElementById('omzet-chart');
+  if(!ctx) return;
+  if(omzetChartInstance){
+    omzetChartInstance.data.labels = d.labels;
+    omzetChartInstance.data.datasets[0].data = valuesJt;
+    omzetChartInstance.update();
+  } else {
+    omzetChartInstance = new Chart(ctx, {
+      type:'bar',
+      data:{labels:d.labels, datasets:[{data:valuesJt, backgroundColor:'#7c5cff', borderRadius:6, maxBarThickness:34}]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=> 'Rp '+c.parsed.y+' jt'}}},
+        scales:{
+          y:{display:false, beginAtZero:true},
+          x:{grid:{display:false}, ticks:{color:'#a3a0b3', font:{size:10.5}}}
+        }
+      }
+    });
+  }
+}
+
+function setOmzetPeriod(key){
+  omzetPeriod = key;
+  buildPeriodToggle('omzet-period-toggle', omzetPeriod, setOmzetPeriod);
+  renderOmzetChart();
+}
+
+function renderProductChart(){
+  const mix = computeProductMix(getOverviewScopedLeads());
+  const ctx = document.getElementById('produk-chart');
+  if(!ctx) return;
+  const total = mix.smk3+mix.iso;
+  const legend = document.getElementById('produk-legend');
+  if(legend){
+    legend.innerHTML = total ? (
+      '<span><span class="dot" style="background:#7c5cff;"></span>SMK3 ('+mix.smk3+')</span>'+
+      '<span><span class="dot" style="background:#c9820a;"></span>ISO ('+mix.iso+')</span>'
+    ) : '<span style="color:var(--muted);">Belum ada produk deal</span>';
+  }
+  if(produkChartInstance){
+    produkChartInstance.data.datasets[0].data = [mix.smk3, mix.iso];
+    produkChartInstance.update();
+  } else {
+    produkChartInstance = new Chart(ctx, {
+      type:'doughnut',
+      data:{labels:['SMK3','ISO'], datasets:[{data:[mix.smk3||0, mix.iso||0], backgroundColor:['#7c5cff','#c9820a'], borderWidth:0}]},
+      options:{responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{display:false}}}
+    });
+  }
+}
+
+function renderAdminPerformanceTable(){
+  const rows = computeAdminPerformance(getOverviewScopedLeads());
+  const initialsOf = (name)=> name.split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const body = document.getElementById('admin-performance-body');
+  if(!body) return;
+  body.innerHTML = rows.length ? rows.map(r=>
+    '<tr><td><span class="admin-name"><span class="admin-avatar" style="background:'+avatarColor(r.name)+'22; color:'+avatarColor(r.name)+';">'+initialsOf(r.name)+'</span>'+r.name+salesBadgeHTML(r.name)+'</span></td>'+
+    '<td>'+r.leadCount+'</td><td>'+r.dpCount+'</td><td class="admin-omzet">'+formatRupiah(r.omzet)+'</td></tr>'
+  ).join('') : '<tr><td colspan="4" style="color:var(--muted); padding:14px 6px;">Belum ada data admin</td></tr>';
+}
+
+const OVERVIEW_SECTIONS = {
+  kpi:'Ringkasan KPI',
+  temp:'Status Cold / Warm / Hot',
+  growth:'Pertumbuhan leads & closing rate',
+  omzet:'Chart omzet deal',
+  produk:'Komposisi produk',
+  admin:'Performa admin sales',
+  actionlist:'Leads hot & warm - butuh aksi'
+};
+let overviewSectionVisibility = {kpi:true, temp:true, growth:true, omzet:true, produk:true, admin:true, actionlist:true};
+let overviewSectionOrder = ['kpi','temp','growth','omzet','produk','admin','actionlist'];
+
+function applyOverviewSectionVisibility(){
+  Object.keys(OVERVIEW_SECTIONS).forEach(key=>{
+    const el = document.getElementById('section-'+key);
+    if(el) el.style.display = overviewSectionVisibility[key] ? '' : 'none';
+  });
+}
+
+function applyOverviewSectionOrder(){
+  const first = document.getElementById('section-'+overviewSectionOrder[0]);
+  if(!first) return;
+  const parent = first.parentElement;
+  overviewSectionOrder.forEach(key=>{
+    const el = document.getElementById('section-'+key);
+    if(el) parent.appendChild(el);
+  });
+  updateReorderBarStates();
+}
+
+function toggleOverviewSection(key){
+  overviewSectionVisibility[key] = !overviewSectionVisibility[key];
+  applyOverviewSectionVisibility();
+}
+
+function moveOverviewSection(key, dir, evt){
+  if(evt) evt.stopPropagation();
+  const i = overviewSectionOrder.indexOf(key);
+  const j = i + dir;
+  if(j<0 || j>=overviewSectionOrder.length) return;
+  [overviewSectionOrder[i], overviewSectionOrder[j]] = [overviewSectionOrder[j], overviewSectionOrder[i]];
+  applyOverviewSectionOrder();
+  renderOverviewSettingsPopover();
+}
+
+function hideOverviewSection(key){
+  overviewSectionVisibility[key] = false;
+  applyOverviewSectionVisibility();
+  renderOverviewSettingsPopover();
+}
+
+let draggedOverviewSectionKey = null;
+
+function reorderOverviewSection(sourceKey, targetKey){
+  if(sourceKey===targetKey) return;
+  const from = overviewSectionOrder.indexOf(sourceKey);
+  const to = overviewSectionOrder.indexOf(targetKey);
+  if(from<0 || to<0) return;
+  overviewSectionOrder.splice(from,1);
+  overviewSectionOrder.splice(to,0,sourceKey);
+  applyOverviewSectionOrder();
+}
+
+function renderOverviewSettingsPopover(){
+  const pop = document.getElementById('overview-settings-popover');
+  if(!pop) return;
+  pop.innerHTML = '<div class="ospop-title">Tampilkan &amp; urutkan overview</div>' + overviewSectionOrder.map((key,i)=>{
+    const isFirst = i===0, isLast = i===overviewSectionOrder.length-1;
+    return '<div class="ospop-item">'+
+      '<input type="checkbox" '+(overviewSectionVisibility[key]?'checked':'')+' onclick="toggleOverviewSection(\''+key+'\')">'+
+      '<span style="flex:1;">'+OVERVIEW_SECTIONS[key]+'</span>'+
+      '<button class="ospop-move" onclick="moveOverviewSection(\''+key+'\',-1,event)" '+(isFirst?'disabled':'')+' aria-label="Naikkan">&#9650;</button>'+
+      '<button class="ospop-move" onclick="moveOverviewSection(\''+key+'\',1,event)" '+(isLast?'disabled':'')+' aria-label="Turunkan">&#9660;</button>'+
+    '</div>';
+  }).join('');
+}
+
+function initOverviewReorderBars(){
+  Object.keys(OVERVIEW_SECTIONS).forEach(key=>{
+    const section = document.getElementById('section-'+key);
+    if(!section) return;
+    if(!section.querySelector(':scope > .section-reorder-bar')){
+      const bar = document.createElement('div');
+      bar.className = 'section-reorder-bar';
+      bar.innerHTML = '<button class="section-move-btn section-move-up" onclick="moveOverviewSection(\''+key+'\',-1,event)" aria-label="Naikkan posisi">&#9650;</button>'+
+        '<button class="section-move-btn section-move-down" onclick="moveOverviewSection(\''+key+'\',1,event)" aria-label="Turunkan posisi">&#9660;</button>'+
+        '<span class="drag-handle" draggable="true" aria-label="Geser buat urutkan">&#8942;&#8942;</span>'+
+        '<button class="section-close-btn" onclick="hideOverviewSection(\''+key+'\')" aria-label="Sembunyikan section">&times;</button>';
+      section.insertBefore(bar, section.firstChild);
+    }
+    section.dataset.sectionKey = key;
+    const handle = section.querySelector(':scope > .section-reorder-bar .drag-handle');
+    handle.ondragstart = function(e){
+      draggedOverviewSectionKey = key;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', key);
+      section.classList.add('section-dragging');
+    };
+    handle.ondragend = function(){
+      section.classList.remove('section-dragging');
+      document.querySelectorAll('.section-drag-over').forEach(el=>el.classList.remove('section-drag-over'));
+      draggedOverviewSectionKey = null;
+    };
+    section.ondragover = function(e){
+      if(!draggedOverviewSectionKey || draggedOverviewSectionKey===key) return;
+      e.preventDefault();
+      section.classList.add('section-drag-over');
+    };
+    section.ondragleave = function(){
+      section.classList.remove('section-drag-over');
+    };
+    section.ondrop = function(e){
+      e.preventDefault();
+      section.classList.remove('section-drag-over');
+      if(draggedOverviewSectionKey) reorderOverviewSection(draggedOverviewSectionKey, key);
+    };
+  });
+  updateReorderBarStates();
+}
+
+function updateReorderBarStates(){
+  overviewSectionOrder.forEach((key,i)=>{
+    const section = document.getElementById('section-'+key);
+    if(!section) return;
+    const bar = section.querySelector(':scope > .section-reorder-bar');
+    if(!bar) return;
+    const upBtn = bar.querySelector('.section-move-up');
+    const downBtn = bar.querySelector('.section-move-down');
+    if(upBtn) upBtn.disabled = i===0;
+    if(downBtn) downBtn.disabled = i===overviewSectionOrder.length-1;
+  });
+}
+
+function toggleOverviewSettings(){
+  const pop = document.getElementById('overview-settings-popover');
+  if(!pop) return;
+  const willOpen = pop.style.display === 'none';
+  if(willOpen) renderOverviewSettingsPopover();
+  pop.style.display = willOpen ? 'block' : 'none';
+}
+
+document.addEventListener('click', function(e){
+  const pop = document.getElementById('overview-settings-popover');
+  if(!pop || pop.style.display === 'none') return;
+  if(pop.contains(e.target) || e.target.closest('.icon-btn[onclick="toggleOverviewSettings()"]')) return;
+  pop.style.display = 'none';
+});
+
+function renderAnalyticsDashboard(){
+  buildPeriodToggle('growth-period-toggle', growthPeriod, setGrowthPeriod);
+  buildStatusToggle();
+  renderGrowthChart();
+  buildPeriodToggle('omzet-period-toggle', omzetPeriod, setOmzetPeriod);
+  renderOmzetChart();
+  renderProductChart();
+  renderAdminPerformanceTable();
+}
+
+function getOverviewScopedLeads(){
+  const term = (document.getElementById('overview-search-input')?.value || '').toLowerCase();
+  return leads.filter(l => matchesSearchTerm(l, term) && matchesQuickFilters(l));
+}
+
+function renderOverview(){
+  const scoped = getOverviewScopedLeads();
+  const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterAdmin!=='all' || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
+  const total = scoped.length;
+  const hot = scoped.filter(l=>l.status==='hot');
+  const warm = scoped.filter(l=>l.status==='warm');
+  const cold = scoped.filter(l=>l.status==='cold');
+  const dp = scoped.filter(isDpLead);
+  const actionable = scoped.filter(l=>l.status==='hot'||l.status==='warm');
+  const overdueCount = scoped.filter(l=>matchesFilter(l,'overdue')).length;
+  const noInteraction = scoped.filter(isNoInteraction);
+  const totalPenawaran = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+  const totalDeal = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+
+  document.getElementById('nav-leads-count').textContent = leads.length;
+  document.getElementById('overview-date').textContent = (isScoped ? 'Terfilter - ' : 'Data live, terhitung otomatis - ') + 'hari ini '+fmtDate(todayIsoStr());
+
+  const iconGrid = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>';
+  const iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"></path></svg>';
+  const iconClock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg>';
+  const iconInbox = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>';
+  const iconMoney = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="3"></circle></svg>';
+  const iconTrend = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>';
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="card" onclick="goToFilter('all')">
+      <div class="card-icon" style="background:var(--accent-soft); color:var(--accent-text);">${iconGrid}</div>
+      <div class="label">Total leads</div><div class="value">${total}</div>
+    </div>
+    <div class="card" onclick="goToFilter('dp')">
+      <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconCheck}</div>
+      <div class="label">Sudah DP</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
+    </div>
+    <div class="card" onclick="goToFilter('overdue')">
+      <div class="card-icon" style="background:var(--hot-bg); color:var(--hot);">${iconClock}</div>
+      <div class="label">Follow-up telat</div><div class="value">${overdueCount}</div><div class="foot" style="color:var(--hot)">dari ${actionable.length} lead hot/warm</div>
+    </div>
+    <div class="card" onclick="goToFilter('no-interaction')">
+      <div class="card-icon" style="background:var(--cold-bg); color:var(--cold);">${iconInbox}</div>
+      <div class="label">Belum ada interaksi</div><div class="value">${noInteraction.length}</div><div class="foot" style="color:var(--text-2)">belum pernah di-follow-up</div>
+    </div>
+    <div class="card" onclick="goToFilter('has-product')">
+      <div class="card-icon" style="background:var(--accent-soft); color:var(--accent-text);">${iconMoney}</div>
+      <div class="label">Rencana omzet</div><div class="value" style="font-size:18px;">${formatRupiah(totalPenawaran)}</div><div class="foot" style="color:var(--text-2)">total harga penawaran</div>
+    </div>
+    <div class="card" onclick="goToFilter('has-deal')">
+      <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconTrend}</div>
+      <div class="label">Omzet deal</div><div class="value" style="font-size:18px;">${formatRupiah(totalDeal)}</div><div class="foot" style="color:var(--success)">realisasi closing</div>
+    </div>
+  `;
+
+  const coldNoInteraction = cold.filter(isNoInteraction).length;
+  const warmOverdue = warm.filter(isTrulyOverdue).length;
+  const hotOverdue = hot.filter(isTrulyOverdue).length;
+
+  document.getElementById('temp-row').innerHTML = `
+    <div class="temp-card" style="border-left-color:var(--cold);">
+      <div class="th" style="color:var(--cold);"><span class="dot" style="background:var(--cold);"></span>Cold</div>
+      <div class="num">${cold.length}</div>
+      <div class="foot" style="color:var(--muted);">${total?Math.round(cold.length/total*100):0}% - ${coldNoInteraction} dari ${cold.length} belum ada interaksi</div>
+    </div>
+    <div class="temp-card" style="border-left-color:var(--warm);">
+      <div class="th" style="color:var(--warm);"><span class="dot" style="background:var(--warm);"></span>Warm</div>
+      <div class="num">${warm.length}</div>
+      <div class="foot" style="color:var(--muted);">${total?Math.round(warm.length/total*100):0}% - ${warmOverdue} dari ${warm.length} follow up telat</div>
+    </div>
+    <div class="temp-card" style="border-left-color:var(--hot);">
+      <div class="th" style="color:var(--hot);"><span class="dot" style="background:var(--hot);"></span>Hot</div>
+      <div class="num">${hot.length}</div>
+      <div class="foot" style="color:var(--muted);">${total?Math.round(hot.length/total*100):0}% - ${hotOverdue} dari ${hot.length} follow up telat</div>
+    </div>
+  `;
+
+  const sorted = actionable.slice().sort((a,b)=>{
+    const aDp = isDpLead(a), bDp = isDpLead(b);
+    if(aDp!==bDp) return aDp? -1:1;
+    if(!a.followUp && !b.followUp) return 0;
+    if(!a.followUp) return 1;
+    if(!b.followUp) return -1;
+    return new Date(a.followUp) - new Date(b.followUp);
+  });
+
+  document.getElementById('overview-rowlist').innerHTML = sorted.length ? sorted.map(l=>leadRowHTML(l,true)).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Tidak ada lead yang cocok dengan filter.</div>';
+  document.getElementById('cold-banner').innerHTML = `<span>+${cold.length} leads cold - kontak awal masuk, belum ada catatan follow-up sama sekali.</span><button onclick="switchView('leads'); setFilter('cold');" style="background:transparent; border:1px solid var(--accent); color:var(--accent-text); padding:5px 12px;">Lihat semua &rarr;</button>`;
+
+  populateQuickFilterDropdowns();
+  renderAnalyticsDashboard();
+}
+
+function setFilter(status){
+  currentFilter = status;
+  document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));
+  const pill = document.querySelector('.filter-pill[data-status="'+status+'"]');
+  if(pill) pill.classList.add('active');
+  document.querySelectorAll('.navsub').forEach(n=>n.classList.remove('active'));
+  const navsub = document.querySelector('.navsub[data-filter="'+status+'"]');
+  if(navsub){
+    navsub.classList.add('active');
+    const leadsNav = document.querySelector('.navitem[data-view="leads"]');
+    if(leadsNav) leadsNav.classList.remove('active');
+  }
+  refreshLeadsListing();
+}
+
+function filterChipLabel(key, list){
+  if(key==='has-product'){
+    const sum = list.reduce((s,l)=> s+(l.products||[]).reduce((a,p)=>a+(p.hargaPenawaran||0),0),0);
+    return 'Rencana omzet &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
+  }
+  if(key==='has-deal'){
+    const sum = list.reduce((s,l)=> s+(l.products||[]).reduce((a,p)=>a+(p.hargaDeal||0),0),0);
+    return 'Omzet deal &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
+  }
+  return (FILTER_LABELS[key]||key) + ' &middot; '+list.length+' lead';
+}
+
+function getQuickFilteredLeads(){
+  const term = document.getElementById('search-input').value.toLowerCase();
+  return leads.filter(l=> matchesSearchTerm(l, term) && matchesQuickFilters(l));
+}
+
+function getFilteredLeads(){
+  let filtered = getQuickFilteredLeads().filter(l=> matchesFilter(l, currentFilter));
+  filtered.sort((a,b)=> new Date(b.entryDate||'1970-01-01') - new Date(a.entryDate||'1970-01-01'));
+  return filtered;
+}
+
+function matchesSearchTerm(l, term){
+  if(!term) return true;
+  return l.company.toLowerCase().includes(term)
+    || (l.pic||'').toLowerCase().includes(term)
+    || (l.city||'').toLowerCase().includes(term)
+    || (l.province||'').toLowerCase().includes(term);
+}
+
+let quickFilterPic = 'all';
+let quickFilterLocation = 'all';
+let quickFilterAdmin = 'all';
+
+// Fokus tampilan -- KHUSUS Master Admin. Kalau diisi (1+ nama), seluruh
+// sistem (Overview, Leads, Follow-up, tabel performa) otomatis nyempit
+// cuma nampilin orang-orang itu. Diinget lewat localStorage sampai di-reset.
+let masterFocusFilter = [];
+const MASTER_FOCUS_STORAGE_KEY = 'sm_master_focus_filter';
+
+// Kelompokkan daftar lead per admin (ala Airtable group-by) -- saklar
+// nyala/mati, gak diinget lintas sesi, cuma tampilan sementara.
+let groupByAdminEnabled = false;
+
+let BRANCH_DEFINITIONS = {
+  bali: {label:'Cabang Bali', provinces:['Bali']},
+  pekanbaru: {label:'Cabang Pekanbaru', provinces:['Riau']},
+  bontang: {label:'Cabang Bontang', provinces:['Kalimantan Timur']}
+};
+
+let userAccounts = [
+  {id:1, name:'Yorivan', email:'yorivan@gmail.com', role:'master_admin', status:'active'},
+  {id:2, name:'Aulia', email:'', role:'super_admin', status:'active'},
+  {id:3, name:'Andi', email:'', role:'supervisor', status:'active', branch:'pekanbaru', team:['Sabrina']},
+  {id:4, name:'Sabrina', email:'', role:'sales', status:'active'}
+];
+let nextUserId = 5;
+let ADMIN_LIST = [];
+
+function syncAdminListFromUsers(){
+  ADMIN_LIST = userAccounts.filter(u=>u.role==='sales' && u.status==='active').map(u=>u.name);
+}
+syncAdminListFromUsers();
+
+let currentUser = null;
+let currentUserProfile = null;
+let editingUserId = null;
+
+const SUPABASE_URL = 'https://hnwgpwkkpqdblrofjrvh.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_T_gwqYbB-v1mlP_IIlKTfw_gwohJH6L';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function renderLoginOptions(){
+  // Sudah gak dipakai lagi -- login sekarang lewat form email/password
+  // yang beneran (Supabase Auth), bukan pilih nama dari daftar tombol.
+}
+
+async function attemptLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.display = 'none';
+  if(!email || !password){
+    errorEl.textContent = 'Email dan password wajib diisi.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error){
+    errorEl.textContent = 'Login gagal: '+error.message;
+    errorEl.style.display = 'block';
+    return;
+  }
+  await loadProfileAndEnter(data.user.id);
+}
+
+async function loadProfileAndEnter(userId){
+  const errorEl = document.getElementById('login-error');
+  const { data: profile, error } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
+  if(error || !profile){
+    errorEl.textContent = 'Akun ini belum terdaftar di tabel profiles. Hubungi Master Admin.';
+    errorEl.style.display = 'block';
+    await supabaseClient.auth.signOut();
+    return;
+  }
+  if(profile.status !== 'active'){
+    errorEl.textContent = 'Akun ini sudah dinonaktifkan.';
+    errorEl.style.display = 'block';
+    await supabaseClient.auth.signOut();
+    return;
+  }
+  currentUserProfile = profile;
+  currentUser = {role: profile.role, name: profile.name};
+  document.getElementById('login-screen').style.display = 'none';
+  resetIdleLogoutTimer();
+  if(profile.role==='sales'){
+    quickFilterAdmin = profile.name;
+  } else if(profile.role==='supervisor'){
+    quickFilterAdmin = (profile.team && profile.team.length) ? profile.team.slice() : [];
+  } else if(profile.role==='master_admin'){
+    loadMasterFocusFilterFromStorage();
+    applyMasterFocusFilterToQuickFilter();
+  } else {
+    quickFilterAdmin = 'all';
+  }
+  applyRoleRestrictions();
+  document.getElementById('leads-rowlist').innerHTML = '<div class="empty-note" style="text-align:center; padding:30px;">Memuat data lead dari server...</div>';
+  await fetchLeadsFromSupabase();
+  populateQuickFilterDropdowns();
+  renderOverview();
+  renderLeadsList();
+  renderFollowupList();
+  renderUserChip();
+  startHeartbeatLoop();
+}
+
+async function checkExistingSession(){
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session && data.session.user){
+    await loadProfileAndEnter(data.session.user.id);
+  }
+}
+
+async function logoutUser(){
+  if(idleLogoutTimer){ clearTimeout(idleLogoutTimer); idleLogoutTimer = null; }
+  stopHeartbeatLoop();
+  stopMonitoringPoll();
+  if(currentUserProfile){
+    try{
+      await supabaseClient.from('profiles').update({last_seen_at:null, last_interaction_at:null, current_view:null}).eq('id', currentUserProfile.id);
+    }catch(e){ /* best-effort -- gak perlu blokir proses logout kalau ini gagal */ }
+  }
+  await supabaseClient.auth.signOut();
+  currentUserProfile = null;
+  currentUser = null;
+  quickFilterAdmin = 'all';
+  applyRoleRestrictions();
+  populateQuickFilterDropdowns();
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  const errorEl = document.getElementById('login-error');
+  if(errorEl){ errorEl.style.display = 'none'; errorEl.textContent = ''; }
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// Auto-logout kalau gak ada aktivitas (mouse/keyboard/klik) selama 24 jam --
+// data lead ini penting, jadi sesi yang dibiarin nganggur seharian penuh
+// otomatis di-logout sendiri demi keamanan.
+const IDLE_LOGOUT_MS = 24 * 60 * 60 * 1000; // 24 jam
+let idleLogoutTimer = null;
+
+function resetIdleLogoutTimer(){
+  if(!currentUser) return; // belum login, gak perlu itung idle
+  if(idleLogoutTimer) clearTimeout(idleLogoutTimer);
+  idleLogoutTimer = setTimeout(async ()=>{
+    await logoutUser();
+  }, IDLE_LOGOUT_MS);
+  maybeSendInteractionHeartbeat();
+}
+
+function initIdleAutoLogout(){
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(evt=>{
+    document.addEventListener(evt, resetIdleLogoutTimer, {passive:true});
+  });
+  resetIdleLogoutTimer();
+}
+
+// Monitoring User -- heartbeat ke Supabase biar Master/Super Admin bisa
+// liat siapa yang lagi Aktif (baru mencet-mencet), Diam (login tapi diem),
+// atau Offline (logout / gak ada tanda-tanda hidup lebih dari beberapa menit).
+const VIEW_LABELS = {
+  overview:'Overview', leads:'Leads', followup:'Rencana follow up',
+  activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
+  monitoring:'Monitoring User', structure:'Struktur Organisasi'
+};
+function getCurrentViewLabel(){
+  const activeEl = document.querySelector('.view.active');
+  if(!activeEl) return '-';
+  const key = activeEl.id.replace('view-','');
+  return VIEW_LABELS[key] || key;
+}
+
+let lastInteractionHeartbeatAt = 0;
+const INTERACTION_HEARTBEAT_MIN_GAP_MS = 45*1000;
+
+function maybeSendInteractionHeartbeat(){
+  const now = Date.now();
+  if(now - lastInteractionHeartbeatAt < INTERACTION_HEARTBEAT_MIN_GAP_MS) return;
+  lastInteractionHeartbeatAt = now;
+  sendHeartbeat(true);
+}
+
+async function sendHeartbeat(fromInteraction){
+  if(!currentUserProfile) return;
+  const nowIso = new Date().toISOString();
+  const payload = { last_seen_at: nowIso, current_view: getCurrentViewLabel() };
+  if(fromInteraction) payload.last_interaction_at = nowIso;
+  try{
+    await supabaseClient.from('profiles').update(payload).eq('id', currentUserProfile.id);
+  }catch(e){ /* heartbeat gagal diem-diem aja, jangan ganggu user */ }
+}
+
+let heartbeatInterval = null;
+function startHeartbeatLoop(){
+  stopHeartbeatLoop();
+  sendHeartbeat(true);
+  heartbeatInterval = setInterval(()=> sendHeartbeat(false), 60*1000);
+}
+function stopHeartbeatLoop(){
+  if(heartbeatInterval){ clearInterval(heartbeatInterval); heartbeatInterval = null; }
+}
+
+function computeUserStatus(p){
+  const now = Date.now();
+  const lastSeen = p.last_seen_at ? new Date(p.last_seen_at).getTime() : 0;
+  const lastInteract = p.last_interaction_at ? new Date(p.last_interaction_at).getTime() : 0;
+  const OFFLINE_AFTER_MS = 3*60*1000;
+  const ACTIVE_WITHIN_MS = 2*60*1000;
+  if(!lastSeen || (now - lastSeen) > OFFLINE_AFTER_MS) return 'offline';
+  if(lastInteract && (now - lastInteract) <= ACTIVE_WITHIN_MS) return 'active';
+  return 'idle';
+}
+
+function relativeTimeFromNow(iso){
+  if(!iso) return 'belum pernah';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if(diffMs < 0) return 'baru saja';
+  const diffMin = Math.floor(diffMs/60000);
+  if(diffMin < 1) return 'baru saja';
+  if(diffMin < 60) return diffMin+' menit lalu';
+  const diffHour = Math.floor(diffMin/60);
+  if(diffHour < 24) return diffHour+' jam lalu';
+  const diffDay = Math.floor(diffHour/24);
+  return diffDay+' hari lalu';
+}
+
+let monitoringPollInterval = null;
+function startMonitoringPoll(){
+  stopMonitoringPoll();
+  monitoringPollInterval = setInterval(()=>{
+    const view = document.getElementById('view-monitoring');
+    if(view && view.classList.contains('active')) renderMonitoringView();
+    else stopMonitoringPoll();
+  }, 20000);
+}
+function stopMonitoringPoll(){
+  if(monitoringPollInterval){ clearInterval(monitoringPollInterval); monitoringPollInterval = null; }
+}
+
+function getRecencyScore(p){
+  const seen = p.last_seen_at ? new Date(p.last_seen_at).getTime() : 0;
+  const interact = p.last_interaction_at ? new Date(p.last_interaction_at).getTime() : 0;
+  return Math.max(seen, interact);
+}
+
+function captureMonitoringRowRects(wrap){
+  const rects = {};
+  wrap.querySelectorAll('.monitor-row').forEach(row=>{
+    rects[row.dataset.name] = row.getBoundingClientRect().top;
+  });
+  return rects;
+}
+
+function animateMonitoringReorder(wrap, oldRects){
+  wrap.querySelectorAll('.monitor-row').forEach(row=>{
+    const oldTop = oldRects[row.dataset.name];
+    if(oldTop == null) return; // orang baru muncul di list, gak usah dianimasiin masuk
+    const newTop = row.getBoundingClientRect().top;
+    const delta = oldTop - newTop;
+    if(Math.abs(delta) < 1) return;
+    row.style.transition = 'none';
+    row.style.transform = 'translateY('+delta+'px)';
+    requestAnimationFrame(()=>{
+      row.style.transition = 'transform 450ms cubic-bezier(0.22, 1, 0.36, 1)';
+      row.style.transform = '';
+    });
+  });
+}
+
+async function renderMonitoringView(){
+  const wrap = document.getElementById('monitoring-list');
+  if(!wrap) return;
+  const alreadyLoaded = wrap.dataset.loaded === '1';
+  const oldRects = alreadyLoaded ? captureMonitoringRowRects(wrap) : null;
+  if(!alreadyLoaded){
+    wrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:24px;">Memuat status user...</div>';
+  }
+  const { data, error } = await supabaseClient.from('profiles').select('*').eq('status','active').order('name');
+  const view = document.getElementById('view-monitoring');
+  if(!view || !view.classList.contains('active')) return; // udah pindah halaman pas fetch selesai
+  if(error){
+    wrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:24px; color:var(--hot);">Gagal memuat status user: '+error.message+'</div>';
+    return;
+  }
+  const list = (data || []).slice().sort((a,b)=> getRecencyScore(b) - getRecencyScore(a));
+  wrap.innerHTML = list.length ? list.map((p,i)=>{
+    const status = computeUserStatus(p);
+    const statusLabel = status==='active' ? 'Aktif' : (status==='idle' ? 'Diam' : 'Offline');
+    const viewLabel = (status==='offline' ? 'Terakhir buka: ' : 'Lagi buka: ')+(p.current_view || '-');
+    const seenSource = status==='offline' ? p.last_seen_at : (p.last_interaction_at || p.last_seen_at);
+    return '<div class="monitor-row" data-name="'+p.name+'">'
+      + '<div class="monitor-rank">'+(i+1)+'</div>'
+      + '<div class="monitor-avatar" style="background:'+avatarColor(p.name)+'">'+initials(p.name)+'</div>'
+      + '<div class="monitor-info">'
+        + '<div class="monitor-name">'+p.name+'<span class="role-badge '+p.role+'">'+roleLabelOf(p.role)+'</span></div>'
+        + '<div class="monitor-sub">'+viewLabel+'</div>'
+      + '</div>'
+      + '<div class="monitor-status"><span class="status-dot '+status+'"></span>'+statusLabel+'</div>'
+      + '<div class="monitor-seen">'+relativeTimeFromNow(seenSource)+'</div>'
+    + '</div>';
+  }).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada user aktif.</div>';
+  wrap.dataset.loaded = '1';
+  if(oldRects) animateMonitoringReorder(wrap, oldRects);
+  startMonitoringPoll();
+}
+
+function applyRoleRestrictions(){
+  const isSales = !!(currentUser && currentUser.role==='sales');
+  const isSupervisor = !!(currentUser && currentUser.role==='supervisor');
+  const isMaster = !!(currentUser && currentUser.role==='master_admin');
+  const canManageUsers = !!(currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin'));
+  const canCompare = !!(currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin' || currentUser.role==='supervisor'));
+  ['admin-filter-select','overview-admin-filter-select'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = (isSales || isMaster) ? 'none' : '';
+  });
+  renderMasterFocusBadges();
+  const bulkDeleteBtn = document.getElementById('btn-bulk-delete');
+  if(bulkDeleteBtn) bulkDeleteBtn.style.display = isMaster ? '' : 'none';
+  const comparisonNav = document.getElementById('nav-comparison-item');
+  if(comparisonNav) comparisonNav.style.display = canCompare ? '' : 'none';
+  if(!canCompare && document.getElementById('view-comparison') && document.getElementById('view-comparison').classList.contains('active')) switchView('overview', true);
+  const monitoringNav = document.getElementById('nav-monitoring-item');
+  if(monitoringNav) monitoringNav.style.display = canManageUsers ? '' : 'none';
+  if(!canManageUsers && document.getElementById('view-monitoring') && document.getElementById('view-monitoring').classList.contains('active')) switchView('overview', true);
+  ['admin-locked-badge-leads','admin-locked-badge-overview'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const showBadge = isSales || isSupervisor;
+    el.style.display = showBadge ? 'inline-flex' : 'none';
+    if(isSales) el.textContent = 'Sales: '+currentUser.name;
+    else if(isSupervisor){
+      const team = (currentUserProfile && currentUserProfile.team && currentUserProfile.team.length) ? currentUserProfile.team.join(', ') : 'belum ada anggota';
+      el.textContent = 'Tim: '+team;
+    } else el.textContent = '';
+  });
+  const overviewTitle = document.getElementById('overview-title');
+  const leadsTitleEl = document.getElementById('leads-title');
+  if(overviewTitle) overviewTitle.textContent = isSales ? 'Overview saya' : (isSupervisor ? 'Overview tim saya' : 'Leads audit SMK3');
+  if(isSales && leadsTitleEl) leadsTitleEl.dataset.rolePrefix = 'Leads saya';
+  else if(isSupervisor && leadsTitleEl) leadsTitleEl.dataset.rolePrefix = 'Leads tim saya';
+  else if(leadsTitleEl) delete leadsTitleEl.dataset.rolePrefix;
+  const usersNav = document.getElementById('nav-users-item');
+  if(usersNav) usersNav.style.display = canManageUsers ? '' : 'none';
+  if(!canManageUsers && document.getElementById('view-users').classList.contains('active')) switchView('overview', true);
+}
+
+function getFocusableUserList(){
+  return userAccounts.filter(u=>u.status==='active');
+}
+
+function renderMasterFocusBadges(){
+  const isMaster = !!(currentUser && currentUser.role==='master_admin');
+  const active = masterFocusFilter && masterFocusFilter.length;
+  const label = active ? ('Fokus: '+masterFocusFilter.join(', ')) : 'Fokus: semua orang';
+  const inner = label + (active ? ' <button class="focus-reset-x" onclick="event.stopPropagation(); clearMasterFocusFilter();" aria-label="Reset fokus">&times;</button>' : '');
+  ['master-focus-badge-overview','master-focus-badge-leads'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.style.display = isMaster ? 'inline-flex' : 'none';
+    el.innerHTML = inner;
+  });
+}
+
+function openFocusFilterModal(){
+  if(!currentUser || currentUser.role!=='master_admin') return;
+  renderFocusFilterChecklist();
+  document.getElementById('focus-filter-error').style.display = 'none';
+  document.getElementById('focus-filter-modal').style.display = 'flex';
+}
+
+function closeFocusFilterModal(){
+  document.getElementById('focus-filter-modal').style.display = 'none';
+}
+
+function renderFocusFilterChecklist(){
+  const wrap = document.getElementById('focus-filter-checklist');
+  if(!wrap) return;
+  const people = getFocusableUserList();
+  wrap.innerHTML = people.length ? people.map(u=>
+    '<label><input type="checkbox" value="'+u.name+'" '+(masterFocusFilter.includes(u.name)?'checked':'')+'>'+u.name+' ('+roleLabelOf(u.role)+')</label>'
+  ).join('') : '<div style="font-size:12px; color:var(--muted);">Belum ada user lain.</div>';
+}
+
+function saveMasterFocusFilter(){
+  try{ localStorage.setItem(MASTER_FOCUS_STORAGE_KEY, JSON.stringify(masterFocusFilter)); }catch(e){}
+}
+
+function applyMasterFocusFilterToQuickFilter(){
+  quickFilterAdmin = masterFocusFilter.length ? masterFocusFilter.slice() : 'all';
+}
+
+function refreshAllListsAfterFocusChange(){
+  populateQuickFilterDropdowns();
+  renderOverview();
+  renderLeadsList();
+  renderFollowupList();
+}
+
+function submitFocusFilter(){
+  const checks = document.querySelectorAll('#focus-filter-checklist input[type=checkbox]:checked');
+  masterFocusFilter = Array.from(checks).map(c=>c.value);
+  saveMasterFocusFilter();
+  applyMasterFocusFilterToQuickFilter();
+  renderMasterFocusBadges();
+  refreshAllListsAfterFocusChange();
+  closeFocusFilterModal();
+  showToast(masterFocusFilter.length ? 'Fokus diterapkan: '+masterFocusFilter.join(', ') : 'Fokus direset, nampilin semua orang');
+}
+
+function clearMasterFocusFilter(){
+  masterFocusFilter = [];
+  saveMasterFocusFilter();
+  applyMasterFocusFilterToQuickFilter();
+  renderMasterFocusBadges();
+  refreshAllListsAfterFocusChange();
+  closeFocusFilterModal();
+  showToast('Fokus direset, nampilin semua orang');
+}
+
+function loadMasterFocusFilterFromStorage(){
+  try{
+    const saved = localStorage.getItem(MASTER_FOCUS_STORAGE_KEY);
+    masterFocusFilter = saved ? (JSON.parse(saved) || []) : [];
+  }catch(e){ masterFocusFilter = []; }
+}
+
+function roleLabelOf(role){
+  if(role==='master_admin') return 'Master Admin';
+  if(role==='super_admin') return 'Super Admin';
+  if(role==='supervisor') return 'Supervisor';
+  return 'Sales';
+}
+
+function personAvatarHTML(name, photoUrl, sizePx){
+  const size = sizePx || 28;
+  const placeholderIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:58%; height:58%;"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path></svg>';
+  if(photoUrl){
+    return '<img src="'+photoUrl+'" alt="'+name+'" style="width:'+size+'px; height:'+size+'px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">'
+      + '<div class="avatar-placeholder" style="display:none; width:'+size+'px; height:'+size+'px;">'+placeholderIcon+'</div>';
+  }
+  return '<div class="avatar-placeholder" style="width:'+size+'px; height:'+size+'px;">'+placeholderIcon+'</div>';
+}
+
+function renderUserChip(){
+  const chip = document.getElementById('sidebar-user-chip');
+  if(!chip || !currentUser) return;
+  const photoUrl = currentUserProfile ? currentUserProfile.photo_url : null;
+  chip.innerHTML = '<div onclick="setMyPhotoUrl()" title="Klik buat ganti foto profil" style="cursor:pointer; display:flex; flex-shrink:0;">'+personAvatarHTML(currentUser.name, photoUrl, 28)+'</div>'+
+    '<div><div class="user-name">'+currentUser.name+'</div><div class="user-role">'+roleLabelOf(currentUser.role)+'</div></div>'+
+    '<button onclick="logoutUser()" style="margin-left:auto; padding:5px 9px; font-size:10.5px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:var(--sidebar-text); border-radius:8px;">Keluar</button>';
+}
+
+async function setMyPhotoUrl(){
+  if(!currentUserProfile) return;
+  const current = currentUserProfile.photo_url || '';
+  const url = prompt('Tempel link foto profil kamu (link ke gambar, misal dari Google Drive/Imgur). Kosongkan buat hapus foto:', current);
+  if(url === null) return;
+  const trimmed = url.trim();
+  const { error } = await supabaseClient.from('profiles').update({photo_url: trimmed || null}).eq('id', currentUserProfile.id);
+  if(error){
+    showToast('Gagal ganti foto: '+error.message);
+    return;
+  }
+  currentUserProfile.photo_url = trimmed || null;
+  renderUserChip();
+  showToast(trimmed ? 'Foto profil diganti' : 'Foto profil dihapus');
+}
+
+function getUniquePicList(){
+  return [...new Set(leads.map(l=>l.pic).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+function getUniqueLocationList(){
+  return [...new Set(leads.map(l=>l.city).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+
+function matchesQuickFilters(l){
+  if(quickFilterPic!=='all' && l.pic!==quickFilterPic) return false;
+  if(quickFilterLocation!=='all' && l.city!==quickFilterLocation) return false;
+  if(quickFilterAdmin!=='all'){
+    if(Array.isArray(quickFilterAdmin)){
+      if(!quickFilterAdmin.includes(l.admin)) return false;
+    } else if(l.admin!==quickFilterAdmin) return false;
+  }
+  return true;
+}
+
+function populateQuickFilterDropdowns(){
+  const pics = getUniquePicList();
+  const locations = getUniqueLocationList();
+  const picOptions = '<option value="all">Semua PIC</option>' + pics.map(p=>'<option value="'+p+'">'+p+'</option>').join('');
+  const locOptions = '<option value="all">Semua lokasi</option>' + locations.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+  let adminUsers = userAccounts.filter(u=>u.role!=='master_admin' && u.status==='active');
+  if(currentUser && currentUser.role==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : [];
+    adminUsers = adminUsers.filter(u=>team.includes(u.name));
+  } else if(currentUser && currentUser.role==='sales'){
+    adminUsers = adminUsers.filter(u=>u.name===currentUser.name);
+  }
+  const adminOptions = '<option value="all">Semua admin</option>' + adminUsers.map(u=>'<option value="'+u.name+'">'+u.name+' ('+roleLabelOf(u.role)+')</option>').join('');
+  ['pic-filter-select','overview-pic-filter-select'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = picOptions;
+    el.value = pics.includes(quickFilterPic) ? quickFilterPic : 'all';
+  });
+  ['location-filter-select','overview-location-filter-select'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = locOptions;
+    el.value = locations.includes(quickFilterLocation) ? quickFilterLocation : 'all';
+  });
+  ['admin-filter-select','overview-admin-filter-select'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = adminOptions;
+    const lockedName = !Array.isArray(quickFilterAdmin) ? quickFilterAdmin : null;
+    el.value = (lockedName && adminUsers.some(u=>u.name===lockedName)) ? lockedName : 'all';
+  });
+}
+
+function setQuickFilterPic(val){
+  quickFilterPic = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function setQuickFilterLocation(val){
+  quickFilterLocation = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function setQuickFilterAdmin(val){
+  if(val==='all' && currentUser && currentUser.role==='supervisor'){
+    // Supervisor gak boleh "keluar" dari scope tim-nya lewat filter ini --
+    // pilih "Semua admin" dikembalikan ke daftar tim dia sendiri, bukan ke semua orang.
+    quickFilterAdmin = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
+  } else if(val==='all' && currentUser && currentUser.role==='sales'){
+    quickFilterAdmin = currentUser.name;
+  } else {
+    quickFilterAdmin = val;
+  }
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function renderAdminSelectOptions(){
+  const sel = document.getElementById('f-admin');
+  if(!sel) return;
+  const current = sel.value;
+  // Yang login sekarang selalu ikut kepilih di daftar ini, walau dia
+  // Master/Super Admin/Supervisor -- soalnya siapa pun bisa jadi
+  // penanggung jawab lead kalau dia sendiri yang input.
+  let options = ADMIN_LIST.slice();
+  if(currentUser && currentUser.name && !options.includes(currentUser.name)){
+    options.unshift(currentUser.name);
+  }
+  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
+  if(options.includes(current)) sel.value = current;
+}
+
+function handleAdminSelectChange(sel){
+  if(sel.value === '__add_new__'){
+    const name = prompt('Nama admin sales baru:');
+    sel.value = ADMIN_LIST[0] || '';
+    if(name && name.trim()){
+      const trimmed = name.trim();
+      if(!ADMIN_LIST.includes(trimmed)){
+        userAccounts.push({id: nextUserId++, name: trimmed, email:'', role:'sales', status:'active'});
+        syncAdminListFromUsers();
+        populateQuickFilterDropdowns();
+        renderLoginOptions();
+      }
+      renderAdminSelectOptions();
+      sel.value = trimmed;
+    }
+  }
+  markFormDirty();
+}
+
+// ===== KELOLA PENGGUNA =====
+function renderUsersView(){
+  const tbody = document.getElementById('users-table-body');
+  if(!tbody) return;
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const viewerIsSuperAdmin = !!(currentUser && currentUser.role==='super_admin');
+  tbody.innerHTML = userAccounts.map(u=>{
+    const isMaster = u.role==='master_admin';
+    const isSPV = u.role==='supervisor';
+    const isSelfRow = !!(currentUser && currentUser.name===u.name && currentUser.role===u.role);
+    const canEdit = viewerIsMaster || (viewerIsSuperAdmin && (u.role==='sales' || u.role==='supervisor'));
+    const canToggleDelete = canEdit && !isMaster && !isSelfRow;
+    const roleLabel = roleLabelOf(u.role);
+    const statusLabel = u.status==='active' ? 'Aktif' : 'Nonaktif';
+    const toggleLabel = u.status==='active' ? 'Nonaktifkan' : 'Aktifkan';
+    const avatarBg = isMaster ? 'var(--accent)' : (u.role==='super_admin' ? 'var(--accent-soft)' : (isSPV ? '#DFF3EC' : avatarColor(u.name)));
+    const avatarColorText = isMaster ? '#fff' : (u.role==='super_admin' ? 'var(--accent-text)' : (isSPV ? '#0B6B54' : 'var(--text)'));
+    const avatarLabel = isMaster ? 'MA' : (u.role==='super_admin' ? 'SA' : (isSPV ? 'SPV' : initials(u.name)));
+    const nameBadge = u.role==='sales' ? salesBadgeHTML(u.name) : '';
+    const kepalaCabangNote = (isSPV && u.branch && BRANCH_DEFINITIONS[u.branch]) ? ' &middot; Kepala '+BRANCH_DEFINITIONS[u.branch].label : '';
+    const teamNote = isSPV ? '<div style="font-size:10px; color:var(--muted); margin-top:2px;">Tim: '+((u.team&&u.team.length)?u.team.join(', '):'belum ada anggota')+kepalaCabangNote+'</div>' : '';
+    return '<tr>'+
+      '<td><span class="admin-name"><span class="admin-avatar" style="background:'+avatarBg+'; color:'+avatarColorText+';">'+avatarLabel+'</span>'+u.name+nameBadge+'</span></td>'+
+      '<td>'+(u.email || '<span style="color:var(--muted)">-</span>')+'</td>'+
+      '<td><span class="role-badge '+u.role+'">'+roleLabel+'</span>'+teamNote+'</td>'+
+      '<td><span class="status-badge-user '+(u.status==='active'?'active':'nonaktif')+'">'+statusLabel+'</span></td>'+
+      '<td>'+
+        '<span class="user-action-link '+(canEdit?'':'disabled')+'" onclick="openUserForm('+u.id+')">Edit</span>'+
+        '<span class="user-action-link '+(canToggleDelete?'':'disabled')+'" onclick="toggleUserStatus('+u.id+')">'+toggleLabel+'</span>'+
+        '<span class="user-action-link danger '+(canToggleDelete?'':'disabled')+'" onclick="deleteUserAccount('+u.id+')">Hapus</span>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function onUserFormRoleChange(){
+  const role = document.getElementById('uf-role').value;
+  const wrap = document.getElementById('uf-team-wrap');
+  if(!wrap) return;
+  if(role==='supervisor'){
+    wrap.style.display = 'block';
+    renderUserFormTeamChecklist();
+    renderUserFormBranchSelect();
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function renderUserFormTeamChecklist(){
+  const list = document.getElementById('uf-team-checklist');
+  if(!list) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  const currentTeam = (editingUser && editingUser.team) ? editingUser.team : [];
+  const salesUsers = userAccounts.filter(u=>u.role==='sales' && u.status==='active');
+  list.innerHTML = salesUsers.length ? salesUsers.map(u=>
+    '<label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2);">'+
+      '<input type="checkbox" value="'+u.name+'" '+(currentTeam.includes(u.name)?'checked':'')+' style="width:auto;">'+u.name+
+    '</label>'
+  ).join('') : '<div style="font-size:12px; color:var(--muted);">Belum ada sales aktif buat dijadiin anggota tim.</div>';
+}
+
+function renderUserFormBranchSelect(){
+  const sel = document.getElementById('uf-branch');
+  if(!sel) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  const currentBranch = editingUser ? (editingUser.branch || '') : '';
+  sel.innerHTML = '<option value="">- bukan Kepala Cabang -</option>' + Object.keys(BRANCH_DEFINITIONS).map(key=>
+    '<option value="'+key+'">'+BRANCH_DEFINITIONS[key].label+'</option>'
+  ).join('') + '<option value="__add_new__">+ Tambah cabang baru...</option>';
+  sel.value = currentBranch;
+}
+
+function slugifyBranchName(str){
+  const slug = str.toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  return slug || ('cabang_'+Date.now());
+}
+
+function handleBranchSelectChange(sel){
+  if(sel.value !== '__add_new__') return;
+  const name = prompt('Nama cabang baru (misal: Surabaya):');
+  if(!name || !name.trim()){
+    renderUserFormBranchSelect();
+    return;
+  }
+  const provinceInput = prompt('Provinsi yang dicakup cabang ini (pisahkan koma kalau lebih dari satu):');
+  const provinces = (provinceInput || '').split(',').map(p=>p.trim()).filter(Boolean);
+  if(!provinces.length){
+    showToast('Cabang gak disimpan, provinsi wajib diisi');
+    renderUserFormBranchSelect();
+    return;
+  }
+  let key = slugifyBranchName(name);
+  while(BRANCH_DEFINITIONS[key]) key = key + '_2';
+  const label = 'Cabang ' + name.trim().replace(/^cabang\s+/i,'');
+  BRANCH_DEFINITIONS[key] = {label, provinces};
+  renderUserFormBranchSelect();
+  sel.value = key;
+  showToast('Cabang "'+label+'" ditambahkan');
+}
+
+function openUserForm(id){
+  editingUserId = id || null;
+  const errorEl = document.getElementById('uf-error');
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const roleSelect = document.getElementById('uf-role');
+  roleSelect.innerHTML = viewerIsMaster
+    ? '<option value="sales">Sales</option><option value="supervisor">Supervisor</option><option value="super_admin">Super Admin</option>'
+    : '<option value="sales">Sales</option><option value="supervisor">Supervisor</option>';
+  if(id){
+    const u = userAccounts.find(x=>x.id===id);
+    if(!u) return;
+    if(u.role==='master_admin' && !viewerIsMaster) return;
+    if(u.role==='super_admin' && !viewerIsMaster) return;
+    document.getElementById('user-form-title').textContent = 'Edit user';
+    document.getElementById('uf-name').value = u.name;
+    document.getElementById('uf-email').value = u.email || '';
+    if(u.role!=='master_admin') roleSelect.value = u.role;
+  } else {
+    document.getElementById('user-form-title').textContent = 'Tambah user';
+    document.getElementById('uf-name').value = '';
+    document.getElementById('uf-email').value = '';
+    roleSelect.value = 'sales';
+  }
+  onUserFormRoleChange();
+  document.getElementById('user-form-modal').style.display = 'flex';
+}
+
+function closeUserForm(){
+  document.getElementById('user-form-modal').style.display = 'none';
+  editingUserId = null;
+}
+
+function submitUserForm(){
+  const name = document.getElementById('uf-name').value.trim();
+  const email = document.getElementById('uf-email').value.trim();
+  const role = document.getElementById('uf-role').value;
+  const errorEl = document.getElementById('uf-error');
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  if(!name){
+    errorEl.textContent = 'Nama wajib diisi.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  const dupe = userAccounts.find(u=>u.name.toLowerCase()===name.toLowerCase() && u.id!==editingUserId);
+  if(dupe){
+    errorEl.textContent = 'Sudah ada user dengan nama ini.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  let branch = '';
+  let team = [];
+  if(role==='supervisor'){
+    branch = document.getElementById('uf-branch').value;
+    const checks = document.querySelectorAll('#uf-team-checklist input[type=checkbox]:checked');
+    team = Array.from(checks).map(c=>c.value);
+  }
+  let savedId = editingUserId;
+  if(editingUserId){
+    const u = userAccounts.find(x=>x.id===editingUserId);
+    if(!u) return;
+    if(u.role==='master_admin' && !viewerIsMaster){
+      errorEl.textContent = 'Gak bisa ubah akun Master Admin.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if(u.role==='super_admin' && !viewerIsMaster){
+      errorEl.textContent = 'Cuma Master Admin yang bisa ubah akun Super Admin.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if(role==='super_admin' && !viewerIsMaster){
+      errorEl.textContent = 'Cuma Master Admin yang bisa menaikkan jadi Super Admin.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    u.name = name;
+    u.email = email;
+    if(u.role!=='master_admin') u.role = role;
+    if(role==='supervisor'){ u.branch = branch; u.team = team; } else { delete u.branch; delete u.team; }
+  } else {
+    if(role==='super_admin' && !viewerIsMaster){
+      errorEl.textContent = 'Cuma Master Admin yang bisa menambah Super Admin.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    const newUser = {id: nextUserId++, name, email, role, status:'active'};
+    if(role==='supervisor'){ newUser.branch = branch; newUser.team = team; }
+    userAccounts.push(newUser);
+    savedId = newUser.id;
+  }
+  if(role==='supervisor' && team.length){
+    userAccounts.forEach(other=>{
+      if(other.role==='supervisor' && other.id!==savedId && other.team){
+        other.team = other.team.filter(n=>!team.includes(n));
+      }
+    });
+  }
+  syncAdminListFromUsers();
+  populateQuickFilterDropdowns();
+  renderAdminSelectOptions();
+  renderLoginOptions();
+  renderUsersView();
+  closeUserForm();
+  showToast(editingUserId ? 'User diperbarui' : 'User ditambahkan');
+}
+
+function toggleUserStatus(id){
+  const u = userAccounts.find(x=>x.id===id);
+  if(!u) return;
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  if(u.role==='master_admin'){ showToast('Master Admin gak bisa dinonaktifkan'); return; }
+  if(u.role==='super_admin' && !viewerIsMaster){ showToast('Cuma Master Admin yang bisa nonaktifkan Super Admin'); return; }
+  if(currentUser && currentUser.name===u.name && currentUser.role===u.role){
+    showToast('Tidak bisa menonaktifkan diri sendiri');
+    return;
+  }
+  u.status = u.status==='active' ? 'nonaktif' : 'active';
+  syncAdminListFromUsers();
+  populateQuickFilterDropdowns();
+  renderAdminSelectOptions();
+  renderLoginOptions();
+  renderUsersView();
+}
+
+function deleteUserAccount(id){
+  const u = userAccounts.find(x=>x.id===id);
+  if(!u) return;
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  if(u.role==='master_admin'){ showToast('Master Admin gak bisa dihapus'); return; }
+  if(u.role==='super_admin' && !viewerIsMaster){ showToast('Cuma Master Admin yang bisa menghapus Super Admin'); return; }
+  if(currentUser && currentUser.name===u.name && currentUser.role===u.role){
+    showToast('Tidak bisa menghapus diri sendiri');
+    return;
+  }
+  if(!confirm('Hapus user "'+u.name+'"? Lead yang sudah ditugaskan ke dia tidak ikut terhapus.')) return;
+  userAccounts = userAccounts.filter(x=>x.id!==id);
+  syncAdminListFromUsers();
+  populateQuickFilterDropdowns();
+  renderAdminSelectOptions();
+  renderLoginOptions();
+  renderUsersView();
+  showToast('User dihapus');
+}
+
+function renderLeadsList(){
+  populateQuickFilterDropdowns();
+  const scopedBase = getQuickFilteredLeads();
+  const total = scopedBase.length;
+  const hot = scopedBase.filter(l=>l.status==='hot').length;
+  const warm = scopedBase.filter(l=>l.status==='warm').length;
+  const cold = scopedBase.filter(l=>l.status==='cold').length;
+  document.getElementById('count-all').textContent = total;
+  document.getElementById('count-cold').textContent = cold;
+  document.getElementById('count-warm').textContent = warm;
+  document.getElementById('count-hot').textContent = hot;
+  const leadsTitleEl = document.getElementById('leads-title');
+  leadsTitleEl.textContent = (leadsTitleEl.dataset.rolePrefix || 'Daftar leads')+' ('+total+')';
+
+  const filtered = getFilteredLeads();
+
+  const chipWrap = document.getElementById('filter-chip-wrap');
+  const pillFilters = ['all','cold','warm','hot'];
+  if(!pillFilters.includes(currentFilter)){
+    chipWrap.style.display = 'flex';
+    chipWrap.innerHTML = '<span class="active-filter-chip">'+filterChipLabel(currentFilter, filtered)+'<button onclick="setFilter(\'all\')" aria-label="Reset filter">&times;</button></span>';
+  } else {
+    chipWrap.style.display = 'none';
+    chipWrap.innerHTML = '';
+  }
+
+  document.getElementById('leads-rowlist').innerHTML = filtered.length
+    ? (groupByAdminEnabled ? buildGroupedLeadRowsHTML(filtered) : filtered.map((l,i)=>leadRowHTML(l,false,true,i+1)).join(''))
+    : '<div class="empty-note" style="text-align:center; padding:30px;">Tidak ada lead yang cocok</div>';
+
+  const selectAllCb = document.getElementById('leads-selectall');
+  if(selectAllCb) selectAllCb.checked = filtered.length>0 && filtered.every(l=>selectedLeadIds.has(l.id));
+  updateBulkDeleteUI();
+}
+
+function buildGroupedLeadRowsHTML(list){
+  const groups = {};
+  const order = [];
+  list.forEach(l=>{
+    const key = l.admin || '';
+    if(!groups[key]){ groups[key] = []; order.push(key); }
+    groups[key].push(l);
+  });
+  order.sort((a,b)=>{
+    if(a==='') return 1;
+    if(b==='') return -1;
+    return a.localeCompare(b);
+  });
+  return order.map(key=>{
+    const items = groups[key];
+    const label = key==='' ? 'Belum ada admin' : leadOwnerLabel(items[0]);
+    return '<div class="lead-group-header">'+label+'<span class="lgh-count">('+items.length+')</span></div>'
+      + items.map((l,i)=>leadRowHTML(l,false,true,i+1)).join('');
+  }).join('');
+}
+
+function toggleGroupByAdmin(){
+  groupByAdminEnabled = !groupByAdminEnabled;
+  const btn = document.getElementById('group-by-admin-toggle');
+  if(btn) btn.classList.toggle('active', groupByAdminEnabled);
+  renderLeadsList();
+}
+
+function toggleLeadSelect(id, evt){
+  if(evt) evt.stopPropagation();
+  if(selectedLeadIds.has(id)) selectedLeadIds.delete(id); else selectedLeadIds.add(id);
+  renderLeadsList();
+}
+
+function toggleSelectAll(){
+  const cb = document.getElementById('leads-selectall');
+  const filtered = getFilteredLeads();
+  if(cb.checked){ filtered.forEach(l=>selectedLeadIds.add(l.id)); }
+  else { filtered.forEach(l=>selectedLeadIds.delete(l.id)); }
+  renderLeadsList();
+}
+
+function updateBulkDeleteUI(){
+  const btn = document.getElementById('btn-bulk-delete');
+  if(!btn) return;
+  const n = selectedLeadIds.size;
+  document.getElementById('bulk-delete-count').textContent = n;
+  btn.classList.toggle('active', n>0);
+}
+
+async function bulkDeleteLeads(){
+  if(selectedLeadIds.size === 0){
+    showToast('Anda belum memilih lead yang akan dihapus');
+    return;
+  }
+  if(!confirm('Apakah Anda yakin akan menghapus lead ini?')) return;
+  const n = selectedLeadIds.size;
+  const idsToDelete = Array.from(selectedLeadIds);
+  const removedNames = leads.filter(l=>selectedLeadIds.has(l.id)).map(l=>l.company);
+  const { error } = await supabaseClient.from('leads').delete().in('id', idsToDelete);
+  if(error){
+    showToast('Gagal menghapus di server: '+error.message);
+    return;
+  }
+  removedNames.forEach(name=> logGlobalActivity('Lead dihapus (hapus massal)', name));
+  leads = leads.filter(l=>!selectedLeadIds.has(l.id));
+  selectedLeadIds.clear();
+  renderLeadsList();
+  showToast('Terhapus '+n+' lead');
+}
+
+function renderHistory(l){
+  const hist = l.history.slice().reverse();
+  const total = hist.length;
+  document.getElementById('history-list').innerHTML = hist.length ? hist.map((h,i)=>{
+    const num = total - i;
+    const timeStr = h.time ? ' &middot; '+h.time : '';
+    return `<div class="history-item">
+      <div class="history-num">${num}</div>
+      <div class="history-content">
+        <div class="history-head"><span class="chan-tag">${CHANNEL_LABELS[h.channel]||'Lainnya'}</span></div>
+        <div class="history-note">${h.note}</div>
+      </div>
+      <div class="history-date">${fmtDate(h.date)}${timeStr}</div>
+    </div>`;
+  }).join('') : '<div class="empty-note">Belum ada riwayat follow-up.</div>';
+}
+
+function logActivity(l, text){
+  if(!l.activityLog) l.activityLog = [];
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const changedBy = currentUser ? currentUser.name : '-';
+  l.activityLog.push({date: todayIsoStr(), time: timeStr, text, changedBy});
+  supabaseClient.from('activity_log').insert({
+    lead_id: l.id, company: l.company, status: l.status,
+    log_date: todayIsoStr(), log_time: timeStr, note: text, changed_by: changedBy
+  }).then(({error})=>{ if(error) console.warn('Gagal simpan log ke server:', error.message); });
+}
+
+function setChatLogHeight(size){
+  const heights = {short:90, medium:150, tall:260, xtall:420};
+  const ta = document.getElementById('f-chatlog');
+  ta.style.minHeight = heights[size]+'px';
+  ta.style.height = heights[size]+'px';
+  document.querySelectorAll('.height-pill').forEach(p=>p.classList.remove('active'));
+  document.querySelector('.height-pill[data-size="'+size+'"]').classList.add('active');
+}
+
+function addFollowUpLog(){
+  if(currentEditId===null){
+    alert('Simpan lead ini dulu sebelum menambahkan laporan follow up.');
+    return;
+  }
+  const note = document.getElementById('f-new-note').value.trim();
+  if(!note){
+    alert('Isi laporan follow up dulu.');
+    return;
+  }
+  const noteDate = document.getElementById('f-note-date').value || todayIsoStr();
+  const noteChannel = document.getElementById('f-note-channel').value;
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l){
+    alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Silakan kembali ke daftar dan buka ulang.');
+    return;
+  }
+  l.history.push({date:noteDate, time:timeStr, channel:noteChannel, note});
+  l.history.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
+  persistLeadFields(l, {history: l.history});
+  logActivity(l, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+  document.getElementById('f-new-note').value = '';
+  renderHistory(l);
+  showToast('Laporan follow up ditambahkan ke riwayat');
+}
+
+function renderProductList(l){
+  const items = l.products || [];
+  document.getElementById('product-list').innerHTML = items.length ? items.map(p=>{
+    const dealVal = p.hargaDeal ? '<span class="val deal">'+formatRupiah(p.hargaDeal)+'</span>' : '<span class="val empty">Belum deal</span>';
+    const lunasBadge = p.lunas ? ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>' : '';
+    return `<div class="product-item">
+      <span class="product-badge ${p.type}">${PRODUCT_LABELS[p.type]||p.type}</span>
+      <div class="product-info">
+        <span class="product-price"><span class="lbl">Penawaran</span><span class="val">${formatRupiah(p.hargaPenawaran)}</span></span>
+        <span class="product-price"><span class="lbl">Deal</span>${dealVal}${lunasBadge}</span>
+      </div>
+      <button class="product-edit" onclick="editProductLine(${p.id})" aria-label="Edit produk">&#9998;</button>
+      <button class="product-remove" onclick="removeProductLine(${p.id})" aria-label="Hapus produk">&times;</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Belum ada produk ditambahkan.</div>';
+}
+
+function resetProductSubmitButton(){
+  document.getElementById('btn-product-submit').textContent = '+ Tambah produk';
+  document.getElementById('btn-product-cancel').style.display = 'none';
+}
+
+function cancelEditProduct(){
+  editingProductId = null;
+  resetProductSubmitButton();
+  document.getElementById('f-product-type').value = 'smk3';
+  document.getElementById('f-product-penawaran').value = '';
+  document.getElementById('f-product-deal').value = '';
+  toggleLunasCheckboxVisibility();
+  document.getElementById('product-form-row3').classList.remove('editing-active');
+}
+
+function toggleLunasCheckboxVisibility(){
+  const dealVal = parseFloat(document.getElementById('f-product-deal').value) || 0;
+  const wrap = document.getElementById('product-lunas-wrap');
+  if(dealVal > 0){
+    wrap.style.display = 'flex';
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('f-product-lunas').checked = false;
+  }
+}
+
+function editProductLine(productId){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  const p = (l.products||[]).find(x=>x.id===productId);
+  if(!p) return;
+  document.getElementById('f-product-type').value = p.type;
+  document.getElementById('f-product-penawaran').value = p.hargaPenawaran;
+  document.getElementById('f-product-deal').value = p.hargaDeal || '';
+  toggleLunasCheckboxVisibility();
+  document.getElementById('f-product-lunas').checked = !!p.lunas;
+  editingProductId = productId;
+  document.getElementById('btn-product-submit').textContent = 'Update produk';
+  document.getElementById('btn-product-cancel').style.display = 'inline-block';
+  document.getElementById('product-form-row3').classList.add('editing-active');
+}
+
+function addProductLine(){
+  if(currentEditId===null){
+    alert('Simpan lead ini dulu sebelum menambahkan produk.');
+    return;
+  }
+  const type = document.getElementById('f-product-type').value;
+  const penawaran = parseFloat(document.getElementById('f-product-penawaran').value) || 0;
+  const deal = parseFloat(document.getElementById('f-product-deal').value) || 0;
+  const lunas = document.getElementById('f-product-lunas').checked;
+  if(!penawaran){
+    alert('Isi harga penawaran dulu.');
+    return;
+  }
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l){
+    alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Silakan kembali ke daftar dan buka ulang.');
+    return;
+  }
+  if(!l.products) l.products = [];
+  if(editingProductId !== null){
+    const p = l.products.find(x=>x.id===editingProductId);
+    const wasLunas = p ? !!p.lunas : false;
+    if(p){
+      p.type = type;
+      p.hargaPenawaran = penawaran;
+      p.hargaDeal = deal;
+      p.lunas = lunas;
+    }
+    editingProductId = null;
+    resetProductSubmitButton();
+    document.getElementById('product-form-row3').classList.remove('editing-active');
+    if(lunas && !wasLunas){
+      logActivity(l, 'Produk '+(PRODUCT_LABELS[type]||type)+' ditandai sudah lunas');
+    } else if(!lunas && wasLunas){
+      logActivity(l, 'Tanda lunas produk '+(PRODUCT_LABELS[type]||type)+' dibatalkan');
+    } else {
+      logActivity(l, 'Update produk '+(PRODUCT_LABELS[type]||type)+(deal>0 ? ' - harga deal '+formatRupiah(deal)+' dicatat' : ' - harga penawaran diperbarui'));
+    }
+    showToast('Produk diupdate');
+  } else {
+    l.products.push({id: Date.now(), type, hargaPenawaran: penawaran, hargaDeal: deal, lunas});
+    logActivity(l, 'Menambahkan produk '+(PRODUCT_LABELS[type]||type)+' - penawaran '+formatRupiah(penawaran)+(lunas ? ' (langsung lunas)' : ''));
+    showToast('Produk ditambahkan');
+  }
+  document.getElementById('f-product-penawaran').value = '';
+  document.getElementById('f-product-deal').value = '';
+  toggleLunasCheckboxVisibility();
+  persistLeadFields(l, {products: l.products});
+  renderProductList(l);
+}
+
+function removeProductLine(productId){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  const removed = (l.products||[]).find(p=>p.id===productId);
+  l.products = (l.products||[]).filter(p=>p.id!==productId);
+  if(editingProductId === productId) cancelEditProduct();
+  if(removed) logActivity(l, 'Menghapus produk '+(PRODUCT_LABELS[removed.type]||removed.type));
+  persistLeadFields(l, {products: l.products});
+  renderProductList(l);
+}
+
+function openLeadForm(id, force){
+  if(!force && formDirty && isEditingContext()){
+    guardLeave(()=>openLeadForm(id, true));
+    return;
+  }
+  originView = document.querySelector('.view.active').id.replace('view-','');
+  lastViewedId = id;
+  currentEditId = id;
+  const l = leads.find(x=>x.id===id);
+  document.getElementById('form-title').textContent = 'Update lead';
+  document.getElementById('form-subtitle').textContent = 'Diisi oleh: '+(l.admin||'-')+' - admin sales';
+  document.getElementById('mobile-client-header').innerHTML = '<div class="avatar" style="background:'+avatarColor(l.company)+'">'+initials(l.company)+'</div><span class="mch-name">'+l.company+'</span>';
+  document.getElementById('form-status-badge').outerHTML = '<span class="badge '+l.status+'" id="form-status-badge">'+l.status.charAt(0).toUpperCase()+l.status.slice(1)+'</span>';
+  document.getElementById('f-company').value = l.company;
+  document.getElementById('f-address').value = l.address;
+  document.getElementById('f-city').value = l.city;
+  document.getElementById('f-province').value = l.province;
+  document.getElementById('f-pic').value = l.pic;
+  document.getElementById('f-phone').value = l.phone;
+  document.getElementById('f-email').value = l.email;
+  document.getElementById('f-status').value = l.status;
+  document.getElementById('f-source').value = l.source || 'wa';
+  document.getElementById('f-entrydate').value = l.entryDate || todayIsoStr();
+  document.getElementById('f-followup').value = l.followUp;
+  renderAdminSelectOptions();
+  document.getElementById('f-admin').value = l.admin || ADMIN_LIST[0];
+  document.getElementById('f-note-date').value = todayIsoStr();
+  document.getElementById('f-note-channel').value = 'wa';
+  document.getElementById('f-new-note').value = '';
+  document.getElementById('f-chatlog').value = l.chatLog || '';
+  setChatLogHeight('medium');
+  document.getElementById('btn-delete').style.display = (currentUser && currentUser.role==='master_admin') ? 'inline-block' : 'none';
+  editingProductId = null;
+  resetProductSubmitButton();
+  document.getElementById('f-product-type').value = 'smk3';
+  document.getElementById('f-product-penawaran').value = '';
+  document.getElementById('f-product-deal').value = '';
+  toggleLunasCheckboxVisibility();
+  document.getElementById('product-form-row3').classList.remove('editing-active');
+
+  renderHistory(l);
+  renderProductList(l);
+  formDirty = false;
+
+  if(originView === 'followup'){
+    enterFollowupSplitMode();
+  } else if(originView === 'leads'){
+    enterSplitMode();
+  } else {
+    switchView('leads', true);
+    enterSplitMode();
+  }
+}
+
+function openNewLeadForm(force){
+  if(!force && formDirty && isEditingContext()){
+    guardLeave(()=>openNewLeadForm(true));
+    return;
+  }
+  originView = document.querySelector('.view.active').id.replace('view-','');
+  lastViewedId = null;
+  currentEditId = null;
+  document.getElementById('form-title').textContent = 'Tambah lead baru';
+  document.getElementById('form-subtitle').textContent = '';
+  document.getElementById('mobile-client-header').innerHTML = '<div class="avatar" style="background:var(--accent-text)">+</div><span class="mch-name">Lead baru</span>';
+  document.getElementById('form-status-badge').outerHTML = '<span class="badge cold" id="form-status-badge">Cold</span>';
+  ['f-company','f-address','f-city','f-province','f-pic','f-phone','f-email','f-followup'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-status').value = 'cold';
+  document.getElementById('f-source').value = 'website';
+  document.getElementById('f-entrydate').value = todayIsoStr();
+  renderAdminSelectOptions();
+  document.getElementById('f-admin').value = (currentUser && currentUser.name) ? currentUser.name : (ADMIN_LIST[0] || '');
+  document.getElementById('f-note-date').value = todayIsoStr();
+  document.getElementById('f-note-channel').value = 'wa';
+  document.getElementById('f-new-note').value = '';
+  document.getElementById('f-chatlog').value = '';
+  setChatLogHeight('medium');
+  document.getElementById('btn-delete').style.display = 'none';
+  document.getElementById('history-list').innerHTML = '<div class="empty-note">Lead baru, belum ada riwayat.</div>';
+  editingProductId = null;
+  resetProductSubmitButton();
+  document.getElementById('f-product-type').value = 'smk3';
+  document.getElementById('f-product-penawaran').value = '';
+  document.getElementById('f-product-deal').value = '';
+  toggleLunasCheckboxVisibility();
+  document.getElementById('product-form-row3').classList.remove('editing-active');
+  document.getElementById('product-list').innerHTML = '<div class="empty-note">Simpan lead dulu sebelum menambahkan produk.</div>';
+  formDirty = false;
+
+  switchView('leads', true);
+  enterSplitMode(true);
+}
+
+async function saveLeadDataOnly(){
+  const data = {
+    company: document.getElementById('f-company').value.trim() || '(tanpa nama)',
+    address: document.getElementById('f-address').value.trim(),
+    city: document.getElementById('f-city').value.trim(),
+    province: document.getElementById('f-province').value.trim(),
+    pic: document.getElementById('f-pic').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    email: document.getElementById('f-email').value.trim(),
+    status: document.getElementById('f-status').value,
+    source: document.getElementById('f-source').value,
+    entryDate: document.getElementById('f-entrydate').value || todayIsoStr(),
+    followUp: document.getElementById('f-followup').value,
+    admin: document.getElementById('f-admin').value,
+    chatLog: document.getElementById('f-chatlog').value
+  };
+  const newNote = document.getElementById('f-new-note').value.trim();
+  const noteDate = document.getElementById('f-note-date').value || todayIsoStr();
+  const noteChannel = document.getElementById('f-note-channel').value;
+  const nowT = new Date();
+  const noteTime = String(nowT.getHours()).padStart(2,'0')+':'+String(nowT.getMinutes()).padStart(2,'0');
+
+  if(currentEditId===null){
+    data.history = newNote ? [{date:noteDate, time:noteTime, channel:noteChannel, note:newNote}] : [];
+    data.products = [];
+    const { data: inserted, error } = await supabaseClient.from('leads').insert(leadToDbRow(data)).select().single();
+    if(error){
+      alert('Gagal menyimpan lead baru ke server: '+error.message);
+      return false;
+    }
+    const newLead = dbRowToLead(inserted);
+    leads.push(newLead);
+    lastViewedId = newLead.id;
+    currentEditId = newLead.id;
+    logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
+    if(newNote) logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+  } else {
+    const l = leads.find(x=>x.id===currentEditId);
+    if(!l){
+      alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Perubahan tidak tersimpan, silakan kembali ke daftar.');
+      return false;
+    }
+    const prevStatus = l.status;
+    const prevFollowUp = l.followUp;
+    const prevSnapshot = {};
+    Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{ prevSnapshot[f] = l[f]; });
+    const updatedHistory = (l.history || []).slice();
+    if(newNote) updatedHistory.push({date:noteDate, time:noteTime, channel:noteChannel, note:newNote});
+    updatedHistory.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
+    const dbRow = leadToDbRow(Object.assign({}, data, {history: updatedHistory, products: l.products||[]}));
+    const { error } = await supabaseClient.from('leads').update(dbRow).eq('id', currentEditId);
+    if(error){
+      alert('Gagal menyimpan perubahan ke server: '+error.message);
+      return false;
+    }
+    Object.assign(l, data);
+    l.history = updatedHistory;
+    Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{
+      const before = (prevSnapshot[f]||'').toString().trim();
+      const after = (l[f]||'').toString().trim();
+      if(before !== after){
+        logActivity(l, FIELD_CHANGE_LABELS[f]+' diubah dari "'+(before||'-')+'" ke "'+(after||'-')+'"');
+      }
+    });
+    if(prevStatus !== l.status){
+      logActivity(l, 'Status diubah dari '+prevStatus.charAt(0).toUpperCase()+prevStatus.slice(1)+' ke '+l.status.charAt(0).toUpperCase()+l.status.slice(1));
+    }
+    if(prevFollowUp !== l.followUp && l.followUp){
+      logActivity(l, 'Follow-up dijadwalkan ke '+fmtDate(l.followUp));
+    }
+    if(newNote) logActivity(l, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+    lastViewedId = currentEditId;
+  }
+  formDirty = false;
+  return true;
+}
+
+async function saveLead(){
+  const ok = await saveLeadDataOnly();
+  if(!ok) return;
+  if(originView !== 'followup'){ originView = 'leads'; }
+  goBack('saved', true);
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(leads, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'leads-backup-'+todayIsoStr()+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  showToast('Data diexport ke file JSON');
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!Array.isArray(parsed)) throw new Error('isi file bukan daftar leads');
+      leads = parsed;
+      nextId = Math.max(0, ...leads.map(l=>l.id||0)) + 1;
+      switchView('leads');
+      showToast('Ditampilkan sementara ('+leads.length+' leads) -- BELUM tersimpan ke server, hilang kalau refresh. Import ke Supabase belum didukung.');
+    }catch(err){
+      alert('File tidak valid: '+err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+async function deleteLead(){
+  if(currentEditId===null) return;
+  if(!confirm('Hapus lead ini?')) return;
+  const name = leads.find(x=>x.id===currentEditId)?.company || 'Lead';
+  const { error } = await supabaseClient.from('leads').delete().eq('id', currentEditId);
+  if(error){
+    showToast('Gagal menghapus di server: '+error.message);
+    return;
+  }
+  logGlobalActivity('Lead dihapus', name);
+  leads = leads.filter(x=>x.id!==currentEditId);
+  lastViewedId = null;
+  currentEditId = null;
+  formDirty = false;
+  switchView('leads', true);
+  showToast('Dihapus: '+name);
+}
+
+// init
+renderAdminSelectOptions();
+applyRoleRestrictions();
+initOverviewReorderBars();
+applyOverviewSectionOrder();
+renderOverview();
+renderLeadsList();
+initDirtyTracking();
+checkExistingSession();
+initIdleAutoLogout();
+</script>
+</body>
+</html>
