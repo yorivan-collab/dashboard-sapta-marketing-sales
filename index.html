@@ -2867,9 +2867,31 @@ function renderAdminSelectOptions(){
   const sel = document.getElementById('f-admin');
   if(!sel) return;
   const current = sel.value;
-  // Yang login sekarang selalu ikut kepilih di daftar ini, walau dia
-  // Master/Super Admin/Supervisor -- soalnya siapa pun bisa jadi
-  // penanggung jawab lead kalau dia sendiri yang input.
+
+  // Sales: lead SELALU otomatis atas nama diri sendiri, gak boleh diubah
+  // sama sekali -- ini bukan cuma soal tampilan, ini batas kepemilikan data.
+  if(currentUser && currentUser.role==='sales'){
+    const myName = currentUser.name || '';
+    sel.innerHTML = '<option value="'+myName+'">'+myName+'</option>';
+    sel.value = myName;
+    sel.disabled = true;
+    return;
+  }
+
+  sel.disabled = false;
+
+  // Supervisor: cuma boleh pilih di antara anggota timnya sendiri + dirinya,
+  // gak boleh lihat/pilih nama di luar itu, dan gak boleh bikin admin baru.
+  if(currentUser && currentUser.role==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
+    let options = team.slice();
+    if(currentUser.name && !options.includes(currentUser.name)) options.unshift(currentUser.name);
+    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+    if(options.includes(current)) sel.value = current;
+    return;
+  }
+
+  // Master Admin / Super Admin: bebas pilih siapa saja + boleh tambah admin baru.
   let options = ADMIN_LIST.slice();
   if(currentUser && currentUser.name && !options.includes(currentUser.name)){
     options.unshift(currentUser.name);
@@ -2879,6 +2901,7 @@ function renderAdminSelectOptions(){
 }
 
 function handleAdminSelectChange(sel){
+  if(currentUser && (currentUser.role==='sales' || currentUser.role==='supervisor')) return;
   if(sel.value === '__add_new__'){
     const name = prompt('Nama admin sales baru:');
     sel.value = ADMIN_LIST[0] || '';
