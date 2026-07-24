@@ -995,6 +995,10 @@
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Email</label>
         <input type="email" id="uf-email" placeholder="nama@saptamutu.com" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
       </div>
+      <div id="uf-password-wrap">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Password (buat login akun ini, min. 6 karakter)</label>
+        <input type="text" id="uf-password" placeholder="Password login" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
       <div>
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Role</label>
         <select id="uf-role" onchange="onUserFormRoleChange()" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
@@ -1044,16 +1048,18 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="admin-approved-modal">
+<div class="modal-overlay" id="approve-password-modal">
   <div class="modal-card">
-    <div class="modal-title">Akun berhasil dibuat</div>
-    <div class="modal-sub">Ini cuma ditampilin SEKALI. Salin dan kirim ke orangnya langsung (WA/telepon), jangan lewat tempat yang gampang dilihat orang lain.</div>
-    <div style="display:flex; flex-direction:column; gap:8px; margin:14px 0; font-size:13px;">
-      <div><span style="color:var(--muted);">Email:</span> <b id="admin-approved-email"></b></div>
-      <div><span style="color:var(--muted);">Password sementara:</span> <b id="admin-approved-password" style="font-family:monospace; font-size:14px;"></b></div>
+    <div class="modal-title">Set password akun ini</div>
+    <div class="modal-sub">Bikin password login buat <b id="approve-password-name"></b>. Catat, nanti kasih tau ke orangnya langsung (WA/telepon).</div>
+    <div style="margin:14px 0;">
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Password (min. 6 karakter)</label>
+      <input type="text" id="approve-password-input" placeholder="Password login" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      <div id="approve-password-error" style="display:none; font-size:11.5px; color:var(--hot); margin-top:6px;"></div>
     </div>
     <div class="modal-actions">
-      <button class="primary" onclick="closeAdminApprovedModal()">Sudah disalin, tutup</button>
+      <button class="primary" onclick="confirmApproveWithPassword()">Buat akun</button>
+      <button onclick="closeApprovePasswordModal()">Batal</button>
     </div>
   </div>
 </div>
@@ -2414,6 +2420,33 @@ function syncAdminListFromUsers(){
 }
 syncAdminListFromUsers();
 
+// Daftar di atas ("userAccounts") tadinya cuma isi 4 orang contoh dari
+// awal project dan gak pernah diperbarui -- akun baru yang beneran
+// dibikin (lewat approve request atau Tambah User) gak bakal keliatan
+// di mana-mana kalau ini gak diisi ulang dari data server yang asli.
+// Fungsi ini yang ngambil data user beneran dari tabel profiles,
+// dipanggil tiap abis login (RLS otomatis batasin sesuai role: Sales
+// cuma dapet dirinya sendiri, Supervisor dapet dirinya+timnya, Master/
+// Super Admin dapet semua).
+async function fetchUserAccountsFromSupabase(){
+  const { data, error } = await supabaseClient.from('profiles').select('*').order('name');
+  if(error){
+    console.warn('Gagal memuat daftar user dari server:', error.message);
+    return;
+  }
+  userAccounts = (data || []).map(p => ({
+    id: p.id,
+    name: p.name,
+    email: p.email || '',
+    role: p.role,
+    status: p.status,
+    branch: p.branch || undefined,
+    team: p.team || undefined,
+    photo_url: p.photo_url || undefined
+  }));
+  syncAdminListFromUsers();
+}
+
 let currentUser = null;
 let currentUserProfile = null;
 let editingUserId = null;
@@ -2475,6 +2508,7 @@ async function loadProfileAndEnter(userId){
   } else {
     quickFilterAdmin = 'all';
   }
+  await fetchUserAccountsFromSupabase();
   applyRoleRestrictions();
   document.getElementById('leads-rowlist').innerHTML = '<div class="empty-note" style="text-align:center; padding:30px;">Memuat data lead dari server...</div>';
   await fetchLeadsFromSupabase();
@@ -3019,9 +3053,9 @@ function renderUsersView(){
       '<td><span class="role-badge '+u.role+'">'+roleLabel+'</span>'+teamNote+'</td>'+
       '<td><span class="status-badge-user '+(u.status==='active'?'active':'nonaktif')+'">'+statusLabel+'</span></td>'+
       '<td>'+
-        '<span class="user-action-link '+(canEdit?'':'disabled')+'" onclick="openUserForm('+u.id+')">Edit</span>'+
-        '<span class="user-action-link '+(canToggleDelete?'':'disabled')+'" onclick="toggleUserStatus('+u.id+')">'+toggleLabel+'</span>'+
-        '<span class="user-action-link danger '+(canToggleDelete?'':'disabled')+'" onclick="deleteUserAccount('+u.id+')">Hapus</span>'+
+        '<span class="user-action-link '+(canEdit?'':'disabled')+'" onclick="openUserForm(\''+u.id+'\')">Edit</span>'+
+        '<span class="user-action-link '+(canToggleDelete?'':'disabled')+'" onclick="toggleUserStatus(\''+u.id+'\')">'+toggleLabel+'</span>'+
+        '<span class="user-action-link danger '+(canToggleDelete?'':'disabled')+'" onclick="deleteUserAccount(\''+u.id+'\')">Hapus</span>'+
       '</td>'+
     '</tr>';
   }).join('');
@@ -3102,6 +3136,8 @@ function openUserForm(id){
   roleSelect.innerHTML = viewerIsMaster
     ? '<option value="sales">Sales</option><option value="supervisor">Supervisor</option><option value="super_admin">Super Admin</option>'
     : '<option value="sales">Sales</option><option value="supervisor">Supervisor</option>';
+  const passwordWrap = document.getElementById('uf-password-wrap');
+  document.getElementById('uf-password').value = '';
   if(id){
     const u = userAccounts.find(x=>x.id===id);
     if(!u) return;
@@ -3111,11 +3147,15 @@ function openUserForm(id){
     document.getElementById('uf-name').value = u.name;
     document.getElementById('uf-email').value = u.email || '';
     if(u.role!=='master_admin') roleSelect.value = u.role;
+    // Ganti password akun yang udah ada belum didukung di sini -- itu
+    // tindakan terpisah (reset password), bukan bagian form edit ini.
+    if(passwordWrap) passwordWrap.style.display = 'none';
   } else {
     document.getElementById('user-form-title').textContent = 'Tambah user';
     document.getElementById('uf-name').value = '';
     document.getElementById('uf-email').value = '';
     roleSelect.value = 'sales';
+    if(passwordWrap) passwordWrap.style.display = 'block';
   }
   onUserFormRoleChange();
   document.getElementById('user-form-modal').style.display = 'flex';
@@ -3126,12 +3166,13 @@ function closeUserForm(){
   editingUserId = null;
 }
 
-function submitUserForm(){
+async function submitUserForm(){
   const name = document.getElementById('uf-name').value.trim();
   const email = document.getElementById('uf-email').value.trim();
   const role = document.getElementById('uf-role').value;
   const errorEl = document.getElementById('uf-error');
   const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  errorEl.style.display = 'none';
   if(!name){
     errorEl.textContent = 'Nama wajib diisi.';
     errorEl.style.display = 'block';
@@ -3150,8 +3191,10 @@ function submitUserForm(){
     const checks = document.querySelectorAll('#uf-team-checklist input[type=checkbox]:checked');
     team = Array.from(checks).map(c=>c.value);
   }
-  let savedId = editingUserId;
+
   if(editingUserId){
+    // Edit user yang udah ada -- masih simulasi lokal (belum ubah akun
+    // Supabase Auth beneran), reset kalau halaman di-refresh.
     const u = userAccounts.find(x=>x.id===editingUserId);
     if(!u) return;
     if(u.role==='master_admin' && !viewerIsMaster){
@@ -3173,31 +3216,62 @@ function submitUserForm(){
     u.email = email;
     if(u.role!=='master_admin') u.role = role;
     if(role==='supervisor'){ u.branch = branch; u.team = team; } else { delete u.branch; delete u.team; }
-  } else {
-    if(role==='super_admin' && !viewerIsMaster){
-      errorEl.textContent = 'Cuma Master Admin yang bisa menambah Super Admin.';
-      errorEl.style.display = 'block';
-      return;
+    if(role==='supervisor' && team.length){
+      userAccounts.forEach(other=>{
+        if(other.role==='supervisor' && other.id!==editingUserId && other.team){
+          other.team = other.team.filter(n=>!team.includes(n));
+        }
+      });
     }
-    const newUser = {id: nextUserId++, name, email, role, status:'active'};
-    if(role==='supervisor'){ newUser.branch = branch; newUser.team = team; }
-    userAccounts.push(newUser);
-    savedId = newUser.id;
+    syncAdminListFromUsers();
+    populateQuickFilterDropdowns();
+    renderAdminSelectOptions();
+    renderUsersView();
+    closeUserForm();
+    showToast('User diperbarui');
+    return;
   }
-  if(role==='supervisor' && team.length){
-    userAccounts.forEach(other=>{
-      if(other.role==='supervisor' && other.id!==savedId && other.team){
-        other.team = other.team.filter(n=>!team.includes(n));
-      }
-    });
+
+  // Tambah user baru -- ini yang beneran bikin akun login (email+password)
+  // lewat Edge Function, bukan simulasi lokal lagi.
+  if(role==='super_admin' && !viewerIsMaster){
+    errorEl.textContent = 'Cuma Master Admin yang bisa menambah Super Admin.';
+    errorEl.style.display = 'block';
+    return;
   }
-  syncAdminListFromUsers();
+  const password = document.getElementById('uf-password').value;
+  if(!email){
+    errorEl.textContent = 'Email wajib diisi.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  if(!password || password.length < 6){
+    errorEl.textContent = 'Password wajib diisi, minimal 6 karakter.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const submitBtn = document.querySelector('#user-form-modal .modal-actions .primary');
+  if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+
+  const { data, error } = await supabaseClient.functions.invoke('create-user-account', {
+    body: { name, email, password, role, team: (role==='supervisor'?team:undefined), branch: (role==='supervisor'?branch:undefined) }
+  });
+
+  if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
+
+  if(error || !data || data.error){
+    errorEl.textContent = 'Gagal bikin akun: ' + (error ? error.message : (data && data.error));
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  await fetchUserAccountsFromSupabase();
   populateQuickFilterDropdowns();
   renderAdminSelectOptions();
-  renderLoginOptions();
   renderUsersView();
   closeUserForm();
-  showToast(editingUserId ? 'User diperbarui' : 'User ditambahkan');
+  showToast('User ditambahkan, akun login sudah aktif');
 }
 
 function toggleUserStatus(id){
@@ -3870,7 +3944,7 @@ async function renderAdminApprovalView(){
     let actions;
     if(r.status==='pending'){
       actions = '<div style="display:flex; gap:8px; margin-top:8px;">'
-        + '<button class="primary" style="padding:6px 14px; font-size:12.5px;" onclick="approveAdminRequest('+r.id+', this)">Approve</button>'
+        + '<button class="primary" style="padding:6px 14px; font-size:12.5px;" onclick="openApprovePasswordModal('+r.id+', \''+r.requested_name.replace(/'/g,"\\'")+'\')">Approve</button>'
         + '<button style="padding:6px 14px; font-size:12.5px;" onclick="rejectAdminRequest('+r.id+')">Reject</button>'
         + '</div>';
     } else {
@@ -3887,24 +3961,46 @@ async function renderAdminApprovalView(){
   refreshAdminApprovalCount();
 }
 
-async function approveAdminRequest(id, btnEl){
-  if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Memproses...'; }
-  const { data, error } = await supabaseClient.functions.invoke('approve-admin-request', {
-    body: { request_id: id }
-  });
-  if(error || !data || data.error){
-    showToast('Gagal approve: '+(error ? error.message : (data && data.error)));
-    if(btnEl){ btnEl.disabled = false; btnEl.textContent = 'Approve'; }
-    return;
-  }
-  document.getElementById('admin-approved-email').textContent = data.email;
-  document.getElementById('admin-approved-password').textContent = data.temp_password;
-  document.getElementById('admin-approved-modal').style.display = 'flex';
-  renderAdminApprovalView();
+let pendingApproveRequestId = null;
+
+function openApprovePasswordModal(id, name){
+  pendingApproveRequestId = id;
+  document.getElementById('approve-password-name').textContent = name || '';
+  document.getElementById('approve-password-input').value = '';
+  document.getElementById('approve-password-error').style.display = 'none';
+  document.getElementById('approve-password-modal').style.display = 'flex';
 }
 
-function closeAdminApprovedModal(){
-  document.getElementById('admin-approved-modal').style.display = 'none';
+function closeApprovePasswordModal(){
+  document.getElementById('approve-password-modal').style.display = 'none';
+  pendingApproveRequestId = null;
+}
+
+async function confirmApproveWithPassword(){
+  const password = document.getElementById('approve-password-input').value;
+  const errEl = document.getElementById('approve-password-error');
+  errEl.style.display = 'none';
+  if(!password || password.length < 6){
+    errEl.textContent = 'Password minimal 6 karakter.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const requestId = pendingApproveRequestId;
+  const confirmBtn = document.querySelector('#approve-password-modal .modal-actions .primary');
+  if(confirmBtn){ confirmBtn.disabled = true; confirmBtn.textContent = 'Memproses...'; }
+  const { data, error } = await supabaseClient.functions.invoke('approve-admin-request', {
+    body: { request_id: requestId, password }
+  });
+  if(confirmBtn){ confirmBtn.disabled = false; confirmBtn.textContent = 'Buat akun'; }
+  if(error || !data || data.error){
+    errEl.textContent = 'Gagal approve: '+(error ? error.message : (data && data.error));
+    errEl.style.display = 'block';
+    return;
+  }
+  closeApprovePasswordModal();
+  await fetchUserAccountsFromSupabase();
+  renderAdminApprovalView();
+  showToast('Akun dibuat: '+data.email);
 }
 
 async function rejectAdminRequest(id){
