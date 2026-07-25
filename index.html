@@ -380,6 +380,22 @@
   .mobile-fab-wrap{display:none;}
   .mobile-client-header{display:none;}
 
+  .assistant-fab-wrap{position:fixed; right:16px; bottom:16px; z-index:150;}
+  .assistant-fab-btn{width:52px; height:52px; border-radius:50%; background:var(--accent); color:#fff; border:none; box-shadow:0 8px 22px rgba(124,92,255,0.45); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
+  .assistant-panel{display:none; flex-direction:column; position:fixed; right:16px; bottom:78px; width:340px; max-width:calc(100vw - 32px); height:460px; max-height:70vh; background:var(--surface); border-radius:var(--radius); box-shadow:0 20px 50px rgba(15,12,30,0.32); overflow:hidden; z-index:150;}
+  .assistant-panel.open{display:flex;}
+  .assistant-panel-header{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border-soft); flex-shrink:0;}
+  .assistant-panel-title{font-weight:700; font-size:13.5px;}
+  .assistant-panel-sub{font-size:11px; color:var(--muted); margin-top:1px;}
+  .assistant-messages{flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:9px;}
+  .assistant-bubble{max-width:88%; padding:8px 12px; border-radius:14px; font-size:12.5px; line-height:1.55; white-space:pre-wrap; word-break:break-word;}
+  .assistant-bubble.user{align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px;}
+  .assistant-bubble.bot{align-self:flex-start; background:var(--border-soft); color:var(--text); border-bottom-left-radius:4px;}
+  .assistant-bubble.typing{align-self:flex-start; background:var(--border-soft); color:var(--muted); font-style:italic;}
+  .assistant-input-row{display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--border-soft); flex-shrink:0;}
+  .assistant-input-row input{flex:1; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box; min-width:0;}
+  .assistant-input-row button{padding:9px 14px; font-size:12.5px; flex-shrink:0;}
+
   @media (max-width: 768px){
     .app{display:block;}
     .sidebar{display:none;}
@@ -426,6 +442,8 @@
     .mobile-client-header .mch-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
     .mobile-fab-wrap{display:block; position:fixed; right:16px; bottom:16px; z-index:100;}
+    .assistant-fab-wrap{bottom:82px;}
+    .assistant-panel{bottom:144px;}
     .mobile-fab-btn{width:54px; height:54px; border-radius:50%; background:var(--accent); color:#fff; border:none; box-shadow:0 8px 22px rgba(124,92,255,0.45); font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
     .mobile-fab-menu{position:absolute; bottom:66px; right:0; display:none; flex-direction:column; align-items:flex-end; gap:7px; max-height:65vh; overflow-y:auto; padding:4px;}
     .mobile-fab-menu.open{display:flex;}
@@ -1080,6 +1098,28 @@
     <div class="mobile-fab-item" onclick="goToFilter('no-interaction'); closeMobileFab();">Belum ada interaksi</div>
   </div>
   <button class="mobile-fab-btn" id="mobile-fab-btn" onclick="toggleMobileFab()" aria-label="Buka menu">&#9776;</button>
+</div>
+
+<div class="assistant-fab-wrap">
+  <button class="assistant-fab-btn" onclick="toggleAssistantPanel()" aria-label="Tanya Vainala">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px; height:24px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+  </button>
+  <div class="assistant-panel" id="assistant-panel">
+    <div class="assistant-panel-header">
+      <div>
+        <div class="assistant-panel-title">Vainala</div>
+        <div class="assistant-panel-sub">Asisten dashboard -- tanya cara pakai menu di sini</div>
+      </div>
+      <button class="icon-btn" onclick="toggleAssistantPanel()" aria-label="Tutup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="assistant-messages" id="assistant-messages"></div>
+    <div class="assistant-input-row">
+      <input type="text" id="assistant-input" placeholder="Contoh: cara tambah lead" onkeydown="if(event.key==='Enter'){ sendAssistantMessage(); }">
+      <button class="primary" onclick="sendAssistantMessage()">Kirim</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -4017,6 +4057,353 @@ async function rejectAdminRequest(id){
   }
   showToast('Pengajuan ditolak');
   renderAdminApprovalView();
+}
+
+// ============================================================
+// ASISTEN DASHBOARD (ala-AI, murni lokal -- gak nyambung ke API AI
+// mana pun. Cocokin pertanyaan ke daftar topik pakai kata kunci,
+// terus jawab pakai gaya sapaan + langkah-langkah).
+// ============================================================
+
+const ASSISTANT_KB = [
+  {
+    keywords: ['tambah lead','lead baru','nambah lead','bikin lead','buat lead','input lead','data lead apa aja','isi lead'],
+    steps: [
+      'Buka menu "Leads", klik tombol "+ Tambah lead baru" di pojok kanan atas.',
+      'Yang wajib diisi: nama perusahaan, suhu lead (Cold/Warm/Hot), dan sumber lead.',
+      'Data tambahan kalau ada: PIC, alamat, kota, provinsi, telepon, email, tanggal masuk, rencana follow up, dan chat log.',
+      'Admin/sales penanggung jawabnya otomatis keisi nama kamu sendiri -- gak perlu diisi manual (kecuali Master/Super Admin yang boleh pilih sendiri).',
+      'Klik Simpan.'
+    ]
+  },
+  {
+    keywords: ['ubah status lead','ganti status','suhu lead','cold warm hot','ubah suhu'],
+    steps: [
+      'Buka lead yang mau diubah dari list "Leads" (klik baris leadnya).',
+      'Di form edit, ganti dropdown "Suhu Lead" jadi Cold/Warm/Hot sesuai kondisi terbaru.',
+      'Klik Simpan.'
+    ]
+  },
+  {
+    keywords: ['follow up','followup','rencana follow up','catat follow up','jadwal follow up'],
+    steps: [
+      'Buka lead yang mau di-follow-up, isi tanggal di kolom "Rencana follow up", Simpan.',
+      'Buat nyatet hasil follow up (log percakapan/hasil), buka lead itu lagi, scroll ke bagian riwayat/log, tambahkan catatan baru.',
+      'Semua rencana follow up bisa dilihat rangkumannya di menu "Follow up" > "Rencana follow up".'
+    ]
+  },
+  {
+    keywords: ['produk','omzet','harga penawaran','dp','lunas','deal'],
+    steps: [
+      'Buka lead-nya, cari bagian "Produk" di form edit.',
+      'Klik "+ Tambah produk", isi jenis produk dan harga penawaran.',
+      'Update status pembayaran (DP/Lunas) di baris produk itu kalau udah ada progress.',
+      'Ringkasan omzet per status (rencana, deal, DP, lunas) bisa dilihat di Overview dan menu Omzet di sidebar.'
+    ]
+  },
+  {
+    keywords: ['ajukan admin','ajukan sales','tambah admin baru supervisor','request admin','nambah anggota tim'],
+    steps: [
+      'Ini khusus role Supervisor. Buka menu "Ajukan Admin Baru" di sidebar.',
+      'Isi nama lengkap dan email calon sales baru.',
+      'Klik "Ajukan". Status pengajuan kamu bisa dipantau di bagian "Riwayat pengajuan saya" di halaman yang sama.',
+      'Setelah di-approve Master/Super Admin, orang itu otomatis masuk ke tim kamu dan bisa langsung login.'
+    ]
+  },
+  {
+    keywords: ['approve admin','approve user','user request','reject admin','terima pengajuan','tolak pengajuan'],
+    steps: [
+      'Ini khusus Master Admin/Super Admin. Buka "Kelola Pengguna" > sub "User Request".',
+      'Pengajuan yang masih "Menunggu" ada tombol Approve dan Reject.',
+      'Approve: kamu diminta bikin password buat akun itu (minimal 6 karakter) -- itu password yang nanti dipakai orangnya buat login, jadi harus dicatat dan dikasih tau ke orangnya langsung.',
+      'Reject: boleh kasih alasan (opsional).',
+      'Setelah approve, akun login langsung aktif dan orangnya otomatis masuk ke tim Supervisor yang ngajuin.'
+    ]
+  },
+  {
+    keywords: ['tambah user','tambah pengguna','bikin akun baru','user baru langsung'],
+    steps: [
+      'Ini khusus Master Admin/Super Admin. Buka "Kelola Pengguna" > sub "Tambah User".',
+      'Klik "+ Tambah user", isi nama, email, password (min. 6 karakter), dan role (Sales/Supervisor/Super Admin).',
+      'Kalau role-nya Supervisor, pilih juga anggota tim dan cabang (opsional, cuma label).',
+      'Klik Simpan -- akun login langsung aktif, gak perlu approval lagi (karena kamu sendiri yang nambah).'
+    ]
+  },
+  {
+    keywords: ['struktur organisasi','bagan tim','siapa atasan','org chart'],
+    steps: [
+      'Buka menu "Struktur Organisasi" di sidebar.',
+      'Master Admin lihat semua orang. Super Admin lihat semua di bawah Master. Supervisor cuma lihat dirinya + timnya sendiri. Sales cuma lihat dirinya + Supervisor-nya.'
+    ]
+  },
+  {
+    keywords: ['perbandingan kinerja','bandingkan','banding performa','siapa paling bagus'],
+    steps: [
+      'Buka menu "Perbandingan Kinerja".',
+      'Centang minimal 2 orang yang mau disanding-sandingkan (daftarnya nyesuain sama siapa yang boleh kamu lihat).',
+      'Klik "Bandingkan" -- muncul kartu berisi jumlah lead, closing rate, cold/warm/hot, DP, dan omzet tiap orang.'
+    ]
+  },
+  {
+    keywords: ['monitoring user','siapa online','siapa aktif','status login orang'],
+    steps: [
+      'Ini khusus Master Admin/Super Admin. Buka menu "Monitoring User".',
+      'Aktif = baru interaksi kurang dari 2 menit. Diam = login tapi gak megang lebih dari 2 menit. Offline = gak ada tanda lebih dari 3 menit.',
+      'Daftarnya otomatis update tiap 20 detik selama halaman ini dibuka.'
+    ]
+  },
+  {
+    keywords: ['fokus tampilan','filter fokus','lihat orang tertentu saja'],
+    steps: [
+      'Ini khusus Master Admin. Ada badge "Fokus: semua orang" di atas Overview/Leads, klik itu.',
+      'Centang 1-2 orang yang mau difokusin, klik "Terapkan" -- seluruh sistem (Overview, Leads, dll) otomatis nyempit ke orang itu aja.',
+      'Klik tombol reset (x) di badge itu buat balik lihat semua orang lagi.'
+    ]
+  },
+  {
+    keywords: ['kelompokkan admin','grouping','group per admin','pisah per sales'],
+    steps: [
+      'Di menu "Leads", ada toggle "Kelompokkan per admin" -- nyalain itu buat lihat lead dikelompokin per nama admin/sales, mirip Airtable.'
+    ]
+  },
+  {
+    keywords: ['ganti foto','foto profil','upload foto','avatar'],
+    steps: [
+      'Klik foto/avatar bulat kamu di pojok kiri bawah sidebar (dekat nama kamu).',
+      'Tempel link foto (misal dari Imgur/Google Drive yang linknya public), atau kosongkan buat hapus foto.'
+    ]
+  },
+  {
+    keywords: ['logout','keluar','auto logout','sign out'],
+    steps: [
+      'Ada tombol "Keluar" di bagian bawah sidebar.',
+      'Kalau kamu diemin gak ada aktivitas sama sekali selama 24 jam, sistem otomatis logout sendiri.'
+    ]
+  },
+  {
+    keywords: ['log aktivitas','riwayat perubahan','history perubahan','siapa yang ubah'],
+    steps: [
+      'Buka menu "Log Aktivitas" -- isinya riwayat semua perubahan (lead baru, status berubah, dll) lengkap sama siapa yang ngubah dan kapan.'
+    ]
+  },
+  {
+    keywords: ['filter admin','pilih sales','lihat punya siapa','filter sales tertentu'],
+    steps: [
+      'Di Overview atau Leads, ada dropdown filter admin/sales -- pilih nama tertentu buat nyaring data cuma punya orang itu.',
+      'Sales dan Supervisor filter-nya udah otomatis kekunci sesuai lingkup mereka sendiri.'
+    ]
+  },
+  {
+    keywords: ['hapus lead','gak bisa hapus','tidak bisa hapus','delete lead','kenapa gak ada tombol hapus'],
+    steps: [
+      'Hapus lead cuma bisa dilakuin Master Admin -- ini emang dibatesin sengaja biar data gak ilang gara-gara kehapus gak sengaja.',
+      'Kalau kamu Super Admin/Supervisor/Sales dan butuh lead dihapus, minta tolong ke Master Admin.'
+    ]
+  },
+  {
+    keywords: ['admin sales gak bisa diganti','field admin dikunci','kenapa admin terkunci','tidak bisa ganti admin lead'],
+    steps: [
+      'Kalau kamu Sales: kolom "Admin Sales" di form lead sengaja dikunci ke nama kamu sendiri -- lead yang kamu buat/pegang emang harus jelas siapa pemiliknya.',
+      'Kalau kamu Supervisor: kolom itu bisa diganti, tapi cuma boleh milih di antara anggota tim kamu sendiri, gak bisa pilih orang luar tim.',
+      'Yang bisa assign lead ke siapa aja tanpa batasan cuma Master Admin dan Super Admin.'
+    ]
+  },
+  {
+    keywords: ['lupa password','reset password','ganti password saya lupa','tidak bisa login lupa sandi'],
+    steps: [
+      'Reset password belum ada tombolnya di aplikasi ini -- harus minta tolong Master Admin.',
+      'Master Admin resetnya manual lewat Supabase Dashboard: Authentication > Users > pilih orangnya > reset password.'
+    ]
+  },
+  {
+    keywords: ['beda tambah user user request','tambah user vs user request','bedanya dua menu kelola pengguna'],
+    steps: [
+      '"Tambah User": buat Master/Super Admin nambah orang baru LANGSUNG, gak perlu approval siapa-siapa (karena mereka sendiri yang berwenang).',
+      '"User Request": daftar pengajuan dari Supervisor yang mau nambah anggota tim baru, harus di-approve dulu sama Master/Super Admin baru akunnya beneran kebentuk.'
+    ]
+  },
+  {
+    keywords: ['nonaktifkan vs hapus','beda nonaktifkan hapus','apa bedanya nonaktifkan sama hapus user'],
+    steps: [
+      '"Nonaktifkan": akunnya gak bisa dipake login lagi, tapi datanya masih ada, bisa diaktifkan lagi kapan pun.',
+      '"Hapus": ngilangin orang itu dari daftar tampilan (di aplikasi ini masih simulasi lokal buat user lama, belum ngehapus akun Supabase Auth beneran).',
+      'Kalau ragu, lebih aman pilih Nonaktifkan daripada Hapus.'
+    ]
+  },
+  {
+    keywords: ['pindahkan lead','reassign lead','ganti pemilik lead','oper lead ke orang lain'],
+    steps: [
+      'Buka lead yang mau dipindah, di form edit ganti dropdown "Admin Sales" ke nama admin yang baru, Simpan.',
+      'Sales gak bisa lakuin ini (field-nya terkunci). Supervisor cuma bisa pindahin ke sesama anggota timnya sendiri. Master/Super Admin bebas pindahin ke siapa aja.'
+    ]
+  },
+  {
+    keywords: ['aktif diam offline','status monitoring artinya','apa itu diam','apa itu offline di monitoring'],
+    steps: [
+      'Aktif = ada interaksi (klik/ketik) dalam 2 menit terakhir.',
+      'Diam = lagi login/buka halaman tapi gak megang apa-apa lebih dari 2 menit.',
+      'Offline = gak ada tanda sama sekali lebih dari 3 menit (termasuk kalau udah logout).'
+    ]
+  },
+  {
+    keywords: ['kepala cabang ngaruh','fungsi kepala cabang','branch ngaruh akses','cabang ngaruh ke data'],
+    steps: [
+      '"Kepala Cabang" itu cuma label/keterangan doang, gak ngaruh sama sekali ke data yang bisa dilihat.',
+      'Yang nentuin Supervisor bisa lihat data siapa itu murni dari daftar "anggota tim" yang di-assign manual, bukan dari cabang/wilayah.'
+    ]
+  },
+  {
+    keywords: ['real time','realtime','kenapa harus refresh','kenapa data gak langsung update','update otomatis'],
+    steps: [
+      'Sebagian besar data DI SINI baru keliatan abis refresh halaman -- bukan otomatis update pas orang lain ngubah sesuatu.',
+      'Pengecualian: menu "Monitoring User" auto-update tiap 20 detik selama halaman itu dibuka.'
+    ]
+  },
+  {
+    keywords: ['cari lead','search lead','nyari perusahaan','nyari pic'],
+    steps: [
+      'Di Overview atau Leads, ada kolom pencarian -- ketik nama PT, nama PIC, atau lokasi buat nyaring hasilnya.'
+    ]
+  },
+  {
+    keywords: ['beda role','master admin super admin supervisor sales','tingkatan role','level akses'],
+    steps: [
+      'Master Admin: akses penuh ke semua data dan user, satu-satunya yang bisa hapus lead dan ubah akun Super Admin.',
+      'Super Admin: akses penuh ke data, bisa kelola Supervisor & Sales, tapi gak bisa sentuh akun Master/Super Admin lain, gak bisa hapus lead.',
+      'Supervisor: cuma lihat data dirinya + anggota tim yang di-assign ke dia.',
+      'Sales: cuma lihat data lead miliknya sendiri.'
+    ]
+  }
+];
+
+function assistantNormalize(s){
+  return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function matchAssistantKB(question){
+  const norm = assistantNormalize(question);
+  if(!norm) return null;
+  let best = null, bestScore = 0;
+  ASSISTANT_KB.forEach(entry=>{
+    let score = 0;
+    entry.keywords.forEach(kw=>{
+      const kwNorm = assistantNormalize(kw);
+      if(kwNorm && norm.includes(kwNorm)) score += kwNorm.split(' ').length;
+    });
+    if(score > bestScore){ bestScore = score; best = entry; }
+  });
+  return bestScore > 0 ? best : null;
+}
+
+// Sapaan bertahap: obrolan PERTAMA di hari itu pakai sapaan lengkap,
+// obrolan ke-2 lebih santai, obrolan ke-3 dst paling singkat/akrab.
+// Balik ke sapaan lengkap lagi begitu gantiganti hari. Disimpen di
+// localStorage (per nama) biar tetep konsisten walau chat-nya ditutup-
+// buka lagi di hari yang sama.
+const ASSISTANT_GREETING_STAGES = {
+  // Obrolan pertama hari ini -- lengkap + ada unsur waktu (pagi/siang/sore/malam)
+  first: [
+    'Halo {name}, selamat {waktu}! ',
+    'Hai {name}, selamat {waktu}, apa kabar? ',
+    'Halo {name}, senang lihat kamu balik lagi. ',
+    'Selamat {waktu}, {name}! '
+  ],
+  // Obrolan kedua di hari yang sama -- sedang, masih nyebut nama
+  mid: [
+    'Oke {name}, ',
+    'Baik {name}, ',
+    '{name}, siap, ',
+    'Lanjut ya {name}, '
+  ],
+  // Obrolan ketiga dst di hari yang sama -- paling singkat/akrab
+  casual: [
+    'Oke, ',
+    'Siap, ',
+    'Yap, ',
+    'Baik, '
+  ]
+};
+
+function assistantTimeGreeting(){
+  const h = new Date().getHours();
+  if(h>=4 && h<11) return 'pagi';
+  if(h>=11 && h<15) return 'siang';
+  if(h>=15 && h<18) return 'sore';
+  return 'malam';
+}
+
+// Nambah 1 hitungan obrolan hari ini buat user yang lagi login, balik
+// ke 1 lagi kalau tanggalnya udah beda dari terakhir kali chat.
+function assistantBumpGreetingStage(){
+  const name = (currentUser && currentUser.name) ? currentUser.name : 'guest';
+  const today = todayIsoStr();
+  const key = 'sm_assistant_greet_' + name;
+  let stored = null;
+  try{ stored = JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){ stored = null; }
+  if(!stored || stored.date !== today) stored = { date: today, count: 0 };
+  stored.count += 1;
+  try{ localStorage.setItem(key, JSON.stringify(stored)); }catch(e){}
+  return stored.count;
+}
+
+function assistantGreeting(){
+  const name = (currentUser && currentUser.name) ? currentUser.name : '';
+  const stageCount = assistantBumpGreetingStage();
+  const pool = stageCount <= 1 ? ASSISTANT_GREETING_STAGES.first
+    : stageCount === 2 ? ASSISTANT_GREETING_STAGES.mid
+    : ASSISTANT_GREETING_STAGES.casual;
+  const pick = pool[Math.floor(Math.random()*pool.length)];
+  return pick.replace('{name}', name).replace('{waktu}', assistantTimeGreeting()).trim() + ' ';
+}
+
+let assistantGreeted = false;
+
+function appendAssistantBubble(text, who){
+  const wrap = document.getElementById('assistant-messages');
+  if(!wrap) return null;
+  const div = document.createElement('div');
+  div.className = 'assistant-bubble ' + who;
+  div.textContent = text;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div;
+}
+
+function toggleAssistantPanel(){
+  const panel = document.getElementById('assistant-panel');
+  if(!panel) return;
+  const opening = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  if(opening && !assistantGreeted){
+    assistantGreeted = true;
+    const name = (currentUser && currentUser.name) ? currentUser.name : '';
+    appendAssistantBubble('Halo '+name+'! Saya Vainala, asisten dashboard ini. Tanya aja soal cara pakai menu di sini -- misalnya "cara tambah lead" atau "cara ajukan admin baru".', 'bot');
+  }
+  if(opening){
+    const input = document.getElementById('assistant-input');
+    if(input) setTimeout(()=>input.focus(), 50);
+  }
+}
+
+function sendAssistantMessage(){
+  const input = document.getElementById('assistant-input');
+  if(!input) return;
+  const question = input.value.trim();
+  if(!question) return;
+  appendAssistantBubble(question, 'user');
+  input.value = '';
+  const typingBubble = appendAssistantBubble('mengetik...', 'typing');
+  setTimeout(()=>{
+    if(typingBubble) typingBubble.remove();
+    const match = matchAssistantKB(question);
+    let answer;
+    if(match){
+      answer = assistantGreeting() + 'ini langkahnya:\n' + match.steps.map((s,i)=>(i+1)+'. '+s).join('\n');
+    } else {
+      answer = assistantGreeting() + 'saya belum nemu jawaban yang pas buat itu. Coba tanya soal salah satu ini: tambah lead, ubah status lead, follow up, produk/omzet, ajukan admin baru, approve admin, tambah user, struktur organisasi, perbandingan kinerja, monitoring user, fokus tampilan, kelompokkan admin, ganti foto profil, logout, atau log aktivitas.';
+    }
+    appendAssistantBubble(answer, 'bot');
+  }, 450 + Math.random()*400);
 }
 
 // init
