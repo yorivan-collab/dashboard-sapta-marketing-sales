@@ -323,6 +323,8 @@
   .form-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:16px;}
   .empty-note{font-size:12.5px; color:var(--muted); padding:8px 0;}
   .footnote{font-size:11px; color:var(--muted); margin-top:6px;}
+  .lengkapi-nanti-toggle{width:100%; display:flex; align-items:center; justify-content:space-between; background:transparent; border:none; padding:0; cursor:pointer; font-size:13px; font-weight:700; color:var(--text); text-transform:none;}
+  .field-hint-dup{color:var(--hot);}
   .banner{background:var(--accent-soft); border-radius:var(--radius); padding:0.9rem 1.1rem; font-size:12.5px; color:var(--accent-text); margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
   .history-scroll{max-height:230px; overflow-y:auto; padding-right:4px;}
 
@@ -759,19 +761,13 @@
               <span class="badge" id="form-status-badge"></span>
             </div>
 
-            <div class="row2">
-              <div class="panel">
-                <div class="panel-title">Data perusahaan</div>
-                <div class="field"><label>Nama badan usaha <span class="req-pill">Wajib</span></label><input type="text" id="f-company" class="f-req"></div>
-                <div class="field"><label>Alamat <span class="opt-pill">Opsional</span></label><input type="text" id="f-address"></div>
-                <div class="row2">
-                  <div class="field"><label>Kabupaten / kota <span class="opt-pill">Opsional</span></label><input type="text" id="f-city"></div>
-                  <div class="field"><label>Provinsi <span class="opt-pill">Opsional</span></label><input type="text" id="f-province"></div>
-                </div>
+            <div class="panel">
+              <div class="panel-title">Data utama</div>
+              <div class="row2">
+                <div class="field"><label>Nama badan usaha <span class="opt-pill">Opsional</span></label><input type="text" id="f-company" placeholder="Kosongkan kalau belum tahu" oninput="handleCompanyFieldInput()"><div class="footnote" id="f-company-hint" style="display:none;"></div></div>
+                <div class="field"><label>Nama PIC <span class="opt-pill">Opsional</span></label><input type="text" id="f-pic" list="pic-datalist" placeholder="Ketik atau pilih dari yang udah pernah masuk" oninput="handleCompanyFieldInput()"><datalist id="pic-datalist"></datalist></div>
               </div>
-              <div class="panel">
-                <div class="panel-title">Kontak PIC</div>
-                <div class="field"><label>Nama PIC <span class="opt-pill">Opsional</span></label><input type="text" id="f-pic" list="pic-datalist" placeholder="Ketik atau pilih dari yang udah pernah masuk"><datalist id="pic-datalist"></datalist></div>
+              <div class="row2" style="margin-top:9px;">
                 <div class="field"><label>Tipe PIC <span class="opt-pill">Opsional</span></label>
                   <select id="f-pic-source">
                     <option value="internal">Internal (kontak langsung perusahaan)</option>
@@ -779,13 +775,8 @@
                   </select>
                 </div>
                 <div class="field"><label>No. telepon <span class="req-pill">Wajib</span></label><input type="text" id="f-phone" class="f-req"></div>
-                <div class="field"><label>Email <span class="opt-pill">Opsional</span></label><input type="text" id="f-email"></div>
               </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-title">Status lead</div>
-              <div class="row4">
+              <div class="row2" style="margin-top:9px;">
                 <div class="field"><label>Suhu lead <span class="req-pill">Wajib</span></label>
                   <select id="f-status" class="f-req">
                     <option value="cold">Cold</option>
@@ -793,34 +784,49 @@
                     <option value="hot">Hot</option>
                   </select>
                 </div>
-                <div class="field"><label>Sumber lead <span class="req-pill">Wajib</span></label>
-                  <select id="f-source" class="f-req">
-                    <option value="website">Website</option>
-                    <option value="sosmed">Sosial media</option>
-                    <option value="wa">WhatsApp</option>
-                    <option value="langsung">Kontak langsung</option>
-                  </select>
-                </div>
-                <div class="field"><label>Tanggal input awal <span class="opt-pill">Otomatis</span></label><input type="date" id="f-entrydate"></div>
-                <div class="field"><label>Follow-up berikutnya <span class="opt-pill">Opsional</span></label><input type="date" id="f-followup"></div>
-              </div>
-              <div class="row4" style="margin-top:9px;">
-                <div class="field"><label>Admin sales <span class="opt-pill">Otomatis</span></label>
+                <div class="field" id="f-admin-wrap"><label>Admin sales <span class="opt-pill">Otomatis</span></label>
                   <select id="f-admin" onchange="handleAdminSelectChange(this)"></select>
                 </div>
               </div>
             </div>
 
             <div class="panel">
-              <div class="panel-title">Kelompok produk</div>
+              <button type="button" class="lengkapi-nanti-toggle" id="lengkapi-nanti-toggle" onclick="toggleLengkapiNanti()">
+                <span>Lengkapi nanti <span class="opt-pill">Opsional</span></span>
+                <svg id="lengkapi-nanti-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; transition:transform .15s ease;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div id="lengkapi-nanti-body" style="display:none; margin-top:12px;">
+                <div class="field"><label>Alamat <span class="opt-pill">Opsional</span></label><input type="text" id="f-address"></div>
+                <div class="row2">
+                  <div class="field"><label>Kabupaten / kota <span class="opt-pill">Opsional</span></label><input type="text" id="f-city"></div>
+                  <div class="field"><label>Provinsi <span class="opt-pill">Opsional</span></label><input type="text" id="f-province"></div>
+                </div>
+                <div class="field"><label>Email <span class="opt-pill">Opsional</span></label><input type="text" id="f-email"></div>
+                <div class="row2">
+                  <div class="field"><label>Sumber lead <span class="opt-pill">Opsional</span></label>
+                    <select id="f-source">
+                      <option value="website">Website</option>
+                      <option value="sosmed">Sosial media</option>
+                      <option value="wa">WhatsApp</option>
+                      <option value="langsung">Kontak langsung</option>
+                    </select>
+                  </div>
+                  <div class="field"><label>Follow-up berikutnya <span class="opt-pill">Opsional</span></label><input type="date" id="f-followup"></div>
+                </div>
+                <div class="field"><label>Tanggal input awal <span class="opt-pill">Otomatis</span></label><input type="date" id="f-entrydate"></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">Produk &amp; penawaran <span class="opt-pill">Opsional</span></div>
               <div class="row3" id="product-form-row3">
-                <div class="field"><label>Jenis produk <span class="req-pill">Wajib</span></label>
-                  <select id="f-product-type" class="f-req">
+                <div class="field"><label>Jenis produk <span class="opt-pill">Opsional</span></label>
+                  <select id="f-product-type">
                     <option value="smk3">SMK3</option>
                     <option value="iso">ISO</option>
                   </select>
                 </div>
-                <div class="field"><label>Harga penawaran (Rp) <span class="req-pill">Wajib</span></label><input type="number" id="f-product-penawaran" class="f-req" min="0" step="100000" placeholder="0"></div>
+                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="number" id="f-product-penawaran" min="0" step="100000" placeholder="0"></div>
                 <div class="field"><label>Harga deal (Rp) <span class="opt-pill">Opsional</span></label><input type="number" id="f-product-deal" min="0" step="100000" placeholder="Isi kalau sudah closing" oninput="toggleLunasCheckboxVisibility()"></div>
               </div>
               <label for="f-product-lunas" id="product-lunas-wrap" style="display:none; align-items:center; gap:8px; margin-top:6px; margin-bottom:0; text-transform:none; font-weight:500; font-size:12.5px; color:var(--text); cursor:pointer;">
@@ -832,15 +838,15 @@
                 <button class="primary" id="btn-product-submit" onclick="addProductLine()">+ Tambah produk</button>
               </div>
               <div class="product-list" id="product-list" style="margin-top:8px;"></div>
-              <div class="footnote">Harga penawaran jadi basis rencana omzet, harga deal jadi omzet realisasi di Overview. Satu lead bisa punya lebih dari satu produk.</div>
+              <div class="footnote">Harga penawaran jadi basis rencana omzet, harga deal jadi omzet realisasi di Overview. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
             </div>
 
             <div class="panel">
-              <div class="panel-title">Tambah data percakapan</div>
+              <div class="panel-title">Laporan follow up <span class="opt-pill">Opsional</span></div>
               <div class="row3">
-                <div class="field"><label>Tanggal percakapan <span class="req-pill">Wajib</span></label><input type="date" id="f-note-date" class="f-req"></div>
-                <div class="field"><label>Sumber percakapan <span class="req-pill">Wajib</span></label>
-                  <select id="f-note-channel" class="f-req">
+                <div class="field"><label>Tanggal percakapan <span class="opt-pill">Opsional</span></label><input type="date" id="f-note-date"></div>
+                <div class="field"><label>Sumber percakapan <span class="opt-pill">Opsional</span></label>
+                  <select id="f-note-channel">
                     <option value="wa">Pesan WhatsApp</option>
                     <option value="website">Pesan dari website</option>
                     <option value="call">Catatan telepon</option>
@@ -851,8 +857,8 @@
                   <div class="footnote" style="margin-top:0;">Tanggal ini yang dipakai di riwayat, bukan tanggal hari ini otomatis.</div>
                 </div>
               </div>
-              <div class="field"><label>Laporan follow up <span class="req-pill">Wajib</span></label>
-              <textarea id="f-new-note" class="f-req" rows="2" placeholder="Isi pesan WA / pesan website / ringkasan telepon..."></textarea></div>
+              <div class="field"><label>Ringkasan percakapan</label>
+              <textarea id="f-new-note" rows="2" placeholder="Isi pesan WA / pesan website / ringkasan telepon..."></textarea></div>
               <div style="display:flex; justify-content:flex-end; margin-top:8px;">
                 <button class="primary" onclick="addFollowUpLog()">Update riwayat follow-up</button>
               </div>
@@ -3242,6 +3248,67 @@ function populatePicDatalist(){
   if(!dl) return;
   dl.innerHTML = getUniquePicList().map(p=>'<option value="'+p.replace(/"/g,'&quot;')+'">').join('');
 }
+
+// Placeholder nama perusahaan kalau belum ketahuan -- dipatok ke nama PIC
+// + nomor urut, biar leads dari PIC/broker yang sama tetap kebedain kalau
+// perusahaannya belum ketahuan lebih dari satu (lihat initials() yang udah
+// nyiapin pola "- (PIC: nama)" ini buat dibersihin jadi inisial avatar).
+function generatePicPlaceholderCompanyName(picName){
+  const escaped = picName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re = new RegExp('^- \\(PIC: '+escaped+' (\\d+)\\)$');
+  let maxNum = 0;
+  leads.forEach(l=>{
+    const m = (l.company||'').match(re);
+    if(m) maxNum = Math.max(maxNum, parseInt(m[1],10));
+  });
+  return '- (PIC: '+picName+' '+(maxNum+1)+')';
+}
+
+function isCompanyNameTaken(name, excludeId){
+  const norm = name.trim().toLowerCase();
+  if(!norm) return false;
+  return leads.some(l => l.id!==excludeId && (l.company||'').trim().toLowerCase()===norm);
+}
+
+function handleCompanyFieldInput(){
+  const hintEl = document.getElementById('f-company-hint');
+  if(!hintEl) return;
+  const company = document.getElementById('f-company').value.trim();
+  const pic = document.getElementById('f-pic').value.trim();
+  hintEl.className = 'footnote';
+  if(company && isCompanyNameTaken(company, currentEditId)){
+    hintEl.textContent = 'Nama ini udah dipakai di lead lain -- cek dulu, siapa tau ini dobel.';
+    hintEl.className = 'footnote field-hint-dup';
+    hintEl.style.display = 'block';
+  } else if(!company && pic){
+    hintEl.textContent = 'Perusahaan kosong -- otomatis diisi "'+generatePicPlaceholderCompanyName(pic)+'" pas disimpan.';
+    hintEl.style.display = 'block';
+  } else {
+    hintEl.style.display = 'none';
+  }
+}
+
+function toggleLengkapiNanti(force){
+  const body = document.getElementById('lengkapi-nanti-body');
+  const chevron = document.getElementById('lengkapi-nanti-chevron');
+  if(!body) return;
+  const open = force !== undefined ? force : (body.style.display === 'none');
+  body.style.display = open ? 'block' : 'none';
+  if(chevron) chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// Kalau lead yang lagi diedit udah punya isi di field "Lengkapi nanti",
+// bagian itu otomatis kebuka biar gak ketuker/ketutupan data yang udah ada.
+function autoExpandLengkapiNantiIfFilled(l){
+  const hasData = !!(l && (l.address || l.city || l.province || l.email || (l.source && l.source!=='website')));
+  toggleLengkapiNanti(hasData);
+}
+
+function updateAdminFieldVisibility(){
+  const wrap = document.getElementById('f-admin-wrap');
+  if(!wrap) return;
+  wrap.style.display = (currentUser && currentUser.role==='sales') ? 'none' : '';
+}
 function getUniqueLocationList(){
   return [...new Set(leads.map(l=>l.city).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
@@ -3809,7 +3876,7 @@ function setChatLogHeight(size){
 
 function addFollowUpLog(){
   if(currentEditId===null){
-    alert('Simpan lead ini dulu sebelum menambahkan laporan follow up.');
+    alert('Lead ini belum tersimpan. Kalau mau nambah catatan pertama, isi field di atas terus klik "Simpan lead" -- otomatis ikut kesimpan. Tombol ini buat nambah catatan susulan setelah lead-nya ada.');
     return;
   }
   const note = document.getElementById('f-new-note').value.trim();
@@ -3896,7 +3963,7 @@ function editProductLine(productId){
 
 function addProductLine(){
   if(currentEditId===null){
-    alert('Simpan lead ini dulu sebelum menambahkan produk.');
+    alert('Lead ini belum tersimpan. Produk yang udah kamu isi di atas otomatis ikut kesimpan pas klik "Simpan lead". Tombol ini buat nambah produk ke-2 dst setelah lead-nya ada.');
     return;
   }
   const type = document.getElementById('f-product-type').value;
@@ -3984,6 +4051,9 @@ function openLeadForm(id, force){
   document.getElementById('f-followup').value = l.followUp;
   renderAdminSelectOptions();
   document.getElementById('f-admin').value = l.admin || ADMIN_LIST[0];
+  updateAdminFieldVisibility();
+  autoExpandLengkapiNantiIfFilled(l);
+  document.getElementById('f-company-hint').style.display = 'none';
   document.getElementById('f-note-date').value = todayIsoStr();
   document.getElementById('f-note-channel').value = 'wa';
   document.getElementById('f-new-note').value = '';
@@ -4032,6 +4102,9 @@ function openNewLeadForm(force){
   document.getElementById('f-entrydate').value = todayIsoStr();
   renderAdminSelectOptions();
   document.getElementById('f-admin').value = (currentUser && currentUser.name) ? currentUser.name : (ADMIN_LIST[0] || '');
+  updateAdminFieldVisibility();
+  toggleLengkapiNanti(false);
+  document.getElementById('f-company-hint').style.display = 'none';
   document.getElementById('f-note-date').value = todayIsoStr();
   document.getElementById('f-note-channel').value = 'wa';
   document.getElementById('f-new-note').value = '';
@@ -4046,7 +4119,7 @@ function openNewLeadForm(force){
   document.getElementById('f-product-deal').value = '';
   toggleLunasCheckboxVisibility();
   document.getElementById('product-form-row3').classList.remove('editing-active');
-  document.getElementById('product-list').innerHTML = '<div class="empty-note">Simpan lead dulu sebelum menambahkan produk.</div>';
+  document.getElementById('product-list').innerHTML = '<div class="empty-note">Belum ada produk. Isi di atas kalau udah sempat nawarin -- otomatis ikut kesimpan.</div>';
   formDirty = false;
 
   switchView('leads', true);
@@ -4054,8 +4127,10 @@ function openNewLeadForm(force){
 }
 
 async function saveLeadDataOnly(){
+  const companyInput = document.getElementById('f-company').value.trim();
+  const picInput = document.getElementById('f-pic').value.trim();
   const data = {
-    company: document.getElementById('f-company').value.trim() || '(tanpa nama)',
+    company: companyInput || (picInput ? generatePicPlaceholderCompanyName(picInput) : '(tanpa nama)'),
     address: document.getElementById('f-address').value.trim(),
     city: document.getElementById('f-city').value.trim(),
     province: document.getElementById('f-province').value.trim(),
@@ -4078,7 +4153,18 @@ async function saveLeadDataOnly(){
 
   if(currentEditId===null){
     data.history = newNote ? [{date:noteDate, time:noteTime, channel:noteChannel, note:newNote}] : [];
-    data.products = [];
+    const quickPenawaran = parseFloat(document.getElementById('f-product-penawaran').value) || 0;
+    let quickProduct = null;
+    if(quickPenawaran > 0){
+      quickProduct = {
+        id: Date.now(),
+        type: document.getElementById('f-product-type').value,
+        hargaPenawaran: quickPenawaran,
+        hargaDeal: parseFloat(document.getElementById('f-product-deal').value) || 0,
+        lunas: document.getElementById('f-product-lunas').checked
+      };
+    }
+    data.products = quickProduct ? [quickProduct] : [];
     const { data: inserted, error } = await supabaseClient.from('leads').insert(leadToDbRow(data)).select().single();
     if(error){
       alert('Gagal menyimpan lead baru ke server: '+error.message);
@@ -4090,6 +4176,7 @@ async function saveLeadDataOnly(){
     currentEditId = newLead.id;
     logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
     if(newNote) logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+    if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
   } else {
     const l = leads.find(x=>x.id===currentEditId);
     if(!l){
