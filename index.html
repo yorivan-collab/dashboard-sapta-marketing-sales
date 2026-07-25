@@ -707,7 +707,7 @@
           <button onclick="exportData()">Export data</button>
           <button onclick="document.getElementById('import-file').click()">Import data</button>
           <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
-          <button class="primary" onclick="openNewLeadForm()">+ Tambah lead</button>
+          <button class="primary" onclick="openQuickLeadModal()">+ Tambah lead</button>
         </div>
       </div>
       <div class="toolbar">
@@ -774,7 +774,7 @@
                     <option value="broker">Jaringan luar (broker/calo)</option>
                   </select>
                 </div>
-                <div class="field"><label>No. telepon <span class="req-pill">Wajib</span></label><input type="text" id="f-phone" class="f-req"></div>
+                <div class="field"><label>No. telepon <span class="opt-pill">Opsional</span></label><input type="text" id="f-phone"></div>
               </div>
               <div class="row2" style="margin-top:9px;">
                 <div class="field"><label>Suhu lead <span class="req-pill">Wajib</span></label>
@@ -1185,9 +1185,119 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="quick-lead-modal">
+  <div class="modal-card" style="max-width:480px; max-height:88vh; overflow-y:auto;">
+    <div class="modal-title">Tambah lead baru</div>
+    <div class="modal-sub">Isi yang penting dulu. Sisanya bisa dilengkapi belakangan.</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin:14px 0;">
+      <div class="row2">
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama perusahaan <span class="opt-pill">Opsional</span></label>
+          <input type="text" id="ql-company" placeholder="Kosongkan kalau belum tahu" oninput="handleQuickCompanyInput()" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+          <div class="footnote" id="ql-company-hint" style="display:none;"></div>
+        </div>
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama PIC <span class="opt-pill">Opsional</span></label>
+          <input type="text" id="ql-pic" list="pic-datalist" placeholder="Ketik atau pilih" oninput="handleQuickCompanyInput()" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Tipe PIC <span class="opt-pill">Opsional</span></label>
+          <select id="ql-pic-source" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <option value="internal">Internal</option>
+            <option value="broker">Jaringan luar (broker/calo)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">No. telepon <span class="opt-pill">Opsional</span></label>
+          <input type="text" id="ql-phone" placeholder="08xxxxxxxxxx" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Suhu lead <span class="req-pill">Wajib</span></label>
+          <select id="ql-status" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <option value="cold">Cold</option>
+            <option value="warm">Warm</option>
+            <option value="hot">Hot</option>
+          </select>
+        </div>
+        <div id="ql-admin-wrap">
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Admin sales <span class="opt-pill">Otomatis</span></label>
+          <select id="ql-admin" onchange="handleQuickAdminSelectChange(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">Produk &amp; penawaran <span class="opt-pill">Opsional</span></div>
+        <div class="row2">
+          <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Jenis produk</label>
+            <select id="ql-product-type" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+              <option value="smk3">SMK3</option>
+              <option value="iso">ISO</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Harga penawaran (Rp)</label>
+            <input type="number" id="ql-product-penawaran" min="0" step="100000" placeholder="0" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Laporan follow up awal <span class="opt-pill">Opsional</span></label>
+        <textarea id="ql-note" rows="2" placeholder="Ringkasan percakapan pertama..." style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box; resize:vertical; font-family:inherit;"></textarea>
+        <div class="footnote">Tanggal dan channel otomatis hari ini / WA.</div>
+      </div>
+      <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
+        <button type="button" class="lengkapi-nanti-toggle" id="ql-lengkapi-toggle" onclick="toggleQuickLengkapiNanti()">
+          <span>Lengkapi nanti <span class="opt-pill">Opsional</span></span>
+          <svg id="ql-lengkapi-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; transition:transform .15s ease;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div id="ql-lengkapi-body" style="display:none; margin-top:10px;">
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Alamat</label>
+              <input type="text" id="ql-address" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div class="row2">
+              <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Kabupaten / kota</label>
+                <input type="text" id="ql-city" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Provinsi</label>
+                <input type="text" id="ql-province" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+              </div>
+            </div>
+            <div>
+              <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Email</label>
+              <input type="text" id="ql-email" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Sumber lead</label>
+              <select id="ql-source" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+                <option value="website">Website</option>
+                <option value="sosmed">Sosial media</option>
+                <option value="wa">WhatsApp</option>
+                <option value="langsung">Kontak langsung</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="ql-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="saveQuickLead()">Simpan lead</button>
+      <button onclick="closeQuickLeadModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
 <div class="mobile-fab-wrap">
   <div class="mobile-fab-menu" id="mobile-fab-menu">
-    <div class="mobile-fab-item accent" onclick="openNewLeadForm(); closeMobileFab();">+ Tambah lead</div>
+    <div class="mobile-fab-item accent" onclick="openQuickLeadModal(); closeMobileFab();">+ Tambah lead</div>
     <div class="mobile-fab-item" onclick="switchView('overview'); closeMobileFab();">Overview</div>
     <div class="mobile-fab-item" onclick="switchView('followup'); closeMobileFab();">Rencana Follow Up</div>
     <div class="mobile-fab-item" onclick="switchView('activitylog'); closeMobileFab();">Log Aktivitas</div>
@@ -4082,48 +4192,160 @@ function openLeadForm(id, force){
   }
 }
 
-function openNewLeadForm(force){
-  if(!force && formDirty && isEditingContext()){
-    guardLeave(()=>openNewLeadForm(true));
+// ===== MODAL "TAMBAH LEAD BARU" (cepat) =====
+// Ganti dari panel penuh jadi popup kecil -- edit lead yang udah ada tetap
+// pakai panel penuh (openLeadForm), ini KHUSUS bikin lead baru.
+function renderQuickAdminSelectOptions(){
+  const sel = document.getElementById('ql-admin');
+  if(!sel) return;
+  const current = sel.value;
+  if(currentUser && currentUser.role==='sales'){
+    const myName = currentUser.name || '';
+    sel.innerHTML = '<option value="'+myName+'">'+myName+'</option>';
+    sel.value = myName;
+    sel.disabled = true;
     return;
   }
-  originView = document.querySelector('.view.active').id.replace('view-','');
-  lastViewedId = null;
-  currentEditId = null;
-  document.getElementById('form-title').textContent = 'Tambah lead baru';
-  document.getElementById('form-subtitle').textContent = '';
-  document.getElementById('mobile-client-header').innerHTML = '<div class="avatar" style="background:var(--accent-text)">+</div><span class="mch-name">Lead baru</span>';
-  document.getElementById('form-status-badge').outerHTML = '<span class="badge cold" id="form-status-badge">Cold</span>';
-  populatePicDatalist();
-  ['f-company','f-address','f-city','f-province','f-pic','f-phone','f-email','f-followup'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-pic-source').value = 'internal';
-  document.getElementById('f-status').value = 'cold';
-  document.getElementById('f-source').value = 'website';
-  document.getElementById('f-entrydate').value = todayIsoStr();
-  renderAdminSelectOptions();
-  document.getElementById('f-admin').value = (currentUser && currentUser.name) ? currentUser.name : (ADMIN_LIST[0] || '');
-  updateAdminFieldVisibility();
-  toggleLengkapiNanti(false);
-  document.getElementById('f-company-hint').style.display = 'none';
-  document.getElementById('f-note-date').value = todayIsoStr();
-  document.getElementById('f-note-channel').value = 'wa';
-  document.getElementById('f-new-note').value = '';
-  document.getElementById('f-chatlog').value = '';
-  setChatLogHeight('medium');
-  document.getElementById('btn-delete').style.display = 'none';
-  document.getElementById('history-list').innerHTML = '<div class="empty-note">Lead baru, belum ada riwayat.</div>';
-  editingProductId = null;
-  resetProductSubmitButton();
-  document.getElementById('f-product-type').value = 'smk3';
-  document.getElementById('f-product-penawaran').value = '';
-  document.getElementById('f-product-deal').value = '';
-  toggleLunasCheckboxVisibility();
-  document.getElementById('product-form-row3').classList.remove('editing-active');
-  document.getElementById('product-list').innerHTML = '<div class="empty-note">Belum ada produk. Isi di atas kalau udah sempat nawarin -- otomatis ikut kesimpan.</div>';
-  formDirty = false;
+  sel.disabled = false;
+  if(currentUser && currentUser.role==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
+    let options = team.slice();
+    if(currentUser.name && !options.includes(currentUser.name)) options.unshift(currentUser.name);
+    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+    if(options.includes(current)) sel.value = current;
+    return;
+  }
+  let options = ADMIN_LIST.slice();
+  if(currentUser && currentUser.name && !options.includes(currentUser.name)){
+    options.unshift(currentUser.name);
+  }
+  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
+  if(options.includes(current)) sel.value = current;
+}
 
-  switchView('leads', true);
-  enterSplitMode(true);
+function handleQuickAdminSelectChange(sel){
+  if(currentUser && (currentUser.role==='sales' || currentUser.role==='supervisor')) return;
+  if(sel.value === '__add_new__'){
+    const name = prompt('Nama admin sales baru:');
+    sel.value = ADMIN_LIST[0] || '';
+    if(name && name.trim()){
+      const trimmed = name.trim();
+      if(!ADMIN_LIST.includes(trimmed)){
+        userAccounts.push({id: nextUserId++, name: trimmed, email:'', role:'sales', status:'active'});
+        syncAdminListFromUsers();
+        populateQuickFilterDropdowns();
+        renderLoginOptions();
+      }
+      renderQuickAdminSelectOptions();
+      sel.value = trimmed;
+    }
+  }
+}
+
+function handleQuickCompanyInput(){
+  const hintEl = document.getElementById('ql-company-hint');
+  if(!hintEl) return;
+  const company = document.getElementById('ql-company').value.trim();
+  const pic = document.getElementById('ql-pic').value.trim();
+  hintEl.className = 'footnote';
+  if(company && isCompanyNameTaken(company, null)){
+    hintEl.textContent = 'Nama ini udah dipakai di lead lain -- cek dulu, siapa tau ini dobel.';
+    hintEl.className = 'footnote field-hint-dup';
+    hintEl.style.display = 'block';
+  } else if(!company && pic){
+    hintEl.textContent = 'Perusahaan kosong -- otomatis diisi "'+generatePicPlaceholderCompanyName(pic)+'" pas disimpan.';
+    hintEl.style.display = 'block';
+  } else {
+    hintEl.style.display = 'none';
+  }
+}
+
+function toggleQuickLengkapiNanti(force){
+  const body = document.getElementById('ql-lengkapi-body');
+  const chevron = document.getElementById('ql-lengkapi-chevron');
+  if(!body) return;
+  const open = force !== undefined ? force : (body.style.display === 'none');
+  body.style.display = open ? 'block' : 'none';
+  if(chevron) chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function openQuickLeadModal(){
+  populatePicDatalist();
+  ['ql-company','ql-pic','ql-phone','ql-address','ql-city','ql-province','ql-email','ql-note'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('ql-pic-source').value = 'internal';
+  document.getElementById('ql-status').value = 'cold';
+  document.getElementById('ql-source').value = 'website';
+  document.getElementById('ql-product-type').value = 'smk3';
+  document.getElementById('ql-product-penawaran').value = '';
+  document.getElementById('ql-company-hint').style.display = 'none';
+  document.getElementById('ql-error').style.display = 'none';
+  toggleQuickLengkapiNanti(false);
+  renderQuickAdminSelectOptions();
+  document.getElementById('ql-admin').value = (currentUser && currentUser.name) ? currentUser.name : (ADMIN_LIST[0] || '');
+  const adminWrap = document.getElementById('ql-admin-wrap');
+  if(adminWrap) adminWrap.style.display = (currentUser && currentUser.role==='sales') ? 'none' : '';
+  document.getElementById('quick-lead-modal').style.display = 'flex';
+}
+
+function closeQuickLeadModal(){
+  document.getElementById('quick-lead-modal').style.display = 'none';
+}
+
+async function saveQuickLead(){
+  const errEl = document.getElementById('ql-error');
+  errEl.style.display = 'none';
+  const phone = document.getElementById('ql-phone').value.trim();
+  const companyInput = document.getElementById('ql-company').value.trim();
+  const picInput = document.getElementById('ql-pic').value.trim();
+  const company = companyInput || (picInput ? generatePicPlaceholderCompanyName(picInput) : '(tanpa nama)');
+  const noteText = document.getElementById('ql-note').value.trim();
+  const now = new Date();
+  const noteTime = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const quickPenawaran = parseFloat(document.getElementById('ql-product-penawaran').value) || 0;
+  const quickProduct = quickPenawaran > 0 ? {
+    id: Date.now(),
+    type: document.getElementById('ql-product-type').value,
+    hargaPenawaran: quickPenawaran,
+    hargaDeal: 0,
+    lunas: false
+  } : null;
+  const data = {
+    company: company,
+    address: document.getElementById('ql-address').value.trim(),
+    city: document.getElementById('ql-city').value.trim(),
+    province: document.getElementById('ql-province').value.trim(),
+    pic: picInput,
+    picSource: document.getElementById('ql-pic-source').value,
+    phone: phone,
+    email: document.getElementById('ql-email').value.trim(),
+    status: document.getElementById('ql-status').value,
+    source: document.getElementById('ql-source').value,
+    entryDate: todayIsoStr(),
+    followUp: '',
+    admin: document.getElementById('ql-admin').value,
+    chatLog: '',
+    history: noteText ? [{date:todayIsoStr(), time:noteTime, channel:'wa', note:noteText}] : [],
+    products: quickProduct ? [quickProduct] : []
+  };
+  const { data: inserted, error } = await supabaseClient.from('leads').insert(leadToDbRow(data)).select().single();
+  if(error){
+    errEl.textContent = 'Gagal menyimpan lead baru ke server: '+error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+  const newLead = dbRowToLead(inserted);
+  leads.push(newLead);
+  logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
+  if(noteText) logActivity(newLead, 'Menambahkan catatan follow-up (WhatsApp)');
+  if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
+  closeQuickLeadModal();
+  showToast('Lead baru ditambahkan');
+  const activeView = document.querySelector('.view.active');
+  const activeViewId = activeView ? activeView.id : '';
+  if(activeViewId==='view-overview') renderOverview();
+  if(activeViewId==='view-dashboard') renderDashboardView();
+  if(activeViewId==='view-leads') refreshLeadsListing();
+  populateQuickFilterDropdowns();
 }
 
 async function saveLeadDataOnly(){
@@ -4473,11 +4695,12 @@ const ASSISTANT_KB = [
   {
     keywords: ['tambah lead','lead baru','nambah lead','bikin lead','buat lead','input lead','data lead apa aja','isi lead'],
     steps: [
-      'Buka menu "Leads", klik tombol "+ Tambah lead baru" di pojok kanan atas.',
-      'Yang wajib diisi: nama perusahaan, suhu lead (Cold/Warm/Hot), dan sumber lead.',
-      'Data tambahan kalau ada: PIC, alamat, kota, provinsi, telepon, email, tanggal masuk, rencana follow up, dan chat log.',
-      'Admin/sales penanggung jawabnya otomatis keisi nama kamu sendiri -- gak perlu diisi manual (kecuali Master/Super Admin yang boleh pilih sendiri).',
-      'Klik Simpan.'
+      'Klik tombol "+ Tambah lead" di menu mana pun -- muncul popup kecil, gak perlu pindah halaman.',
+      'Yang wajib diisi cuma suhu lead (Cold/Warm/Hot). Nama perusahaan, nomor telepon, dan lainnya boleh dikosongin dulu kalau belum tahu -- nama perusahaan otomatis dikasih nama sementara dari PIC-nya kalau kosong.',
+      'Produk, harga penawaran, dan laporan follow up awal juga opsional -- kalau diisi, otomatis ikut kesimpan bareng lead-nya.',
+      'Alamat, kota, provinsi, email, dan sumber lead ada di bagian "Lengkapi nanti" yang bisa dilipat/dibuka -- aman ditunda.',
+      'Admin/sales penanggung jawabnya otomatis keisi nama kamu sendiri buat Sales, sedangkan Supervisor/Master/Super Admin bisa pilih sendiri.',
+      'Klik "Simpan lead".'
     ]
   },
   {
