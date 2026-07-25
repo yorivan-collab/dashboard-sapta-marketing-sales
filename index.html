@@ -145,6 +145,23 @@
   .status-badge-user.active{background:var(--success-bg); color:var(--success);}
   .status-badge-user.nonaktif{background:var(--cold-bg); color:var(--muted);}
   .user-action-link{font-size:11.5px; font-weight:600; color:var(--accent-text); cursor:pointer; margin-right:10px;}
+  .ovp-cols{display:grid; grid-template-columns:260px 1fr; gap:18px; align-items:start;}
+  .ovp-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.15rem; position:sticky; top:18px;}
+  .ovp-photo-wrap{width:100%; aspect-ratio:4/3.2; border-radius:var(--radius-sm); background:linear-gradient(135deg,var(--accent-soft),#ffe3ee); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:12px;}
+  .ovp-initials{width:72px; height:72px; border-radius:50%; background:rgba(255,255,255,0.8); color:var(--accent-text); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;}
+  .ovp-name{font-size:16px; font-weight:700;}
+  .ovp-divider{height:1px; background:var(--border-soft); margin:14px 0;}
+  .ovp-about-label{font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;}
+  .ovp-about-line{font-size:12.5px; color:var(--text-2); line-height:1.5;}
+  .ovp-stat-row{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; padding:6px 0; color:var(--text-2);}
+  .ovp-stat-row b{color:var(--text); font-weight:700;}
+  .dash-kpis{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; align-content:start;}
+  @media (max-width:900px){
+    .ovp-cols{grid-template-columns:1fr;}
+    .ovp-photo-wrap{aspect-ratio:16/7;}
+    .ovp-card{position:static;}
+    .dash-kpis{grid-template-columns:repeat(2, 1fr); gap:8px;}
+  }
   .user-action-link:last-child{margin-right:0;}
   .user-action-link.danger{color:var(--hot);}
   .user-action-link.disabled{color:var(--muted); cursor:default; pointer-events:none;}
@@ -487,7 +504,11 @@
     </div>
 
     <div class="nav-label">Menu</div>
-    <div class="navitem active" data-view="overview" onclick="switchView('overview')">
+    <div class="navitem active" data-view="dashboard" onclick="switchView('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      Dashboard
+    </div>
+    <div class="navitem" data-view="overview" onclick="switchView('overview')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
       Overview
     </div>
@@ -552,7 +573,7 @@
   <div class="main">
 
     <!-- OVERVIEW -->
-    <div class="view active" id="view-overview">
+    <div class="view" id="view-overview">
       <div class="topbar">
         <div>
           <div class="title" id="overview-title">Leads Sales & Marketing</div>
@@ -632,6 +653,45 @@
           <div class="rowlist" id="overview-rowlist"></div>
         </div>
         <div class="banner" id="cold-banner"></div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD (personal, terkunci ke data lead sendiri) -->
+    <div class="view active" id="view-dashboard">
+      <div class="topbar">
+        <div>
+          <div class="title">Dashboard</div>
+          <div class="subtitle">Ringkasan lead yang jadi tanggung jawab kamu sendiri</div>
+        </div>
+      </div>
+
+      <div class="ovp-cols">
+        <div class="ovp-card">
+          <div class="ovp-photo-wrap" id="ovp-photo-wrap"></div>
+          <div class="ovp-name" id="ovp-name"></div>
+          <div><span class="role-badge" id="ovp-role-badge"></span> <span class="status-badge-user active">Aktif</span></div>
+          <div class="ovp-about-line" id="ovp-job-title" style="margin-top:8px;"></div>
+          <div class="ovp-about-line" id="ovp-branch-label"></div>
+          <div class="ovp-about-line" id="ovp-phone"></div>
+          <div class="ovp-about-line" id="ovp-bio" style="font-style:italic; margin-top:6px;"></div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="btn-secondary" style="flex:1; padding:9px; border-radius:8px; border:1px solid var(--border); background:var(--surface); font-size:12.5px; font-weight:600; cursor:pointer;" onclick="openEditProfileModal()">Edit profil</button>
+            <button class="btn-secondary" style="flex:1; padding:9px; border-radius:8px; border:1px solid var(--border); background:var(--surface); font-size:12.5px; font-weight:600; cursor:pointer;" onclick="changeMyPassword()">Ganti password</button>
+          </div>
+          <div class="ovp-divider"></div>
+          <div class="ovp-about-label">Tentang</div>
+          <div class="ovp-about-line" id="ovp-team-info"></div>
+          <div class="ovp-divider"></div>
+          <div class="ovp-about-label">Ringkasan</div>
+          <div class="ovp-stat-row"><span>Total lead</span><b id="ovp-stat-lead"></b></div>
+          <div class="ovp-stat-row"><span>Closing rate</span><b id="ovp-stat-closing"></b></div>
+          <div class="ovp-stat-row"><span>Omzet deal</span><b id="ovp-stat-omzet"></b></div>
+        </div>
+
+        <div>
+          <div class="dash-kpis" id="dash-kpi-row"></div>
+          <div class="temps" id="dash-temp-row" style="margin-top:12px;"></div>
+        </div>
       </div>
     </div>
 
@@ -1082,6 +1142,36 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="edit-profile-modal">
+  <div class="modal-card">
+    <div class="modal-title">Edit profil</div>
+    <div class="modal-sub">Detail ini cuma buat ditampilin di kartu Profile kamu -- gak ngaruh ke akses data.</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin:14px 0;">
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Jabatan</label>
+        <input type="text" id="ep-job-title" placeholder="Misal: Sales Executive" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Cabang</label>
+        <input type="text" id="ep-branch-label" placeholder="Misal: Jakarta Pusat" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nomor telepon</label>
+        <input type="text" id="ep-phone" placeholder="08xxxxxxxxxx" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Bio singkat</label>
+        <textarea id="ep-bio" rows="3" placeholder="Satu-dua kalimat tentang kamu" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box; resize:vertical; font-family:inherit;"></textarea>
+      </div>
+      <div id="ep-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="saveEditProfile()">Simpan</button>
+      <button onclick="closeEditProfileModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
 <div class="mobile-fab-wrap">
   <div class="mobile-fab-menu" id="mobile-fab-menu">
     <div class="mobile-fab-item accent" onclick="openNewLeadForm(); closeMobileFab();">+ Tambah lead</div>
@@ -1406,6 +1496,7 @@ function switchView(view, force){
   const navsubView = document.querySelector('.navsub[data-view="'+view+'"]');
   if(navsubView) navsubView.classList.add('active');
   if(view==='overview') renderOverview();
+  if(view==='dashboard') renderDashboardView();
   if(view==='leads') renderLeadsList();
   if(view==='followup') renderCalendar();
   if(view==='activitylog') renderActivityLogView();
@@ -1594,6 +1685,14 @@ function goToFilter(key){
     switchView('leads', true);
     setFilter(key);
   });
+}
+
+// Dipakai dari menu Dashboard -- kartunya terkunci ke data lead milik
+// sendiri, jadi waktu diklik, kunci juga filter admin di Leads ke nama
+// sendiri sebelum pindah, biar konsisten (bukan nampilin punya orang lain).
+function goToFilterMine(key){
+  if(currentUser) quickFilterAdmin = currentUser.name;
+  goToFilter(key);
 }
 
 function toggleMobileFab(){
@@ -2291,6 +2390,199 @@ function getOverviewScopedLeads(){
   return leads.filter(l => matchesSearchTerm(l, term) && matchesQuickFilters(l));
 }
 
+function computeMyOverviewStats(){
+  const perf = computeAdminPerformance(leads);
+  let names;
+  if(currentUser && currentUser.role==='sales'){
+    names = [currentUser.name];
+  } else if(currentUser && currentUser.role==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : [];
+    names = [currentUser.name, ...team];
+  } else {
+    names = perf.map(p=>p.name);
+  }
+  const mine = perf.filter(p=>names.includes(p.name));
+  const leadCount = mine.reduce((s,p)=>s+p.leadCount,0);
+  const dpCount = mine.reduce((s,p)=>s+p.dpCount,0);
+  const omzet = mine.reduce((s,p)=>s+p.omzet,0);
+  const closing = leadCount ? Math.round(dpCount/leadCount*100) : 0;
+  return { leadCount, closing, omzet };
+}
+
+function computeMyTeamInfoText(){
+  if(!currentUser) return '';
+  if(currentUser.role==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team && currentUserProfile.team.length) ? currentUserProfile.team.join(', ') : 'belum ada anggota';
+    const branch = (currentUserProfile && currentUserProfile.branch && BRANCH_DEFINITIONS[currentUserProfile.branch]) ? (' -- Kepala '+BRANCH_DEFINITIONS[currentUserProfile.branch].label) : '';
+    return 'Tim: '+team+branch;
+  }
+  if(currentUser.role==='sales'){
+    const spv = userAccounts.find(u=>u.role==='supervisor' && u.team && u.team.includes(currentUser.name));
+    return spv ? ('Supervisor: '+spv.name) : 'Belum ada Supervisor yang di-assign';
+  }
+  if(currentUser.role==='master_admin') return 'Akses penuh ke semua data dan user';
+  if(currentUser.role==='super_admin') return 'Akses penuh, kecuali akun Master Admin';
+  return '';
+}
+
+function renderOverviewProfileCard(){
+  if(!currentUser) return;
+  const photoWrap = document.getElementById('ovp-photo-wrap');
+  if(photoWrap){
+    const photoUrl = currentUserProfile ? currentUserProfile.photo_url : null;
+    photoWrap.onclick = setMyPhotoUrl;
+    if(photoUrl){
+      photoWrap.innerHTML = '<img src="'+photoUrl+'" alt="'+currentUser.name+'" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML=\'<div class=&quot;ovp-initials&quot;>'+initials(currentUser.name)+'<\/div>\';">';
+    } else {
+      photoWrap.innerHTML = '<div class="ovp-initials">'+initials(currentUser.name)+'</div>';
+    }
+  }
+  const nameEl = document.getElementById('ovp-name');
+  if(nameEl) nameEl.textContent = currentUser.name;
+  const roleBadge = document.getElementById('ovp-role-badge');
+  if(roleBadge){ roleBadge.textContent = roleLabelOf(currentUser.role); roleBadge.className = 'role-badge '+currentUser.role; }
+  const teamInfoEl = document.getElementById('ovp-team-info');
+  if(teamInfoEl) teamInfoEl.textContent = computeMyTeamInfoText();
+  const stats = computeMyOverviewStats();
+  const statLeadEl = document.getElementById('ovp-stat-lead');
+  const statClosingEl = document.getElementById('ovp-stat-closing');
+  const statOmzetEl = document.getElementById('ovp-stat-omzet');
+  if(statLeadEl) statLeadEl.textContent = stats.leadCount;
+  if(statClosingEl) statClosingEl.textContent = stats.closing+'%';
+  if(statOmzetEl) statOmzetEl.textContent = formatRupiah(stats.omzet);
+
+  const jobTitleEl = document.getElementById('ovp-job-title');
+  const branchLabelEl = document.getElementById('ovp-branch-label');
+  const phoneEl = document.getElementById('ovp-phone');
+  const bioEl = document.getElementById('ovp-bio');
+  const p = currentUserProfile || {};
+  if(jobTitleEl){ jobTitleEl.textContent = p.job_title ? p.job_title : ''; jobTitleEl.style.display = p.job_title ? '' : 'none'; }
+  if(branchLabelEl){ branchLabelEl.textContent = p.branch_label ? ('Cabang: '+p.branch_label) : ''; branchLabelEl.style.display = p.branch_label ? '' : 'none'; }
+  if(phoneEl){ phoneEl.textContent = p.phone ? p.phone : ''; phoneEl.style.display = p.phone ? '' : 'none'; }
+  if(bioEl){ bioEl.textContent = p.bio ? p.bio : ''; bioEl.style.display = p.bio ? '' : 'none'; }
+}
+
+function openEditProfileModal(){
+  if(!currentUserProfile) return;
+  document.getElementById('ep-job-title').value = currentUserProfile.job_title || '';
+  document.getElementById('ep-branch-label').value = currentUserProfile.branch_label || '';
+  document.getElementById('ep-phone').value = currentUserProfile.phone || '';
+  document.getElementById('ep-bio').value = currentUserProfile.bio || '';
+  const errEl = document.getElementById('ep-error');
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  document.getElementById('edit-profile-modal').style.display = 'flex';
+}
+
+function closeEditProfileModal(){
+  document.getElementById('edit-profile-modal').style.display = 'none';
+}
+
+async function saveEditProfile(){
+  if(!currentUserProfile) return;
+  const errEl = document.getElementById('ep-error');
+  const jobTitle = document.getElementById('ep-job-title').value.trim();
+  const branchLabel = document.getElementById('ep-branch-label').value.trim();
+  const phone = document.getElementById('ep-phone').value.trim();
+  const bio = document.getElementById('ep-bio').value.trim();
+  const payload = { job_title: jobTitle || null, branch_label: branchLabel || null, phone: phone || null, bio: bio || null };
+  const { error } = await supabaseClient.from('profiles').update(payload).eq('id', currentUserProfile.id);
+  if(error){
+    errEl.textContent = 'Gagal simpan: '+error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+  Object.assign(currentUserProfile, payload);
+  closeEditProfileModal();
+  renderOverviewProfileCard();
+  showToast('Profil berhasil disimpan');
+}
+
+async function changeMyPassword(){
+  const pw = prompt('Password baru buat akun kamu (minimal 6 karakter):');
+  if(pw === null) return;
+  if(pw.length < 6){ showToast('Password minimal 6 karakter, gak disimpan'); return; }
+  const { error } = await supabaseClient.auth.updateUser({ password: pw });
+  if(error){ showToast('Gagal ganti password: '+error.message); return; }
+  showToast('Password berhasil diganti');
+}
+
+function renderDashboardView(){
+  renderOverviewProfileCard();
+  if(!currentUser) return;
+  const mine = leads.filter(l => l.admin === currentUser.name);
+  const total = mine.length;
+  const dp = mine.filter(isDpLead);
+  const actionable = mine.filter(l=>l.status==='hot'||l.status==='warm');
+  const overdueCount = mine.filter(l=>matchesFilter(l,'overdue')).length;
+  const noInteraction = mine.filter(isNoInteraction);
+  const totalPenawaran = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+  const totalDeal = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+  const cold = mine.filter(l=>l.status==='cold');
+  const warm = mine.filter(l=>l.status==='warm');
+  const hot = mine.filter(l=>l.status==='hot');
+  const coldNoInteraction = cold.filter(isNoInteraction).length;
+  const warmOverdue = warm.filter(isTrulyOverdue).length;
+  const hotOverdue = hot.filter(isTrulyOverdue).length;
+
+  const iconGrid = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>';
+  const iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"></path></svg>';
+  const iconClock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg>';
+  const iconInbox = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>';
+  const iconMoney = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="3"></circle></svg>';
+  const iconTrend = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>';
+
+  const dashRow = document.getElementById('dash-kpi-row');
+  if(!dashRow) return;
+  dashRow.innerHTML = `
+    <div class="card" onclick="goToFilterMine('all')">
+      <div class="card-icon" style="background:var(--accent-soft); color:var(--accent-text);">${iconGrid}</div>
+      <div class="label">Total lead</div><div class="value">${total}</div>
+    </div>
+    <div class="card" onclick="goToFilterMine('dp')">
+      <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconCheck}</div>
+      <div class="label">Sudah DP</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
+    </div>
+    <div class="card" onclick="goToFilterMine('overdue')">
+      <div class="card-icon" style="background:var(--hot-bg); color:var(--hot);">${iconClock}</div>
+      <div class="label">Follow-up telat</div><div class="value">${overdueCount}</div><div class="foot" style="color:var(--hot)">dari ${actionable.length} lead hot/warm</div>
+    </div>
+    <div class="card" onclick="goToFilterMine('no-interaction')">
+      <div class="card-icon" style="background:var(--cold-bg); color:var(--cold);">${iconInbox}</div>
+      <div class="label">Belum ada interaksi</div><div class="value">${noInteraction.length}</div><div class="foot" style="color:var(--text-2)">belum pernah di-follow-up</div>
+    </div>
+    <div class="card" onclick="goToFilterMine('has-product')">
+      <div class="card-icon" style="background:var(--accent-soft); color:var(--accent-text);">${iconMoney}</div>
+      <div class="label">Rencana omzet</div><div class="value" style="font-size:18px;">${formatRupiah(totalPenawaran)}</div><div class="foot" style="color:var(--text-2)">total harga penawaran</div>
+    </div>
+    <div class="card" onclick="goToFilterMine('has-deal')">
+      <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconTrend}</div>
+      <div class="label">Omzet deal</div><div class="value" style="font-size:18px;">${formatRupiah(totalDeal)}</div><div class="foot" style="color:var(--success)">realisasi closing</div>
+    </div>
+  `;
+
+  const dashTempRow = document.getElementById('dash-temp-row');
+  if(dashTempRow){
+    dashTempRow.innerHTML = `
+      <div class="temp-card" style="border-left-color:var(--cold); cursor:pointer;" onclick="goToFilterMine('cold')">
+        <div class="th" style="color:var(--cold);"><span class="dot" style="background:var(--cold);"></span>Cold</div>
+        <div class="num">${cold.length}</div>
+        <div class="foot" style="color:var(--muted);">${total?Math.round(cold.length/total*100):0}% - ${coldNoInteraction} dari ${cold.length} belum ada interaksi</div>
+      </div>
+      <div class="temp-card" style="border-left-color:var(--warm); cursor:pointer;" onclick="goToFilterMine('warm')">
+        <div class="th" style="color:var(--warm);"><span class="dot" style="background:var(--warm);"></span>Warm</div>
+        <div class="num">${warm.length}</div>
+        <div class="foot" style="color:var(--muted);">${total?Math.round(warm.length/total*100):0}% - ${warmOverdue} dari ${warm.length} follow up telat</div>
+      </div>
+      <div class="temp-card" style="border-left-color:var(--hot); cursor:pointer;" onclick="goToFilterMine('hot')">
+        <div class="th" style="color:var(--hot);"><span class="dot" style="background:var(--hot);"></span>Hot</div>
+        <div class="num">${hot.length}</div>
+        <div class="foot" style="color:var(--muted);">${total?Math.round(hot.length/total*100):0}% - ${hotOverdue} dari ${hot.length} follow up telat</div>
+      </div>
+    `;
+  }
+}
+
 function renderOverview(){
   const scoped = getOverviewScopedLeads();
   const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterAdmin!=='all' || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
@@ -2558,6 +2850,7 @@ async function loadProfileAndEnter(userId){
   renderFollowupList();
   renderUserChip();
   startHeartbeatLoop();
+  switchView('dashboard', true);
 }
 
 async function checkExistingSession(){
