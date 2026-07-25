@@ -615,6 +615,7 @@
         <div style="position:relative; height:220px;">
           <canvas id="growth-chart"></canvas>
         </div>
+        <div class="dash-hint">Batang ungu "Total lead baru" = jumlah lead yang masuk pada periode itu. Garis Hot/Warm/Cold = status lead-lead itu sekarang, garis putus-putus = closing rate periode itu.</div>
       </div>
 
       <div id="section-omzet" class="dash-card">
@@ -1810,15 +1811,15 @@ function goBack(action, force){
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
 const PERIOD_LABELS = {minggu:'Minggu', bulan:'Bulan', enam_bulan:'6 Bulan', tahun:'Tahun', lima_tahun:'5 Tahun'};
-const STATUS_META = {hot:{label:'Hot'}, warm:{label:'Warm'}, cold:{label:'Cold'}, closing:{label:'Closing rate'}};
-const STATUS_COLORS = {hot:'#e3436b', warm:'#c9820a', cold:'#6b7280', closing:'#1a9a6c'};
+const STATUS_META = {total:{label:'Total lead baru'}, hot:{label:'Hot'}, warm:{label:'Warm'}, cold:{label:'Cold'}, closing:{label:'Closing rate'}};
+const STATUS_COLORS = {total:'#7c5cff', hot:'#e3436b', warm:'#c9820a', cold:'#6b7280', closing:'#1a9a6c'};
 
 let growthChartInstance = null;
 let omzetChartInstance = null;
 let produkChartInstance = null;
 let growthPeriod = 'bulan';
 let omzetPeriod = 'bulan';
-let growthActiveStatus = {hot:true, warm:true, cold:true, closing:true};
+let growthActiveStatus = {total:true, hot:true, warm:true, cold:true, closing:true};
 
 function getPeriodBuckets(key){
   const now = new Date(); now.setHours(0,0,0,0);
@@ -1867,20 +1868,21 @@ function getPeriodBuckets(key){
 function computeGrowthSeries(key, sourceLeads){
   const src = sourceLeads || leads;
   const buckets = getPeriodBuckets(key);
-  const hot=[],warm=[],cold=[],closing=[];
+  const total=[],hot=[],warm=[],cold=[],closing=[];
   buckets.forEach(b=>{
     const inBucket = src.filter(l=>{
       if(!l.entryDate) return false;
       const d = new Date(l.entryDate+"T00:00:00");
       return d>=b.start && d<b.end;
     });
+    total.push(inBucket.length);
     hot.push(inBucket.filter(l=>l.status==='hot').length);
     warm.push(inBucket.filter(l=>l.status==='warm').length);
     cold.push(inBucket.filter(l=>l.status==='cold').length);
     const closed = inBucket.filter(isDpLead).length;
     closing.push(inBucket.length ? Math.round(closed/inBucket.length*100) : 0);
   });
-  return {labels:buckets.map(b=>b.label), hot, warm, cold, closing};
+  return {labels:buckets.map(b=>b.label), total, hot, warm, cold, closing};
 }
 
 function computeOmzetSeries(key, sourceLeads){
@@ -2125,17 +2127,19 @@ function renderGrowthChart(){
   if(!ctx) return;
   if(growthChartInstance){
     growthChartInstance.data.labels = d.labels;
-    growthChartInstance.data.datasets[0].data = d.hot;
-    growthChartInstance.data.datasets[1].data = d.warm;
-    growthChartInstance.data.datasets[2].data = d.cold;
-    growthChartInstance.data.datasets[3].data = d.closing;
-    ['hot','warm','cold','closing'].forEach((key,i)=>{ growthChartInstance.data.datasets[i].hidden = !growthActiveStatus[key]; });
+    growthChartInstance.data.datasets[0].data = d.total;
+    growthChartInstance.data.datasets[1].data = d.hot;
+    growthChartInstance.data.datasets[2].data = d.warm;
+    growthChartInstance.data.datasets[3].data = d.cold;
+    growthChartInstance.data.datasets[4].data = d.closing;
+    ['total','hot','warm','cold','closing'].forEach((key,i)=>{ growthChartInstance.data.datasets[i].hidden = !growthActiveStatus[key]; });
     growthChartInstance.update();
   } else {
     growthChartInstance = new Chart(ctx, {
       data:{
         labels:d.labels,
         datasets:[
+          {type:'bar', label:'Total lead baru', data:d.total, backgroundColor:STATUS_COLORS.total+'26', borderColor:STATUS_COLORS.total, borderWidth:1, borderRadius:4, maxBarThickness:26, yAxisID:'y', hidden:!growthActiveStatus.total},
           {type:'line', label:'Hot', data:d.hot, borderColor:STATUS_COLORS.hot, backgroundColor:STATUS_COLORS.hot, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.hot},
           {type:'line', label:'Warm', data:d.warm, borderColor:STATUS_COLORS.warm, backgroundColor:STATUS_COLORS.warm, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.warm},
           {type:'line', label:'Cold', data:d.cold, borderColor:STATUS_COLORS.cold, backgroundColor:STATUS_COLORS.cold, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.cold},
