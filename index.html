@@ -771,7 +771,13 @@
               </div>
               <div class="panel">
                 <div class="panel-title">Kontak PIC</div>
-                <div class="field"><label>Nama PIC <span class="opt-pill">Opsional</span></label><input type="text" id="f-pic"></div>
+                <div class="field"><label>Nama PIC <span class="opt-pill">Opsional</span></label><input type="text" id="f-pic" list="pic-datalist" placeholder="Ketik atau pilih dari yang udah pernah masuk"><datalist id="pic-datalist"></datalist></div>
+                <div class="field"><label>Tipe PIC <span class="opt-pill">Opsional</span></label>
+                  <select id="f-pic-source">
+                    <option value="internal">Internal (kontak langsung perusahaan)</option>
+                    <option value="broker">Jaringan luar (broker/calo)</option>
+                  </select>
+                </div>
                 <div class="field"><label>No. telepon <span class="req-pill">Wajib</span></label><input type="text" id="f-phone" class="f-req"></div>
                 <div class="field"><label>Email <span class="opt-pill">Opsional</span></label><input type="text" id="f-email"></div>
               </div>
@@ -1220,6 +1226,7 @@ function dbRowToLead(row){
     id: row.id,
     company: row.company || '',
     pic: row.pic || '',
+    picSource: row.pic_source || 'internal',
     address: row.address || '',
     city: row.city || '',
     province: row.province || '',
@@ -1240,6 +1247,7 @@ function leadToDbRow(data){
   return {
     company: data.company,
     pic: data.pic || null,
+    pic_source: data.picSource || 'internal',
     address: data.address || null,
     city: data.city || null,
     province: data.province || null,
@@ -1293,7 +1301,8 @@ const AVATAR_COLORS = ["#7c5cff","#0d9488","#2563eb","#f0653b","#d6336c","#16a34
 const CHANNEL_LABELS = {wa:"WhatsApp", website:"Website", call:"Telepon", lainnya:"Lainnya"};
 const SOURCE_LABELS = {website:"Website", sosmed:"Sosial media", wa:"WhatsApp", langsung:"Kontak langsung"};
 const PRODUCT_LABELS = {smk3:"SMK3", iso:"ISO"};
-const FIELD_CHANGE_LABELS = {company:'Nama perusahaan', address:'Alamat', city:'Kota', province:'Provinsi', pic:'PIC', phone:'No. telepon', email:'Email', source:'Sumber lead', admin:'Admin sales'};
+const FIELD_CHANGE_LABELS = {company:'Nama perusahaan', address:'Alamat', city:'Kota', province:'Provinsi', pic:'PIC', picSource:'Tipe PIC', phone:'No. telepon', email:'Email', source:'Sumber lead', admin:'Admin sales'};
+const PIC_SOURCE_LABELS = {internal:'Internal', broker:'Jaringan luar (broker/calo)'};
 
 function avatarColor(str){
   let sum=0; for(let i=0;i<str.length;i++) sum+=str.charCodeAt(i);
@@ -1465,7 +1474,7 @@ function unsavedModalStay(){
 }
 
 function initDirtyTracking(){
-  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note'];
+  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note'];
   fieldIds.forEach(id=>{
     const el = document.getElementById(id);
     if(el){
@@ -3228,6 +3237,11 @@ async function setMyPhotoUrl(){
 function getUniquePicList(){
   return [...new Set(leads.map(l=>l.pic).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
+function populatePicDatalist(){
+  const dl = document.getElementById('pic-datalist');
+  if(!dl) return;
+  dl.innerHTML = getUniquePicList().map(p=>'<option value="'+p.replace(/"/g,'&quot;')+'">').join('');
+}
 function getUniqueLocationList(){
   return [...new Set(leads.map(l=>l.city).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
@@ -3952,14 +3966,16 @@ function openLeadForm(id, force){
   currentEditId = id;
   const l = leads.find(x=>x.id===id);
   document.getElementById('form-title').textContent = 'Update lead';
-  document.getElementById('form-subtitle').textContent = 'Diisi oleh: '+(l.admin||'-')+' - admin sales';
+  document.getElementById('form-subtitle').textContent = 'Diisi oleh: '+(l.admin||'-')+' - admin sales'+(l.picSource==='broker' ? ' - PIC: jaringan luar (broker/calo)' : '');
   document.getElementById('mobile-client-header').innerHTML = '<div class="avatar" style="background:'+avatarColor(l.company)+'">'+initials(l.company)+'</div><span class="mch-name">'+l.company+'</span>';
   document.getElementById('form-status-badge').outerHTML = '<span class="badge '+l.status+'" id="form-status-badge">'+l.status.charAt(0).toUpperCase()+l.status.slice(1)+'</span>';
+  populatePicDatalist();
   document.getElementById('f-company').value = l.company;
   document.getElementById('f-address').value = l.address;
   document.getElementById('f-city').value = l.city;
   document.getElementById('f-province').value = l.province;
   document.getElementById('f-pic').value = l.pic;
+  document.getElementById('f-pic-source').value = l.picSource || 'internal';
   document.getElementById('f-phone').value = l.phone;
   document.getElementById('f-email').value = l.email;
   document.getElementById('f-status').value = l.status;
@@ -4008,7 +4024,9 @@ function openNewLeadForm(force){
   document.getElementById('form-subtitle').textContent = '';
   document.getElementById('mobile-client-header').innerHTML = '<div class="avatar" style="background:var(--accent-text)">+</div><span class="mch-name">Lead baru</span>';
   document.getElementById('form-status-badge').outerHTML = '<span class="badge cold" id="form-status-badge">Cold</span>';
+  populatePicDatalist();
   ['f-company','f-address','f-city','f-province','f-pic','f-phone','f-email','f-followup'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-pic-source').value = 'internal';
   document.getElementById('f-status').value = 'cold';
   document.getElementById('f-source').value = 'website';
   document.getElementById('f-entrydate').value = todayIsoStr();
@@ -4042,6 +4060,7 @@ async function saveLeadDataOnly(){
     city: document.getElementById('f-city').value.trim(),
     province: document.getElementById('f-province').value.trim(),
     pic: document.getElementById('f-pic').value.trim(),
+    picSource: document.getElementById('f-pic-source').value,
     phone: document.getElementById('f-phone').value.trim(),
     email: document.getElementById('f-email').value.trim(),
     status: document.getElementById('f-status').value,
@@ -4093,9 +4112,10 @@ async function saveLeadDataOnly(){
     Object.assign(l, data);
     l.history = updatedHistory;
     Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{
-      const before = (prevSnapshot[f]||'').toString().trim();
-      const after = (l[f]||'').toString().trim();
+      let before = (prevSnapshot[f]||'').toString().trim();
+      let after = (l[f]||'').toString().trim();
       if(before !== after){
+        if(f==='picSource'){ before = PIC_SOURCE_LABELS[before] || before; after = PIC_SOURCE_LABELS[after] || after; }
         logActivity(l, FIELD_CHANGE_LABELS[f]+' diubah dari "'+(before||'-')+'" ke "'+(after||'-')+'"');
       }
     });
