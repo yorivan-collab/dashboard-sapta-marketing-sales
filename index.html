@@ -442,7 +442,7 @@
     .cal-day{font-size:10.5px;}
 
     .followup-layout{grid-template-columns:1fr;}
-    .followup-layout .calendar-panel{position:sticky; top:0; z-index:5; padding:0.6rem 0.65rem; margin-bottom:10px;}
+    .followup-layout .calendar-panel{position:sticky; top:0; z-index:5; padding:0.55rem 0.5rem; margin:0 auto 10px; max-width:230px;}
     .followup-layout .calendar-head{margin-bottom:8px;}
     .followup-layout .calendar-head .cal-month{font-size:12px;}
     .followup-layout .icon-btn{width:28px; height:28px;}
@@ -460,9 +460,9 @@
     .mobile-client-header .avatar{background:rgba(255,255,255,0.22); color:#fff; flex-shrink:0;}
     .mobile-client-header .mch-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
-    .mobile-fab-wrap{display:block; position:fixed; right:16px; bottom:16px; z-index:100;}
-    .assistant-fab-wrap{bottom:82px;}
-    .assistant-panel{bottom:144px;}
+    .mobile-fab-wrap{display:block; position:fixed; right:16px; bottom:82px; z-index:100;}
+    .assistant-fab-wrap{right:16px; bottom:16px;}
+    .assistant-panel{right:16px; bottom:78px;}
     .mobile-fab-btn{width:54px; height:54px; border-radius:50%; background:var(--accent); color:#fff; border:none; box-shadow:0 8px 22px rgba(124,92,255,0.45); font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
     .mobile-fab-menu{position:absolute; bottom:66px; right:0; display:none; flex-direction:column; align-items:flex-end; gap:7px; max-height:65vh; overflow-y:auto; padding:4px;}
     .mobile-fab-menu.open{display:flex;}
@@ -1302,6 +1302,7 @@
 <div class="mobile-fab-wrap">
   <div class="mobile-fab-menu" id="mobile-fab-menu">
     <div class="mobile-fab-item accent" onclick="openQuickLeadModal(); closeMobileFab();">+ Tambah lead</div>
+    <div class="mobile-fab-item" onclick="switchView('dashboard'); closeMobileFab();">Dashboard</div>
     <div class="mobile-fab-item" onclick="switchView('overview'); closeMobileFab();">Overview</div>
     <div class="mobile-fab-item" onclick="switchView('followup'); closeMobileFab();">Rencana Follow Up</div>
     <div class="mobile-fab-item" onclick="switchView('activitylog'); closeMobileFab();">Log Aktivitas</div>
@@ -1313,6 +1314,8 @@
     <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah DP</div>
     <div class="mobile-fab-item" onclick="goToFilter('overdue'); closeMobileFab();">Follow up telat</div>
     <div class="mobile-fab-item" onclick="goToFilter('no-interaction'); closeMobileFab();">Belum ada interaksi</div>
+    <div class="mobile-fab-sep"></div>
+    <div class="mobile-fab-item" onclick="closeMobileFab(); logoutUser();">Keluar</div>
   </div>
   <button class="mobile-fab-btn" id="mobile-fab-btn" onclick="toggleMobileFab()" aria-label="Buka menu">&#9776;</button>
 </div>
