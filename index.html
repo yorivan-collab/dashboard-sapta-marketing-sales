@@ -259,6 +259,8 @@
           <span class="filter-pill" data-status="cold" onclick="setFilter('cold')">Cold <span id="count-cold"></span></span>
           <span class="filter-pill" data-status="warm" onclick="setFilter('warm')">Warm <span id="count-warm"></span></span>
           <span class="filter-pill" data-status="hot" onclick="setFilter('hot')">Hot <span id="count-hot"></span></span>
+          <span class="filter-pill" data-status="overdue" onclick="setFilter('overdue')">Follow up telat <span id="count-overdue"></span></span>
+          <span class="filter-pill" data-status="no-interaction" onclick="setFilter('no-interaction')">Belum ada interaksi <span id="count-no-interaction"></span></span>
         </div>
       </div>
       <div class="quick-filter-bar" style="margin-bottom:10px;">
@@ -834,7 +836,12 @@
   </div>
 </div>
 
-<div class="mobile-fab-wrap">
+<div class="mobile-topbar" id="mobile-topbar">
+  <button class="mobile-topbar-btn" id="mobile-fab-btn" onclick="toggleMobileFab()" aria-label="Buka menu navigasi">
+    <span class="mobile-topbar-btn-icon">&#9776;</span>
+    <span class="mobile-topbar-btn-label">Menu</span>
+  </button>
+  <div class="mobile-topbar-title" id="mobile-topbar-title">Dashboard</div>
   <div class="mobile-fab-menu" id="mobile-fab-menu">
     <div class="mobile-fab-item accent" onclick="openQuickLeadModal(); closeMobileFab();">+ Tambah lead</div>
     <div class="mobile-fab-item" onclick="switchView('dashboard'); closeMobileFab();">Dashboard</div>
@@ -852,7 +859,6 @@
     <div class="mobile-fab-sep"></div>
     <div class="mobile-fab-item" onclick="closeMobileFab(); logoutUser();">Keluar</div>
   </div>
-  <button class="mobile-fab-btn" id="mobile-fab-btn" onclick="toggleMobileFab()" aria-label="Buka menu">&#9776;</button>
 </div>
 
 <div class="assistant-fab-wrap">
@@ -1149,6 +1155,13 @@ window.addEventListener('beforeunload', function(e){
   }
 });
 
+const MOBILE_VIEW_TITLES = {
+  overview:'Overview', dashboard:'Dashboard', leads:'Daftar Leads', followup:'Rencana Follow Up',
+  activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
+  monitoring:'Monitoring User', structure:'Struktur Organisasi', 'request-admin':'Ajukan Admin Baru',
+  'admin-approval':'Approval Admin Baru'
+};
+
 function switchView(view, force){
   if(!force && formDirty && isEditingContext()){
     guardLeave(()=>switchView(view, true));
@@ -1157,6 +1170,8 @@ function switchView(view, force){
   exitSplitMode();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
+  const topbarTitle = document.getElementById('mobile-topbar-title');
+  if(topbarTitle) topbarTitle.textContent = MOBILE_VIEW_TITLES[view] || '';
   document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.navsub').forEach(n=>n.classList.remove('active'));
   const nav = document.querySelector('.navitem[data-view="'+view+'"]');
@@ -1365,14 +1380,19 @@ function goToFilterMine(key){
 
 function toggleMobileFab(){
   const menu = document.getElementById('mobile-fab-menu');
-  const btn = document.getElementById('mobile-fab-btn');
+  const icon = document.querySelector('#mobile-fab-btn .mobile-topbar-btn-icon');
+  const label = document.querySelector('#mobile-fab-btn .mobile-topbar-btn-label');
   const isOpen = menu.classList.toggle('open');
-  btn.innerHTML = isOpen ? '&times;' : '&#9776;';
+  if(icon) icon.innerHTML = isOpen ? '&times;' : '&#9776;';
+  if(label) label.textContent = isOpen ? 'Tutup' : 'Menu';
 }
 
 function closeMobileFab(){
   document.getElementById('mobile-fab-menu').classList.remove('open');
-  document.getElementById('mobile-fab-btn').innerHTML = '&#9776;';
+  const icon = document.querySelector('#mobile-fab-btn .mobile-topbar-btn-icon');
+  const label = document.querySelector('#mobile-fab-btn .mobile-topbar-btn-label');
+  if(icon) icon.innerHTML = '&#9776;';
+  if(label) label.textContent = 'Menu';
 }
 
 function placeLeadFormPanel(targetId){
@@ -3429,17 +3449,21 @@ function renderLeadsList(){
   const hot = scopedBase.filter(l=>l.status==='hot').length;
   const warm = scopedBase.filter(l=>l.status==='warm').length;
   const cold = scopedBase.filter(l=>l.status==='cold').length;
+  const overdueCount = scopedBase.filter(l=>matchesFilter(l,'overdue')).length;
+  const noInteractionCount = scopedBase.filter(isNoInteraction).length;
   document.getElementById('count-all').textContent = total;
   document.getElementById('count-cold').textContent = cold;
   document.getElementById('count-warm').textContent = warm;
   document.getElementById('count-hot').textContent = hot;
+  document.getElementById('count-overdue').textContent = overdueCount;
+  document.getElementById('count-no-interaction').textContent = noInteractionCount;
   const leadsTitleEl = document.getElementById('leads-title');
   leadsTitleEl.textContent = (leadsTitleEl.dataset.rolePrefix || 'Daftar leads')+' ('+total+')';
 
   const filtered = getFilteredLeads();
 
   const chipWrap = document.getElementById('filter-chip-wrap');
-  const pillFilters = ['all','cold','warm','hot'];
+  const pillFilters = ['all','cold','warm','hot','overdue','no-interaction'];
   if(!pillFilters.includes(currentFilter)){
     chipWrap.style.display = 'flex';
     chipWrap.innerHTML = '<span class="active-filter-chip">'+filterChipLabel(currentFilter, filtered)+'<button onclick="setFilter(\'all\')" aria-label="Reset filter">&times;</button></span>';
@@ -3726,7 +3750,7 @@ function openLeadForm(id, force){
   const l = leads.find(x=>x.id===id);
   document.getElementById('form-title').textContent = 'Update lead';
   document.getElementById('form-subtitle').textContent = 'Diisi oleh: '+(l.admin||'-')+' - admin sales'+(l.picSource==='broker' ? ' - PIC: jaringan luar (broker/calo)' : '');
-  document.getElementById('mobile-client-header').innerHTML = '<div class="avatar" style="background:'+avatarColor(l.company)+'">'+initials(l.company)+'</div><span class="mch-name">'+l.company+'</span>';
+  document.getElementById('mobile-client-header').innerHTML = '<button class="mch-back-btn" onclick="goBack()" aria-label="Kembali ke daftar lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px; height:18px;"><polyline points="15 18 9 12 15 6"></polyline></svg></button><div class="avatar" style="background:'+avatarColor(l.company)+'">'+initials(l.company)+'</div><span class="mch-name">'+l.company+'</span>';
   document.getElementById('form-status-badge').outerHTML = '<span class="badge '+l.status+'" id="form-status-badge">'+l.status.charAt(0).toUpperCase()+l.status.slice(1)+'</span>';
   populatePicDatalist();
   document.getElementById('f-company').value = l.company;
