@@ -64,7 +64,7 @@
       <div class="navsub" data-view="followup" onclick="switchView('followup')">Rencana follow up <span class="nav-badge" id="nav-followup-count"></span></div>
       <div class="navsub" data-filter="overdue" onclick="goToFilter('overdue')">Follow up telat</div>
       <div class="navsub" data-filter="no-interaction" onclick="goToFilter('no-interaction')">Belum ada interaksi</div>
-      <div class="navsub" data-filter="no-followup-date" onclick="goToFilter('no-followup-date')">Belum ada tanggal follow up</div>
+      <div class="navsub" data-filter="no-followup-date" onclick="goToFilter('no-followup-date')">Tanggal follow up kosong</div>
     </div>
 
     <div class="nav-label">Omzet</div>
@@ -859,7 +859,7 @@
     <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah DP</div>
     <div class="mobile-fab-item" onclick="goToFilter('overdue'); closeMobileFab();">Follow up telat</div>
     <div class="mobile-fab-item" onclick="goToFilter('no-interaction'); closeMobileFab();">Belum ada interaksi</div>
-    <div class="mobile-fab-item" onclick="goToFilter('no-followup-date'); closeMobileFab();">Belum ada tanggal follow up</div>
+    <div class="mobile-fab-item" onclick="goToFilter('no-followup-date'); closeMobileFab();">Tanggal follow up kosong</div>
     <div class="mobile-fab-sep"></div>
     <div class="mobile-fab-item" onclick="closeMobileFab(); logoutUser();">Keluar</div>
   </div>
@@ -1039,7 +1039,7 @@ function isTrulyOverdue(l){
   if(!l.followUp) return false;
   return isOverdue(l.followUp);
 }
-const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah DP', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Belum ada tanggal follow up', 'has-product':'Rencana omzet', 'has-deal':'Omzet deal', lunas:'Sudah Lunas'};
+const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah DP', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Tanggal follow up kosong', 'has-product':'Rencana omzet', 'has-deal':'Omzet deal', lunas:'Sudah Lunas'};
 function matchesFilter(l, key){
   switch(key){
     case 'all': return true;
@@ -2296,7 +2296,7 @@ function renderDashboardView(){
   const noFollowupDate = mine.filter(l=>!l.followUp).length;
   document.getElementById('dash-list-stats').innerHTML = `
     <div class="stat-list-row" onclick="goToFilterMine('no-followup-date')">
-      <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Belum ada tanggal follow up</span>
+      <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Tanggal follow up kosong</span>
       <span class="stat-list-value">${noFollowupDate}</span>
     </div>
   `;
@@ -2378,7 +2378,7 @@ function renderOverview(){
   const noFollowupDate = scoped.filter(l=>!l.followUp).length;
   document.getElementById('section-list-stats').innerHTML = `
     <div class="stat-list-row" onclick="goToFilter('no-followup-date')">
-      <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Belum ada tanggal follow up</span>
+      <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Tanggal follow up kosong</span>
       <span class="stat-list-value">${noFollowupDate}</span>
     </div>
   `;
