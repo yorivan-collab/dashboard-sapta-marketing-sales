@@ -64,6 +64,7 @@
       <div class="navsub" data-view="followup" onclick="switchView('followup')">Rencana follow up <span class="nav-badge" id="nav-followup-count"></span></div>
       <div class="navsub" data-filter="overdue" onclick="goToFilter('overdue')">Follow up telat</div>
       <div class="navsub" data-filter="no-interaction" onclick="goToFilter('no-interaction')">Belum ada interaksi</div>
+      <div class="navsub" data-filter="no-followup-date" onclick="goToFilter('no-followup-date')">Belum ada tanggal follow up</div>
     </div>
 
     <div class="nav-label">Omzet</div>
@@ -142,6 +143,7 @@
       <div id="section-temp">
         <div class="temps" id="temp-row"></div>
       </div>
+      <div id="section-list-stats" style="margin-bottom:14px;"></div>
 
       <div id="section-growth" class="dash-card">
         <div class="dash-card-head">
@@ -233,6 +235,7 @@
         <div>
           <div class="dash-kpis" id="dash-kpi-row"></div>
           <div class="temps" id="dash-temp-row" style="margin-top:12px;"></div>
+          <div id="dash-list-stats" style="margin-top:12px;"></div>
         </div>
       </div>
     </div>
@@ -738,7 +741,7 @@
           <div class="footnote" id="ql-company-hint" style="display:none;"></div>
         </div>
         <div>
-          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama PIC <span class="opt-pill">Opsional</span></label>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama PIC <span class="req-pill">Wajib</span></label>
           <input type="text" id="ql-pic" list="pic-datalist" placeholder="Ketik atau pilih" oninput="handleQuickCompanyInput()" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
         </div>
       </div>
@@ -786,7 +789,7 @@
         </div>
       </div>
       <div>
-        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Laporan follow up awal <span class="opt-pill">Opsional</span></label>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Laporan follow up awal <span class="req-pill">Wajib</span></label>
         <textarea id="ql-note" rows="2" placeholder="Ringkasan percakapan pertama..." style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box; resize:vertical; font-family:inherit;"></textarea>
         <div class="footnote">Tanggal dan channel otomatis hari ini / WA.</div>
       </div>
@@ -856,6 +859,7 @@
     <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah DP</div>
     <div class="mobile-fab-item" onclick="goToFilter('overdue'); closeMobileFab();">Follow up telat</div>
     <div class="mobile-fab-item" onclick="goToFilter('no-interaction'); closeMobileFab();">Belum ada interaksi</div>
+    <div class="mobile-fab-item" onclick="goToFilter('no-followup-date'); closeMobileFab();">Belum ada tanggal follow up</div>
     <div class="mobile-fab-sep"></div>
     <div class="mobile-fab-item" onclick="closeMobileFab(); logoutUser();">Keluar</div>
   </div>
@@ -904,7 +908,9 @@ function dbRowToLead(row){
     chatLog: row.chat_log || '',
     products: row.products || [],
     history: row.history || [],
-    activityLog: []
+    activityLog: [],
+    createdAt: row.created_at || '',
+    firstViewedAt: row.first_viewed_at || null
   };
 }
 function leadToDbRow(data){
@@ -985,6 +991,12 @@ function fmtDate(iso){
   const months = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
   return d.getDate()+" "+months[d.getMonth()]+" "+d.getFullYear();
 }
+function fmtTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
 function formatRupiah(num){
   const n = Number(num)||0;
   return 'Rp ' + n.toLocaleString('id-ID');
@@ -1027,7 +1039,7 @@ function isTrulyOverdue(l){
   if(!l.followUp) return false;
   return isOverdue(l.followUp);
 }
-const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah DP', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'has-product':'Rencana omzet', 'has-deal':'Omzet deal', lunas:'Sudah Lunas'};
+const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah DP', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Belum ada tanggal follow up', 'has-product':'Rencana omzet', 'has-deal':'Omzet deal', lunas:'Sudah Lunas'};
 function matchesFilter(l, key){
   switch(key){
     case 'all': return true;
@@ -1037,6 +1049,7 @@ function matchesFilter(l, key){
     case 'dp': return isDpLead(l);
     case 'overdue': return (l.status==='hot'||l.status==='warm') && isTrulyOverdue(l);
     case 'no-interaction': return isNoInteraction(l);
+    case 'no-followup-date': return !l.followUp;
     case 'has-product': return hasProduct(l);
     case 'has-deal': return hasDealProduct(l);
     case 'lunas': return isLunasLead(l);
@@ -1078,15 +1091,18 @@ function leadRowHTML(l, showNote, selectable, idx){
   const isJust = l.id === lastViewedId;
   const isChecked = !!(selectable && selectedLeadIds.has(l.id));
   const selectCell = selectable ? `<div class="lead-select-cell${isChecked?' checked':''}" onclick="toggleLeadSelect(${l.id}, event)">${isChecked ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : idx}</div>` : '';
+  const newDotClass = l.firstViewedAt ? 'seen' : 'unseen';
+  const newDotTitle = l.firstViewedAt ? 'Sudah pernah dibuka' : 'Lead baru, belum pernah dibuka';
+  const entryTime = fmtTime(l.createdAt);
   return `<div class="lead-row${selectable ? ' selectable' : ''}${isJust ? ' just-viewed' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
     ${selectCell}
     <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
     <div class="lead-info">
-      <div class="lead-name">${l.company}<span class="just-tag">Baru dibuka</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span></div>
+      <div class="lead-name"><span class="new-lead-dot ${newDotClass}" title="${newDotTitle}"></span>${l.company}<span class="just-tag">Baru dibuka</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span></div>
       <div class="lead-sub">${sub}</div>
       ${showNote ? '<div class="lead-note">'+lastNote(l)+'</div>' : ''}
     </div>
-    <div class="lead-entrydate">${fmtDate(l.entryDate)}</div>
+    <div class="lead-entrydate">${fmtDate(l.entryDate)}${entryTime ? '<br><span class="lead-entrytime">'+entryTime+'</span>' : ''}</div>
     <span class="source-pill">${productTypesLabel(l)}</span>
     ${badge(l.status)}
     <div class="lead-followup">${followUpChip(l)}</div>
@@ -1456,7 +1472,7 @@ function renderSplitNameList(){
     const matchTerm = l.company.toLowerCase().includes(term) || (l.pic||'').toLowerCase().includes(term);
     return matchStatus && matchTerm;
   });
-  filtered.sort((a,b)=> new Date(b.entryDate||'1970-01-01') - new Date(a.entryDate||'1970-01-01'));
+  filtered.sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
   document.getElementById('split-namelist').innerHTML = filtered.length ? filtered.map(l=>{
     const isActive = l.id === currentEditId;
     return `<div class="split-name-item${isActive?' active':''}" onclick="openLeadForm(${l.id})">
@@ -2276,6 +2292,14 @@ function renderDashboardView(){
       </div>
     `;
   }
+
+  const noFollowupDate = mine.filter(l=>!l.followUp).length;
+  document.getElementById('dash-list-stats').innerHTML = `
+    <div class="stat-list-row" onclick="goToFilterMine('no-followup-date')">
+      <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Belum ada tanggal follow up</span>
+      <span class="stat-list-value">${noFollowupDate}</span>
+    </div>
+  `;
 }
 
 function renderOverview(){
@@ -2351,6 +2375,14 @@ function renderOverview(){
     </div>
   `;
 
+  const noFollowupDate = scoped.filter(l=>!l.followUp).length;
+  document.getElementById('section-list-stats').innerHTML = `
+    <div class="stat-list-row" onclick="goToFilter('no-followup-date')">
+      <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Belum ada tanggal follow up</span>
+      <span class="stat-list-value">${noFollowupDate}</span>
+    </div>
+  `;
+
   const sorted = actionable.slice().sort((a,b)=>{
     const aDp = isDpLead(a), bDp = isDpLead(b);
     if(aDp!==bDp) return aDp? -1:1;
@@ -2399,9 +2431,15 @@ function getQuickFilteredLeads(){
   return leads.filter(l=> matchesSearchTerm(l, term) && matchesQuickFilters(l));
 }
 
+function leadSortTimestamp(l){
+  // created_at (jam presisi) diutamakan supaya lead yang ditambah di hari
+  // yang sama tetap keurut bener -- entryDate (tanggal doang) cuma fallback
+  // buat data lama yang belum punya created_at.
+  return new Date(l.createdAt || l.entryDate || '1970-01-01').getTime();
+}
 function getFilteredLeads(){
   let filtered = getQuickFilteredLeads().filter(l=> matchesFilter(l, currentFilter));
-  filtered.sort((a,b)=> new Date(b.entryDate||'1970-01-01') - new Date(a.entryDate||'1970-01-01'));
+  filtered.sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
   return filtered;
 }
 
@@ -3009,11 +3047,13 @@ function toggleLengkapiNanti(force){
   if(chevron) chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
-// Kalau lead yang lagi diedit udah punya isi di field "Lengkapi nanti",
-// bagian itu otomatis kebuka biar gak ketuker/ketutupan data yang udah ada.
+// Begitu lead udah tersimpan sebagai data (baru maupun lama/dummy), bagian
+// "Lengkapi nanti" SELALU otomatis kebuka pas detailnya dibuka -- biar
+// datanya langsung kelihatan, gak ketutup di balik akordion yang collapsed.
+// (Yang tetap collapsed default itu cuma pas ngisi form TAMBAH lead baru,
+// belum ada datanya sama sekali.)
 function autoExpandLengkapiNantiIfFilled(l){
-  const hasData = !!(l && (l.address || l.city || l.province || l.email || (l.source && l.source!=='website')));
-  toggleLengkapiNanti(hasData);
+  toggleLengkapiNanti(true);
 }
 
 function updateAdminFieldVisibility(){
@@ -3748,6 +3788,10 @@ function openLeadForm(id, force){
   lastViewedId = id;
   currentEditId = id;
   const l = leads.find(x=>x.id===id);
+  if(l && !l.firstViewedAt){
+    l.firstViewedAt = new Date().toISOString();
+    persistLeadFields(l, {first_viewed_at: l.firstViewedAt});
+  }
   document.getElementById('form-title').textContent = 'Update lead';
   document.getElementById('form-subtitle').textContent = 'Diisi oleh: '+(l.admin||'-')+' - admin sales'+(l.picSource==='broker' ? ' - PIC: jaringan luar (broker/calo)' : '');
   document.getElementById('mobile-client-header').innerHTML = '<button class="mch-back-btn" onclick="goBack()" aria-label="Kembali ke daftar lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px; height:18px;"><polyline points="15 18 9 12 15 6"></polyline></svg></button><div class="avatar" style="background:'+avatarColor(l.company)+'">'+initials(l.company)+'</div><span class="mch-name">'+l.company+'</span>';
@@ -3905,6 +3949,18 @@ async function saveQuickLead(){
   const picInput = document.getElementById('ql-pic').value.trim();
   const company = companyInput || (picInput ? generatePicPlaceholderCompanyName(picInput) : '(tanpa nama)');
   const noteText = document.getElementById('ql-note').value.trim();
+  if(!picInput){
+    errEl.textContent = 'Nama PIC wajib diisi.';
+    errEl.style.display = 'block';
+    document.getElementById('ql-pic').focus();
+    return;
+  }
+  if(!noteText){
+    errEl.textContent = 'Laporan follow up awal wajib diisi.';
+    errEl.style.display = 'block';
+    document.getElementById('ql-note').focus();
+    return;
+  }
   const now = new Date();
   const noteTime = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const quickPenawaran = parseFloat(document.getElementById('ql-product-penawaran').value) || 0;
@@ -4302,8 +4358,8 @@ const ASSISTANT_KB = [
     keywords: ['tambah lead','lead baru','nambah lead','bikin lead','buat lead','input lead','data lead apa aja','isi lead'],
     steps: [
       'Klik tombol "+ Tambah lead" di menu mana pun -- muncul popup kecil, gak perlu pindah halaman.',
-      'Yang wajib diisi cuma suhu lead (Cold/Warm/Hot). Nama perusahaan, nomor telepon, dan lainnya boleh dikosongin dulu kalau belum tahu -- nama perusahaan otomatis dikasih nama sementara dari PIC-nya kalau kosong.',
-      'Produk, harga penawaran, dan laporan follow up awal juga opsional -- kalau diisi, otomatis ikut kesimpan bareng lead-nya.',
+      'Yang wajib diisi ada 3: suhu lead (Cold/Warm/Hot), nama PIC, dan laporan follow up awal (ringkasan percakapan pertama). Nama perusahaan dan nomor telepon boleh dikosongin dulu kalau belum tahu -- nama perusahaan otomatis dikasih nama sementara dari PIC-nya kalau kosong.',
+      'Produk dan harga penawaran opsional -- kalau diisi, otomatis ikut kesimpan bareng lead-nya.',
       'Alamat, kota, provinsi, email, dan sumber lead ada di bagian "Lengkapi nanti" yang bisa dilipat/dibuka -- aman ditunda.',
       'Admin/sales penanggung jawabnya otomatis keisi nama kamu sendiri buat Sales, sedangkan Supervisor/Master/Super Admin bisa pilih sendiri.',
       'Klik "Simpan lead".'
