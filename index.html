@@ -957,6 +957,7 @@ let nextId = 34;
 let currentFilter = "all";
 let currentEditId = null;
 let lastViewedId = null;
+let lastActionWasAdd = false;
 let originView = "leads";
 let toastTimer = null;
 let editingProductId = null;
@@ -1089,16 +1090,19 @@ function leadOwnerLabel(l){
 function leadRowHTML(l, showNote, selectable, idx){
   const sub = [l.city, l.phone].filter(Boolean).join(' &middot; ') || 'Belum ada lokasi';
   const isJust = l.id === lastViewedId;
+  const isJustAdd = isJust && lastActionWasAdd;
+  const isJustView = isJust && !lastActionWasAdd;
   const isChecked = !!(selectable && selectedLeadIds.has(l.id));
   const selectCell = selectable ? `<div class="lead-select-cell${isChecked?' checked':''}" onclick="toggleLeadSelect(${l.id}, event)">${isChecked ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : idx}</div>` : '';
   const newDotClass = l.firstViewedAt ? 'seen' : 'unseen';
   const newDotTitle = l.firstViewedAt ? 'Sudah pernah dibuka' : 'Lead baru, belum pernah dibuka';
   const entryTime = fmtTime(l.createdAt);
-  return `<div class="lead-row${selectable ? ' selectable' : ''}${isJust ? ' just-viewed' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
+  const justTagText = isJustAdd ? 'Baru ditambah' : 'Baru dibuka';
+  return `<div class="lead-row${selectable ? ' selectable' : ''}${isJustView ? ' just-viewed' : ''}${isJustAdd ? ' just-added' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
     ${selectCell}
     <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
     <div class="lead-info">
-      <div class="lead-name"><span class="new-lead-dot ${newDotClass}" title="${newDotTitle}"></span>${l.company}<span class="just-tag">Baru dibuka</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span></div>
+      <div class="lead-name"><span class="new-lead-dot ${newDotClass}" title="${newDotTitle}"></span>${l.company}<span class="just-tag">${justTagText}</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span></div>
       <div class="lead-sub">${sub}</div>
       ${showNote ? '<div class="lead-note">'+lastNote(l)+'</div>' : ''}
     </div>
@@ -3786,6 +3790,7 @@ function openLeadForm(id, force){
   }
   originView = document.querySelector('.view.active').id.replace('view-','');
   lastViewedId = id;
+  lastActionWasAdd = false;
   currentEditId = id;
   const l = leads.find(x=>x.id===id);
   if(l && !l.firstViewedAt){
@@ -3997,6 +4002,8 @@ async function saveQuickLead(){
   }
   const newLead = dbRowToLead(inserted);
   leads.push(newLead);
+  lastViewedId = newLead.id;
+  lastActionWasAdd = true;
   logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
   if(noteText) logActivity(newLead, 'Menambahkan catatan follow-up (WhatsApp)');
   if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
@@ -4057,6 +4064,7 @@ async function saveLeadDataOnly(){
     const newLead = dbRowToLead(inserted);
     leads.push(newLead);
     lastViewedId = newLead.id;
+    lastActionWasAdd = true;
     currentEditId = newLead.id;
     logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
     if(newNote) logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
@@ -4098,6 +4106,7 @@ async function saveLeadDataOnly(){
     }
     if(newNote) logActivity(l, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
     lastViewedId = currentEditId;
+    lastActionWasAdd = false;
   }
   formDirty = false;
   return true;
