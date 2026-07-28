@@ -371,8 +371,8 @@
                     <option value="iso">ISO</option>
                   </select>
                 </div>
-                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="number" id="f-product-penawaran" min="0" step="100000" placeholder="0"></div>
-                <div class="field"><label>Harga deal (Rp) <span class="opt-pill">Opsional</span></label><input type="number" id="f-product-deal" min="0" step="100000" placeholder="Isi kalau sudah closing" oninput="toggleLunasCheckboxVisibility()"></div>
+                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this)"></div>
+                <div class="field"><label>Harga deal (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-deal" placeholder="Isi kalau sudah closing" oninput="handleRupiahInputFormat(this); toggleLunasCheckboxVisibility();"></div>
               </div>
               <label for="f-product-lunas" id="product-lunas-wrap" style="display:none; align-items:center; gap:8px; margin-top:6px; margin-bottom:0; text-transform:none; font-weight:500; font-size:12.5px; color:var(--text); cursor:pointer;">
                 <input type="checkbox" id="f-product-lunas" style="width:auto; accent-color:var(--accent); cursor:pointer;">
@@ -785,7 +785,7 @@
           </div>
           <div>
             <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Harga penawaran (Rp)</label>
-            <input type="number" id="ql-product-penawaran" min="0" step="100000" placeholder="0" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <input type="text" inputmode="numeric" id="ql-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
           </div>
         </div>
       </div>
@@ -1002,6 +1002,19 @@ function fmtTime(iso){
 function formatRupiah(num){
   const n = Number(num)||0;
   return 'Rp ' + n.toLocaleString('id-ID');
+}
+function formatNumberInputValue(num){
+  const n = Math.round(Number(num)||0);
+  return n ? n.toLocaleString('id-ID') : '';
+}
+function unformatNumberInput(str){
+  if(!str) return 0;
+  const digits = String(str).replace(/[^0-9]/g,'');
+  return digits ? parseInt(digits, 10) : 0;
+}
+function handleRupiahInputFormat(el){
+  const raw = unformatNumberInput(el.value);
+  el.value = raw ? raw.toLocaleString('id-ID') : '';
 }
 function isOverdue(iso){
   if(!iso) return false;
@@ -3701,7 +3714,7 @@ function cancelEditProduct(){
 }
 
 function toggleLunasCheckboxVisibility(){
-  const dealVal = parseFloat(document.getElementById('f-product-deal').value) || 0;
+  const dealVal = unformatNumberInput(document.getElementById('f-product-deal').value);
   const wrap = document.getElementById('product-lunas-wrap');
   if(dealVal > 0){
     wrap.style.display = 'flex';
@@ -3717,8 +3730,8 @@ function editProductLine(productId){
   const p = (l.products||[]).find(x=>x.id===productId);
   if(!p) return;
   document.getElementById('f-product-type').value = p.type;
-  document.getElementById('f-product-penawaran').value = p.hargaPenawaran;
-  document.getElementById('f-product-deal').value = p.hargaDeal || '';
+  document.getElementById('f-product-penawaran').value = formatNumberInputValue(p.hargaPenawaran);
+  document.getElementById('f-product-deal').value = formatNumberInputValue(p.hargaDeal);
   toggleLunasCheckboxVisibility();
   document.getElementById('f-product-lunas').checked = !!p.lunas;
   editingProductId = productId;
@@ -3733,8 +3746,8 @@ function addProductLine(){
     return;
   }
   const type = document.getElementById('f-product-type').value;
-  const penawaran = parseFloat(document.getElementById('f-product-penawaran').value) || 0;
-  const deal = parseFloat(document.getElementById('f-product-deal').value) || 0;
+  const penawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
+  const deal = unformatNumberInput(document.getElementById('f-product-deal').value);
   const lunas = document.getElementById('f-product-lunas').checked;
   if(!penawaran){
     alert('Isi harga penawaran dulu.');
@@ -3781,6 +3794,7 @@ function addProductLine(){
 function removeProductLine(productId){
   const l = leads.find(x=>x.id===currentEditId);
   if(!l) return;
+  if(!confirm('Anda mau hapus penawaran ini?')) return;
   const removed = (l.products||[]).find(p=>p.id===productId);
   l.products = (l.products||[]).filter(p=>p.id!==productId);
   if(editingProductId === productId) cancelEditProduct();
@@ -3974,7 +3988,7 @@ async function saveQuickLead(){
   }
   const now = new Date();
   const noteTime = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  const quickPenawaran = parseFloat(document.getElementById('ql-product-penawaran').value) || 0;
+  const quickPenawaran = unformatNumberInput(document.getElementById('ql-product-penawaran').value);
   const quickProduct = quickPenawaran > 0 ? {
     id: Date.now(),
     type: document.getElementById('ql-product-type').value,
@@ -4050,14 +4064,14 @@ async function saveLeadDataOnly(){
 
   if(currentEditId===null){
     data.history = newNote ? [{date:noteDate, time:noteTime, channel:noteChannel, note:newNote}] : [];
-    const quickPenawaran = parseFloat(document.getElementById('f-product-penawaran').value) || 0;
+    const quickPenawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
     let quickProduct = null;
     if(quickPenawaran > 0){
       quickProduct = {
         id: Date.now(),
         type: document.getElementById('f-product-type').value,
         hargaPenawaran: quickPenawaran,
-        hargaDeal: parseFloat(document.getElementById('f-product-deal').value) || 0,
+        hargaDeal: unformatNumberInput(document.getElementById('f-product-deal').value),
         lunas: document.getElementById('f-product-lunas').checked
       };
     }
