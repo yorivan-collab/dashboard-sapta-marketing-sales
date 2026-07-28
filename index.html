@@ -3824,7 +3824,7 @@ function openLeadForm(id, force){
   document.getElementById('f-new-note').value = '';
   document.getElementById('f-chatlog').value = l.chatLog || '';
   setChatLogHeight('medium');
-  document.getElementById('btn-delete').style.display = (currentUser && currentUser.role==='master_admin') ? 'inline-block' : 'none';
+  document.getElementById('btn-delete').style.display = (currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin')) ? 'inline-block' : 'none';
   editingProductId = null;
   resetProductSubmitButton();
   document.getElementById('f-product-type').value = 'smk3';
@@ -4495,8 +4495,8 @@ const ASSISTANT_KB = [
   {
     keywords: ['hapus lead','gak bisa hapus','tidak bisa hapus','delete lead','kenapa gak ada tombol hapus'],
     steps: [
-      'Hapus lead cuma bisa dilakuin Master Admin -- ini emang dibatesin sengaja biar data gak ilang gara-gara kehapus gak sengaja.',
-      'Kalau kamu Super Admin/Supervisor/Sales dan butuh lead dihapus, minta tolong ke Master Admin.'
+      'Hapus lead cuma bisa dilakuin Master Admin dan Super Admin -- ini emang dibatesin sengaja biar data gak ilang gara-gara kehapus gak sengaja.',
+      'Kalau kamu Supervisor/Sales dan butuh lead dihapus, minta tolong ke Master Admin atau Super Admin.'
     ]
   },
   {
@@ -4567,8 +4567,8 @@ const ASSISTANT_KB = [
   {
     keywords: ['beda role','master admin super admin supervisor sales','tingkatan role','level akses'],
     steps: [
-      'Master Admin: akses penuh ke semua data dan user, satu-satunya yang bisa hapus lead dan ubah akun Super Admin.',
-      'Super Admin: akses penuh ke data, bisa kelola Supervisor & Sales, tapi gak bisa sentuh akun Master/Super Admin lain, gak bisa hapus lead.',
+      'Master Admin: akses penuh ke semua data dan user, satu-satunya yang bisa ubah akun Super Admin.',
+      'Super Admin: akses penuh ke data, bisa kelola Supervisor & Sales, bisa hapus lead, tapi gak bisa sentuh akun Master/Super Admin lain.',
       'Supervisor: cuma lihat data dirinya + anggota tim yang di-assign ke dia.',
       'Sales: cuma lihat data lead miliknya sendiri.'
     ]
