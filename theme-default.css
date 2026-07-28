@@ -24,6 +24,7 @@
   .brand-mark{width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,var(--accent),#ff6fa5); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;}
   .brand-name{color:#fff; font-size:14.5px; font-weight:600;}
   .brand-sub{color:var(--sidebar-text); font-size:11px;}
+  .brand-user{color:var(--accent-2); font-size:11px; font-weight:600; margin-top:3px;}
   .nav-label{color:#6f6b85; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; padding:14px 10px 6px;}
   .navitem{display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm); color:var(--sidebar-text); font-size:13.5px; cursor:pointer; user-select:none; position:relative;}
   .navitem svg{width:16px; height:16px; flex-shrink:0; opacity:0.8;}
@@ -52,6 +53,8 @@
   .view.active{display:block;}
   .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;}
   .title{font-size:21px; font-weight:700; letter-spacing:-0.01em;}
+  .title-divider{display:inline-block; margin:0 10px; color:var(--border); font-weight:400;}
+  .title-greeting{color:var(--accent-text); font-weight:700;}
   .subtitle{font-size:12.5px; color:var(--muted); margin-top:3px;}
   .icon-btn{width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:10px; flex-shrink:0;}
   .icon-btn svg{width:18px; height:18px;}
