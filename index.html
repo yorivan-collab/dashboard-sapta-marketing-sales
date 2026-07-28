@@ -2795,6 +2795,7 @@ function applyRoleRestrictions(){
   const isSupervisor = !!(currentUser && currentUser.role==='supervisor');
   const isMaster = !!(currentUser && currentUser.role==='master_admin');
   const canManageUsers = !!(currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin'));
+  const canDeleteLeads = !!(currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin'));
   const canCompare = !!(currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin' || currentUser.role==='supervisor'));
   ['admin-filter-select','overview-admin-filter-select'].forEach(id=>{
     const el = document.getElementById(id);
@@ -2802,7 +2803,7 @@ function applyRoleRestrictions(){
   });
   renderMasterFocusBadges();
   const bulkDeleteBtn = document.getElementById('btn-bulk-delete');
-  if(bulkDeleteBtn) bulkDeleteBtn.style.display = isMaster ? '' : 'none';
+  if(bulkDeleteBtn) bulkDeleteBtn.style.display = canDeleteLeads ? '' : 'none';
   const comparisonNav = document.getElementById('nav-comparison-item');
   if(comparisonNav) comparisonNav.style.display = canCompare ? '' : 'none';
   if(!canCompare && document.getElementById('view-comparison') && document.getElementById('view-comparison').classList.contains('active')) switchView('overview', true);
