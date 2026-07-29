@@ -280,7 +280,7 @@
       <div id="leads-fulllist-wrap">
         <div class="panel">
           <div class="rowlist-header selectable">
-            <span class="rowlist-selectall-cell"><input type="checkbox" id="leads-selectall" onclick="toggleSelectAll()"></span><span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+            <span class="rowlist-selectall-cell"><input type="checkbox" id="leads-selectall" onclick="toggleSelectAll()"></span><span></span><span>Perusahaan</span><span id="col-header-entrydate">Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
           </div>
           <div class="rowlist" id="leads-rowlist"></div>
         </div>
@@ -1095,6 +1095,9 @@ function productTypesLabel(l){
   const types = [...new Set((l.products||[]).map(p=>PRODUCT_LABELS[p.type]||p.type))];
   return types.length ? types.join(', ') : '-';
 }
+function leadTotalPenawaran(l){
+  return (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0);
+}
 
 function leadOwnerLabel(l){
   if(!l.admin) return 'Belum ada admin';
@@ -1113,6 +1116,9 @@ function leadRowHTML(l, showNote, selectable, idx){
   const newDotTitle = l.firstViewedAt ? 'Sudah pernah dibuka' : 'Lead baru, belum pernah dibuka';
   const entryTime = fmtTime(l.createdAt);
   const justTagText = isJustAdd ? 'Baru ditambah' : 'Baru dibuka';
+  const entryColHTML = currentFilter==='has-product'
+    ? '<span class="lead-omzet-value">'+formatRupiah(leadTotalPenawaran(l))+'</span>'
+    : fmtDate(l.entryDate)+(entryTime ? '<br><span class="lead-entrytime">'+entryTime+'</span>' : '');
   return `<div class="lead-row${selectable ? ' selectable' : ''}${isJustView ? ' just-viewed' : ''}${isJustAdd ? ' just-added' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
     ${selectCell}
     <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
@@ -1121,7 +1127,7 @@ function leadRowHTML(l, showNote, selectable, idx){
       <div class="lead-sub">${sub}</div>
       ${showNote ? '<div class="lead-note">'+lastNote(l)+'</div>' : ''}
     </div>
-    <div class="lead-entrydate">${fmtDate(l.entryDate)}${entryTime ? '<br><span class="lead-entrytime">'+entryTime+'</span>' : ''}</div>
+    <div class="lead-entrydate">${entryColHTML}</div>
     <span class="source-pill">${productTypesLabel(l)}</span>
     ${badge(l.status)}
     <div class="lead-followup">${followUpChip(l)}</div>
@@ -3534,11 +3540,14 @@ function renderLeadsList(){
   const pillFilters = ['all','cold','warm','hot','overdue','no-interaction'];
   if(!pillFilters.includes(currentFilter)){
     chipWrap.style.display = 'flex';
-    chipWrap.innerHTML = '<span class="active-filter-chip">'+filterChipLabel(currentFilter, filtered)+'<button onclick="setFilter(\'all\')" aria-label="Reset filter">&times;</button></span>';
+    const closeBtn = currentFilter==='has-product' ? '' : '<button onclick="setFilter(\'all\')" aria-label="Reset filter">&times;</button>';
+    chipWrap.innerHTML = '<span class="active-filter-chip">'+filterChipLabel(currentFilter, filtered)+closeBtn+'</span>';
   } else {
     chipWrap.style.display = 'none';
     chipWrap.innerHTML = '';
   }
+  const colHeaderEntrydate = document.getElementById('col-header-entrydate');
+  if(colHeaderEntrydate) colHeaderEntrydate.textContent = currentFilter==='has-product' ? 'Nilai omzet' : 'Tanggal input';
 
   document.getElementById('leads-rowlist').innerHTML = filtered.length
     ? (groupByAdminEnabled ? buildGroupedLeadRowsHTML(filtered) : filtered.map((l,i)=>leadRowHTML(l,false,true,i+1)).join(''))
