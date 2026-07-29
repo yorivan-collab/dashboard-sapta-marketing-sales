@@ -333,6 +333,7 @@
                   <select id="f-admin" onchange="handleAdminSelectChange(this)"></select>
                 </div>
               </div>
+              <div id="assist-status-wrap" style="display:none; margin-top:9px;"></div>
             </div>
 
             <div class="panel">
@@ -685,6 +686,33 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="assist-modal">
+  <div class="modal-card">
+    <div class="modal-title">Bagikan lead ini</div>
+    <div class="modal-sub">Pilih ke siapa dan mode apa. "Perbantuan" cuma kasih akses terbatas, kepemilikan tetap di admin sekarang. "Full kelola" mindahin kepemilikan penuh.</div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Bagikan ke</label>
+      <select id="assist-target-select"></select>
+    </div>
+    <div class="field" style="margin-bottom:4px;">
+      <label>Mode</label>
+      <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text); font-weight:400; text-transform:none;"><input type="radio" name="assist-mode" value="assist" checked onchange="renderAssistScopeVisibility()" style="width:auto; margin:0;"> Perbantuan (akses terbatas)</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text); font-weight:400; text-transform:none;"><input type="radio" name="assist-mode" value="full" onchange="renderAssistScopeVisibility()" style="width:auto; margin:0;"> Full kelola (pindah kepemilikan)</label>
+      </div>
+    </div>
+    <div id="assist-scope-wrap" style="margin-top:8px;">
+      <label style="display:block; font-size:11px; font-weight:600; color:var(--accent-text); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px;">Boleh kelola bagian mana aja?</label>
+      <div class="focus-checklist" id="assist-scope-checklist"></div>
+    </div>
+    <div id="assist-modal-error" style="display:none; font-size:11.5px; color:var(--hot); margin-bottom:10px;"></div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitAssistLead()">Simpan</button>
+      <button onclick="closeAssistModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="approve-password-modal">
   <div class="modal-card">
     <div class="modal-title">Set password akun ini</div>
@@ -912,7 +940,9 @@ function dbRowToLead(row){
     history: row.history || [],
     activityLog: [],
     createdAt: row.created_at || '',
-    firstViewedAt: row.first_viewed_at || null
+    firstViewedAt: row.first_viewed_at || null,
+    assistAdmin: row.assist_admin || null,
+    assistScope: row.assist_scope || []
   };
 }
 function leadToDbRow(data){
@@ -971,11 +1001,18 @@ let calendarSelectedDate = null;
 let selectedLeadIds = new Set();
 const MONTH_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const AVATAR_COLORS = ["#7c5cff","#0d9488","#2563eb","#f0653b","#d6336c","#16a34a","#475569","#c9820a"];
-const CHANNEL_LABELS = {wa:"WhatsApp", website:"Website", call:"Telepon", lainnya:"Lainnya"};
+const CHANNEL_LABELS = {wa:"WhatsApp", website:"Website", call:"Telepon", lainnya:"Lainnya", sistem:"Sistem"};
 const SOURCE_LABELS = {website:"Website", sosmed:"Sosial media", wa:"WhatsApp", langsung:"Kontak langsung"};
 const PRODUCT_LABELS = {smk3:"SMK3", iso:"ISO"};
 const FIELD_CHANGE_LABELS = {company:'Nama perusahaan', address:'Alamat', city:'Kota', province:'Provinsi', pic:'PIC', picSource:'Tipe PIC', phone:'No. telepon', email:'Email', source:'Sumber lead', admin:'Admin sales'};
 const PIC_SOURCE_LABELS = {internal:'Internal', broker:'Jaringan luar (broker/calo)'};
+const ASSIST_SCOPE_LABELS = {contact:'Info kontak', status:'Status & suhu lead', followup:'Laporan & rencana follow-up', product:'Produk & penawaran'};
+const ASSIST_SCOPE_FIELD_IDS = {
+  contact: ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-source'],
+  status: ['f-status'],
+  followup: ['f-followup','f-note-date','f-note-channel','f-new-note','f-chatlog'],
+  product: ['f-product-type','f-product-penawaran','f-product-deal']
+};
 
 function avatarColor(str){
   let sum=0; for(let i=0;i<str.length;i++) sum+=str.charCodeAt(i);
@@ -1119,11 +1156,19 @@ function leadRowHTML(l, showNote, selectable, idx){
   const entryColHTML = currentFilter==='has-product'
     ? '<span class="lead-omzet-value">'+formatRupiah(leadTotalPenawaran(l))+'</span>'
     : fmtDate(l.entryDate)+(entryTime ? '<br><span class="lead-entrytime">'+entryTime+'</span>' : '');
+  let assistTagHTML = '';
+  if(l.assistAdmin && currentUser){
+    if(l.assistAdmin === currentUser.name){
+      assistTagHTML = '<span class="assist-tag" title="Kamu dikasih akses perbantuan terbatas ke lead ini oleh '+l.admin+'">Data perbantuan</span>';
+    } else if(l.admin === currentUser.name || currentUser.role==='master_admin' || currentUser.role==='super_admin'){
+      assistTagHTML = '<span class="assist-tag assist-tag-owner" title="Lead ini lagi dibagikan (perbantuan) ke '+l.assistAdmin+'">Dibagikan ke '+l.assistAdmin+'</span>';
+    }
+  }
   return `<div class="lead-row${selectable ? ' selectable' : ''}${isJustView ? ' just-viewed' : ''}${isJustAdd ? ' just-added' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
     ${selectCell}
     <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
     <div class="lead-info">
-      <div class="lead-name"><span class="new-lead-dot ${newDotClass}" title="${newDotTitle}"></span>${l.company}<span class="just-tag">${justTagText}</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span></div>
+      <div class="lead-name"><span class="new-lead-dot ${newDotClass}" title="${newDotTitle}"></span>${l.company}<span class="just-tag">${justTagText}</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span>${assistTagHTML}</div>
       <div class="lead-sub">${sub}</div>
       ${showNote ? '<div class="lead-note">'+lastNote(l)+'</div>' : ''}
     </div>
@@ -3106,8 +3151,8 @@ function matchesQuickFilters(l){
   if(quickFilterLocation!=='all' && l.city!==quickFilterLocation) return false;
   if(quickFilterAdmin!=='all'){
     if(Array.isArray(quickFilterAdmin)){
-      if(!quickFilterAdmin.includes(l.admin)) return false;
-    } else if(l.admin!==quickFilterAdmin) return false;
+      if(!quickFilterAdmin.includes(l.admin) && !quickFilterAdmin.includes(l.assistAdmin)) return false;
+    } else if(l.admin!==quickFilterAdmin && l.assistAdmin!==quickFilterAdmin) return false;
   }
   return true;
 }
@@ -3230,6 +3275,163 @@ function handleAdminSelectChange(sel){
     }
   }
   markFormDirty();
+}
+
+// ===== PERBANTUAN / FULL KELOLA LEAD =====
+function isAssistOnlyViewer(l){
+  if(!currentUser || !l) return false;
+  if(currentUser.role==='master_admin' || currentUser.role==='super_admin') return false;
+  if(l.admin === currentUser.name) return false;
+  return l.assistAdmin === currentUser.name;
+}
+
+function canManageAssist(l){
+  if(!currentUser || !l) return false;
+  if(currentUser.role==='master_admin' || currentUser.role==='super_admin') return true;
+  return l.admin === currentUser.name;
+}
+
+function pushAssistHistoryNote(l, text){
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if(!l.history) l.history = [];
+  l.history.push({date: todayIsoStr(), time: timeStr, channel: 'sistem', note: text});
+  return l.history;
+}
+
+function renderAssistStatusArea(l){
+  const wrap = document.getElementById('assist-status-wrap');
+  if(!wrap) return;
+  if(!l){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  const canManage = canManageAssist(l);
+  if(l.assistAdmin){
+    const scopeLabels = (l.assistScope||[]).map(k=>ASSIST_SCOPE_LABELS[k]||k).join(', ') || '-';
+    wrap.style.display = 'block';
+    wrap.innerHTML = '<div class="assist-banner">'
+      + '<div><b>Perbantuan aktif:</b> '+l.assistAdmin+' -- boleh kelola: '+scopeLabels+'</div>'
+      + (canManage ? '<button type="button" onclick="endAssist()">Akhiri perbantuan</button>' : '')
+      + '</div>';
+  } else if(canManage){
+    wrap.style.display = 'block';
+    wrap.innerHTML = '<button type="button" class="assist-share-btn" onclick="openAssistModal()">Bagikan lead ke user lain</button>';
+  } else {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+  }
+}
+
+function openAssistModal(){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  const targetSel = document.getElementById('assist-target-select');
+  const options = ADMIN_LIST.filter(name=>name!==l.admin);
+  targetSel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('');
+  const assistRadio = document.querySelector('input[name="assist-mode"][value="assist"]');
+  if(assistRadio) assistRadio.checked = true;
+  const checklistWrap = document.getElementById('assist-scope-checklist');
+  checklistWrap.innerHTML = Object.keys(ASSIST_SCOPE_LABELS).map(key=>
+    '<label><input type="checkbox" value="'+key+'" checked> '+ASSIST_SCOPE_LABELS[key]+'</label>'
+  ).join('');
+  document.getElementById('assist-modal-error').style.display = 'none';
+  renderAssistScopeVisibility();
+  document.getElementById('assist-modal').style.display = 'flex';
+}
+
+function closeAssistModal(){
+  document.getElementById('assist-modal').style.display = 'none';
+}
+
+function renderAssistScopeVisibility(){
+  const checked = document.querySelector('input[name="assist-mode"]:checked');
+  const mode = checked ? checked.value : 'assist';
+  document.getElementById('assist-scope-wrap').style.display = mode==='assist' ? 'block' : 'none';
+}
+
+function submitAssistLead(){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  const errEl = document.getElementById('assist-modal-error');
+  errEl.style.display = 'none';
+  const target = document.getElementById('assist-target-select').value;
+  if(!target){
+    errEl.textContent = 'Pilih siapa yang mau dibagikan lead ini.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const checkedMode = document.querySelector('input[name="assist-mode"]:checked');
+  const mode = checkedMode ? checkedMode.value : 'assist';
+  if(mode==='full'){
+    const oldAdmin = l.admin;
+    l.admin = target;
+    l.assistAdmin = null;
+    l.assistScope = [];
+    const noteText = 'Full kelola oleh '+target+' dari '+oldAdmin;
+    pushAssistHistoryNote(l, noteText);
+    persistLeadFields(l, {admin: target, assist_admin: null, assist_scope: [], history: l.history});
+    logActivity(l, noteText);
+    showToast('Lead dipindah full ke '+target);
+  } else {
+    const checks = Array.from(document.querySelectorAll('#assist-scope-checklist input:checked')).map(c=>c.value);
+    if(!checks.length){
+      errEl.textContent = 'Centang minimal satu bagian yang boleh dikelola.';
+      errEl.style.display = 'block';
+      return;
+    }
+    l.assistAdmin = target;
+    l.assistScope = checks;
+    const noteText = 'Perbantuan '+l.admin+' - '+target;
+    pushAssistHistoryNote(l, noteText);
+    persistLeadFields(l, {assist_admin: target, assist_scope: checks, history: l.history});
+    logActivity(l, noteText);
+    showToast('Lead dibagikan (perbantuan) ke '+target);
+  }
+  closeAssistModal();
+  renderAssistStatusArea(l);
+  renderAdminSelectOptions();
+  document.getElementById('f-admin').value = l.admin;
+  applyAssistFieldLocking(l);
+  renderProductList(l);
+  renderHistory(l);
+}
+
+function endAssist(){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l || !l.assistAdmin) return;
+  if(!confirm('Akhiri perbantuan '+l.assistAdmin+' buat lead ini?')) return;
+  const prevAssist = l.assistAdmin;
+  l.assistAdmin = null;
+  l.assistScope = [];
+  const noteText = 'Perbantuan '+l.admin+' - '+prevAssist+' diakhiri';
+  pushAssistHistoryNote(l, noteText);
+  persistLeadFields(l, {assist_admin: null, assist_scope: [], history: l.history});
+  logActivity(l, noteText);
+  showToast('Perbantuan diakhiri');
+  renderAssistStatusArea(l);
+  applyAssistFieldLocking(l);
+  renderProductList(l);
+  renderHistory(l);
+}
+
+function applyAssistFieldLocking(l){
+  const isLocked = isAssistOnlyViewer(l);
+  const allowed = isLocked ? (l.assistScope||[]) : Object.keys(ASSIST_SCOPE_FIELD_IDS);
+  Object.keys(ASSIST_SCOPE_FIELD_IDS).forEach(cat=>{
+    const catAllowed = allowed.includes(cat);
+    ASSIST_SCOPE_FIELD_IDS[cat].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.disabled = isLocked && !catAllowed;
+    });
+  });
+  const productAllowed = allowed.includes('product');
+  const followupAllowed = allowed.includes('followup');
+  const btnProductSubmit = document.getElementById('btn-product-submit');
+  if(btnProductSubmit) btnProductSubmit.disabled = isLocked && !productAllowed;
+  const addFollowupBtn = document.querySelector('button[onclick="addFollowUpLog()"]');
+  if(addFollowupBtn) addFollowupBtn.disabled = isLocked && !followupAllowed;
+  const fAdmin = document.getElementById('f-admin');
+  if(fAdmin && isLocked) fAdmin.disabled = true;
+  const btnDelete = document.getElementById('btn-delete');
+  if(btnDelete && isLocked) btnDelete.style.display = 'none';
 }
 
 // ===== KELOLA PENGGUNA =====
@@ -3699,17 +3901,19 @@ function addFollowUpLog(){
 
 function renderProductList(l){
   const items = l.products || [];
+  const productLocked = isAssistOnlyViewer(l) && !(l.assistScope||[]).includes('product');
   document.getElementById('product-list').innerHTML = items.length ? items.map(p=>{
     const dealVal = p.hargaDeal ? '<span class="val deal">'+formatRupiah(p.hargaDeal)+'</span>' : '<span class="val empty">Belum deal</span>';
     const lunasBadge = p.lunas ? ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>' : '';
+    const actionBtns = productLocked ? '' : `<button class="product-edit" onclick="editProductLine(${p.id})" aria-label="Edit produk">&#9998;</button>
+      <button class="product-remove" onclick="removeProductLine(${p.id})" aria-label="Hapus produk">&times;</button>`;
     return `<div class="product-item">
       <span class="product-badge ${p.type}">${PRODUCT_LABELS[p.type]||p.type}</span>
       <div class="product-info">
         <span class="product-price"><span class="lbl">Penawaran</span><span class="val">${formatRupiah(p.hargaPenawaran)}</span></span>
         <span class="product-price"><span class="lbl">Deal</span>${dealVal}${lunasBadge}</span>
       </div>
-      <button class="product-edit" onclick="editProductLine(${p.id})" aria-label="Edit produk">&#9998;</button>
-      <button class="product-remove" onclick="removeProductLine(${p.id})" aria-label="Hapus produk">&times;</button>
+      ${actionBtns}
     </div>`;
   }).join('') : '<div class="empty-note">Belum ada produk ditambahkan.</div>';
 }
@@ -3759,6 +3963,11 @@ function editProductLine(productId){
 function addProductLine(){
   if(currentEditId===null){
     alert('Lead ini belum tersimpan. Produk yang udah kamu isi di atas otomatis ikut kesimpan pas klik "Simpan lead". Tombol ini buat nambah produk ke-2 dst setelah lead-nya ada.');
+    return;
+  }
+  const leadCheck = leads.find(x=>x.id===currentEditId);
+  if(leadCheck && isAssistOnlyViewer(leadCheck) && !(leadCheck.assistScope||[]).includes('product')){
+    alert('Kamu cuma dikasih akses perbantuan terbatas buat lead ini, gak termasuk bagian Produk & penawaran.');
     return;
   }
   const type = document.getElementById('f-product-type').value;
@@ -3871,6 +4080,8 @@ function openLeadForm(id, force){
 
   renderHistory(l);
   renderProductList(l);
+  renderAssistStatusArea(l);
+  applyAssistFieldLocking(l);
   formDirty = false;
 
   if(originView === 'followup'){
