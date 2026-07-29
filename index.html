@@ -2501,7 +2501,7 @@ let nextUserId = 5;
 let ADMIN_LIST = [];
 
 function syncAdminListFromUsers(){
-  ADMIN_LIST = userAccounts.filter(u=>u.role==='sales' && u.status==='active').map(u=>u.name);
+  ADMIN_LIST = userAccounts.filter(u=>u.status==='active').map(u=>u.name);
 }
 syncAdminListFromUsers();
 
@@ -2941,6 +2941,10 @@ function roleLabelOf(role){
   if(role==='supervisor') return 'Supervisor';
   return 'Sales';
 }
+function adminOptionLabel(name){
+  const u = userAccounts.find(x=>x.name===name);
+  return u ? (name+' - '+roleLabelOf(u.role)) : name;
+}
 
 function personAvatarHTML(name, photoUrl, sizePx){
   const size = sizePx || 28;
@@ -3185,7 +3189,7 @@ function renderAdminSelectOptions(){
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
     let options = team.slice();
     if(currentUser.name && !options.includes(currentUser.name)) options.unshift(currentUser.name);
-    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('');
     if(options.includes(current)) sel.value = current;
     return;
   }
@@ -3195,7 +3199,7 @@ function renderAdminSelectOptions(){
   if(currentUser && currentUser.name && !options.includes(currentUser.name)){
     options.unshift(currentUser.name);
   }
-  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
+  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
   if(options.includes(current)) sel.value = current;
 }
 
@@ -3886,7 +3890,7 @@ function renderQuickAdminSelectOptions(){
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
     let options = team.slice();
     if(currentUser.name && !options.includes(currentUser.name)) options.unshift(currentUser.name);
-    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('');
     if(options.includes(current)) sel.value = current;
     return;
   }
@@ -3894,7 +3898,7 @@ function renderQuickAdminSelectOptions(){
   if(currentUser && currentUser.name && !options.includes(currentUser.name)){
     options.unshift(currentUser.name);
   }
-  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
+  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
   if(options.includes(current)) sel.value = current;
 }
 
