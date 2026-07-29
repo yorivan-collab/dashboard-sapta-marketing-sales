@@ -1648,7 +1648,8 @@ function computeAdminPerformance(sourceLeads){
     const own = src.filter(l=>l.admin===name);
     const dpCount = own.filter(isDpLead).length;
     const omzet = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
-    return {name, leadCount:own.length, dpCount, omzet};
+    const omzetPenawaran = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+    return {name, leadCount:own.length, dpCount, omzet, omzetPenawaran};
   }).sort((a,b)=> b.omzet - a.omzet);
 }
 
@@ -1722,11 +1723,12 @@ async function renderComparisonResult(){
       + '<div class="compare-stats-grid">'
         + '<div class="compare-stat"><div class="cs-label">Total lead</div><div class="cs-value">'+p.leadCount+'</div></div>'
         + '<div class="compare-stat"><div class="cs-label">Closing rate</div><div class="cs-value">'+closingRate+'%</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Cold</div><div class="cs-value">'+cold+'</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Warm</div><div class="cs-value">'+warm+'</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Hot</div><div class="cs-value">'+hot+'</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Sudah DP</div><div class="cs-value">'+p.dpCount+'</div></div>'
-        + '<div class="compare-stat" style="grid-column:1 / -1;"><div class="cs-label">Omzet closed</div><div class="cs-value">'+formatRupiah(p.omzet)+'</div></div>'
+        + '<div class="compare-stat cold"><div class="cs-label">Cold</div><div class="cs-value">'+cold+'</div></div>'
+        + '<div class="compare-stat warm"><div class="cs-label">Warm</div><div class="cs-value">'+warm+'</div></div>'
+        + '<div class="compare-stat hot"><div class="cs-label">Hot</div><div class="cs-value">'+hot+'</div></div>'
+        + '<div class="compare-stat dp"><div class="cs-label">Sudah DP</div><div class="cs-value">'+p.dpCount+'</div></div>'
+        + '<div class="compare-stat penawaran"><div class="cs-label">Rencana omzet</div><div class="cs-value">'+formatRupiah(p.omzetPenawaran)+'</div></div>'
+        + '<div class="compare-stat closed"><div class="cs-label">Omzet closed</div><div class="cs-value">'+formatRupiah(p.omzet)+'</div></div>'
       + '</div>'
     + '</div>';
   }).join('') + '</div>';
