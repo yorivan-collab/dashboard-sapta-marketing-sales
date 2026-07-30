@@ -634,6 +634,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="toast live-notify-toast" id="live-notify-toast" onclick="openLiveNotifyLead()">
+  <span class="tdot"></span>
+  <div>
+    <div id="live-notify-text"></div>
+    <div class="live-notify-hint">Klik buat lihat lead-nya</div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="user-form-modal">
   <div class="modal-card">
@@ -2797,6 +2804,7 @@ async function loadProfileAndEnter(userId){
   renderFollowupList();
   renderUserChip();
   startHeartbeatLoop();
+  startActivityRealtimeSub();
   switchView('dashboard', true);
 }
 
@@ -2811,6 +2819,7 @@ async function logoutUser(){
   if(idleLogoutTimer){ clearTimeout(idleLogoutTimer); idleLogoutTimer = null; }
   stopHeartbeatLoop();
   stopMonitoringPoll();
+  stopActivityRealtimeSub();
   if(currentUserProfile){
     try{
       await supabaseClient.from('profiles').update({last_seen_at:null, last_interaction_at:null, current_view:null}).eq('id', currentUserProfile.id);
@@ -2931,6 +2940,83 @@ function startMonitoringPoll(){
 }
 function stopMonitoringPoll(){
   if(monitoringPollInterval){ clearInterval(monitoringPollInterval); monitoringPollInterval = null; }
+}
+
+// ============================================================
+// NOTIFIKASI LIVE (Realtime) -- pop-up bertingkat waktu ada
+// user lain nambah/ubah data lead, sesuai posisi role:
+// - Sales: cuma kalau Master/Super/SPV yang ubah lead MILIKNYA sendiri.
+// - Supervisor: cuma kalau anak buahnya (Sales di timnya) yang nambah/ubah.
+// - Super Admin: cuma kalau Master Admin ubah lead milik SPV/Sales
+//   (bukan lead miliknya Master/Super sendiri).
+// - Master Admin: sengaja gak dikasih pop-up (dia udah bisa lihat semua).
+// Cuma aktif kalau lagi buka aplikasi ini (in-app), bukan push notification
+// OS/browser -- jadi gak perlu minta izin apa-apa ke user.
+// ============================================================
+let activityRealtimeChannel = null;
+
+function startActivityRealtimeSub(){
+  stopActivityRealtimeSub();
+  activityRealtimeChannel = supabaseClient
+    .channel('activity-log-live')
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'activity_log'}, payload=>{
+      handleIncomingActivityEvent(payload.new);
+    })
+    .subscribe();
+}
+
+function stopActivityRealtimeSub(){
+  if(activityRealtimeChannel){ supabaseClient.removeChannel(activityRealtimeChannel); activityRealtimeChannel = null; }
+}
+
+async function handleIncomingActivityEvent(row){
+  if(!currentUser || !row || row.lead_id===null || row.lead_id===undefined) return;
+  if(row.changed_by === currentUser.name) return;
+  const actor = userAccounts.find(u=>u.name===row.changed_by);
+  const actorRole = actor ? actor.role : null;
+  if(!actorRole) return;
+  let l = leads.find(x=>x.id===row.lead_id);
+  if(!l){
+    const { data } = await supabaseClient.from('leads').select('*').eq('id', row.lead_id).single();
+    if(!data) return;
+    l = dbRowToLead(data);
+    leads.push(l);
+  }
+  const owner = userAccounts.find(u=>u.name===l.admin);
+  const ownerRole = owner ? owner.role : null;
+  const myRole = currentUser.role;
+  let relevant = false;
+  if(myRole==='sales'){
+    relevant = l.admin===currentUser.name && ['master_admin','super_admin','supervisor'].includes(actorRole);
+  } else if(myRole==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team) || [];
+    relevant = actorRole==='sales' && team.includes(row.changed_by);
+  } else if(myRole==='super_admin'){
+    relevant = actorRole==='master_admin' && (ownerRole==='supervisor' || ownerRole==='sales');
+  }
+  if(!relevant) return;
+  showLiveUpdateToast(l, row);
+}
+
+let liveNotifyTimer = null;
+let pendingLiveNotifyLeadId = null;
+
+function showLiveUpdateToast(l, row){
+  pendingLiveNotifyLeadId = l.id;
+  const t = document.getElementById('live-notify-toast');
+  if(!t) return;
+  document.getElementById('live-notify-text').textContent = row.note ? (row.note+' - '+l.company) : ('Ada perubahan di lead '+l.company);
+  t.classList.add('show');
+  clearTimeout(liveNotifyTimer);
+  liveNotifyTimer = setTimeout(()=>{ t.classList.remove('show'); }, 6000);
+}
+
+function openLiveNotifyLead(){
+  const id = pendingLiveNotifyLeadId;
+  const t = document.getElementById('live-notify-toast');
+  if(t) t.classList.remove('show');
+  clearTimeout(liveNotifyTimer);
+  if(id!==null && id!==undefined) openLeadForm(id);
 }
 
 function getRecencyScore(p){
