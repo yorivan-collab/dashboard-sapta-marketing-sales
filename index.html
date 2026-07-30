@@ -99,6 +99,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
       Monitoring User
     </div>
+    <div class="navitem" data-view="quota-approval" id="nav-quota-approval-item" onclick="switchView('quota-approval')" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+      Permintaan Limit <span class="nav-badge" id="nav-quota-approval-count"></span>
+    </div>
     <div class="navitem" data-view="request-admin" id="nav-request-admin-item" onclick="switchView('request-admin')" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
       Ajukan Admin Baru
@@ -615,6 +619,20 @@
       <div id="admin-approval-list"></div>
     </div>
 
+    <!-- PERMINTAAN LIMIT (Master/Super Admin) -->
+    <div class="view" id="view-quota-approval">
+      <div class="topbar">
+        <div>
+          <div class="title">Permintaan Limit</div>
+          <div class="subtitle">Request tambahan follow-up harian / jumlah lead dari user</div>
+        </div>
+        <button class="icon-btn" onclick="renderQuotaApprovalView()" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        </button>
+      </div>
+      <div id="quota-approval-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -697,6 +715,21 @@
     <div class="modal-actions">
       <button class="primary" onclick="confirmApproveWithPassword()">Buat akun</button>
       <button onclick="closeApprovePasswordModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="quota-request-modal">
+  <div class="modal-card">
+    <div class="modal-title">Kirim request tambahan limit</div>
+    <div class="modal-sub" id="quota-request-message"></div>
+    <div style="margin:14px 0;">
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Catatan (opsional)</label>
+      <textarea id="quota-request-note" placeholder="Misal: lagi rame closing akhir bulan" style="width:100%; min-height:60px; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitQuotaRequest()">Kirim Request</button>
+      <button onclick="closeQuotaRequestModal()">Batal</button>
     </div>
   </div>
 </div>
@@ -1230,6 +1263,7 @@ function switchView(view, force){
   if(view==='structure') renderStructureView();
   if(view==='request-admin') renderRequestAdminView();
   if(view==='admin-approval') renderAdminApprovalView();
+  if(view==='quota-approval') renderQuotaApprovalView();
   sendHeartbeat(false);
 }
 
@@ -2541,6 +2575,159 @@ async function fetchUserAccountsFromSupabase(){
   syncAdminListFromUsers();
 }
 
+// ============================================================
+// LIMIT & REQUEST TAMBAHAN (produk/follow-up/jumlah lead)
+// ============================================================
+let quotaRequests = [];
+
+async function fetchQuotaRequests(){
+  const { data, error } = await supabaseClient.from('quota_requests').select('*').order('created_at', {ascending:false});
+  if(error){
+    console.warn('Gagal memuat quota_requests:', error.message);
+    return;
+  }
+  quotaRequests = data || [];
+}
+
+function followUpApprovedExtraToday(leadId){
+  const today = todayIsoStr();
+  return quotaRequests.filter(r=> r.type==='follow_up' && r.lead_id===leadId && r.status==='approved' && r.reviewed_at && r.reviewed_at.slice(0,10)===today)
+    .reduce((s,r)=> s + (r.approved_extra||0), 0);
+}
+function followUpLimitToday(leadId){ return 10 + followUpApprovedExtraToday(leadId); }
+function followUpCountToday(l){
+  const today = todayIsoStr();
+  return (l.history||[]).filter(h=> h.date===today).length;
+}
+function leadCountApprovedExtra(adminName){
+  return quotaRequests.filter(r=> r.type==='lead_count' && r.target_admin===adminName && r.status==='approved')
+    .reduce((s,r)=> s + (r.approved_extra||0), 0);
+}
+function leadCountLimit(adminName){ return 15 + leadCountApprovedExtra(adminName); }
+function leadCountCurrent(adminName, excludeLeadId){
+  return leads.filter(l=> l.admin===adminName && l.id!==excludeLeadId).length;
+}
+
+let pendingQuotaRequest = null;
+
+function openQuotaRequestModal(type, opts){
+  pendingQuotaRequest = Object.assign({type}, opts);
+  document.getElementById('quota-request-message').textContent = opts.message;
+  document.getElementById('quota-request-note').value = '';
+  document.getElementById('quota-request-modal').style.display = 'flex';
+}
+
+function closeQuotaRequestModal(){
+  document.getElementById('quota-request-modal').style.display = 'none';
+  pendingQuotaRequest = null;
+}
+
+async function submitQuotaRequest(){
+  if(!pendingQuotaRequest || !currentUser) return;
+  const note = document.getElementById('quota-request-note').value.trim();
+  const row = {
+    type: pendingQuotaRequest.type,
+    requester: currentUser.name,
+    target_admin: pendingQuotaRequest.targetAdmin || null,
+    lead_id: pendingQuotaRequest.leadId || null,
+    lead_company: pendingQuotaRequest.leadCompany || null,
+    current_limit: pendingQuotaRequest.currentLimit,
+    note: note || null
+  };
+  const { error } = await supabaseClient.from('quota_requests').insert(row);
+  if(error){
+    showToast('Gagal kirim request: '+error.message);
+    return;
+  }
+  closeQuotaRequestModal();
+  showToast('Request terkirim, tunggu di-approve Master/Super Admin');
+  await fetchQuotaRequests();
+  refreshQuotaApprovalCount();
+}
+
+function quotaTypeLabel(t){ return t==='follow_up' ? 'Tambahan follow-up harian' : 'Tambahan jumlah lead'; }
+
+async function refreshQuotaApprovalCount(){
+  const badge = document.getElementById('nav-quota-approval-count');
+  if(!badge || !currentUser) return;
+  if(!(currentUser.role==='master_admin' || currentUser.role==='super_admin')) return;
+  const count = quotaRequests.filter(r=>r.status==='pending').length;
+  badge.textContent = count ? count : '';
+}
+
+function renderQuotaApprovalView(){
+  const wrap = document.getElementById('quota-approval-list');
+  if(!wrap || !currentUser) return;
+  const view = document.getElementById('view-quota-approval');
+  if(!view || !view.classList.contains('active')) return;
+  if(!quotaRequests.length){
+    wrap.innerHTML = '<div class="panel" style="color:var(--muted); font-size:12.5px;">Belum ada request.</div>';
+    refreshQuotaApprovalCount();
+    return;
+  }
+  const rank = s => s==='pending' ? 0 : 1;
+  const sorted = quotaRequests.slice().sort((a,b)=> rank(a.status)-rank(b.status) || (new Date(b.created_at)-new Date(a.created_at)));
+  wrap.innerHTML = '<div class="panel">' + sorted.map(r=>{
+    const target = r.type==='follow_up' ? ('Lead: '+(r.lead_company||'-')) : ('Admin tujuan: '+(r.target_admin||'-'));
+    let actions;
+    if(r.status==='pending'){
+      actions = '<div style="display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;">'
+        + '<input type="number" min="1" max="10" placeholder="+jumlah" id="quota-extra-input-'+r.id+'" style="width:80px; padding:6px 8px; font-size:12.5px; border:1px solid var(--border); border-radius:8px;">'
+        + '<button class="primary" style="padding:6px 14px; font-size:12.5px;" onclick="approveQuotaRequest('+r.id+')">Setujui</button>'
+        + '<button style="padding:6px 14px; font-size:12.5px;" onclick="rejectQuotaRequest('+r.id+')">Tolak</button>'
+        + '</div>';
+    } else {
+      const extra = r.status==='approved' ? ('<div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Tambahan diberikan: +'+r.approved_extra+'</div>') : (r.reject_reason ? ('<div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Alasan: '+r.reject_reason+'</div>') : '');
+      actions = '<div style="font-size:11.5px; color:var(--muted); margin-top:4px;">Direview oleh '+(r.reviewed_by||'-')+'</div>' + extra;
+    }
+    return '<div style="padding:12px 0; border-bottom:1px solid var(--border-soft);">'
+      + '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">'
+      + '<div><b>'+quotaTypeLabel(r.type)+'</b> <span style="color:var(--muted); font-size:12px;">('+target+')</span>'
+      + '<div style="font-size:11.5px; color:var(--muted);">Diajukan oleh '+r.requester+' - limit saat ini: '+r.current_limit+(r.note ? ' - catatan: '+r.note : '')+'</div></div>'
+      + adminRequestStatusBadgeHTML(r.status)
+      + '</div>' + actions + '</div>';
+  }).join('') + '</div>';
+  refreshQuotaApprovalCount();
+}
+
+async function approveQuotaRequest(id){
+  const input = document.getElementById('quota-extra-input-'+id);
+  const extra = input ? parseInt(input.value, 10) : NaN;
+  if(!extra || extra < 1 || extra > 10){
+    showToast('Isi tambahan 1-10 dulu.');
+    return;
+  }
+  const { error } = await supabaseClient.from('quota_requests').update({
+    status: 'approved', approved_extra: extra, reviewed_by: currentUser.name, reviewed_at: new Date().toISOString()
+  }).eq('id', id);
+  if(error){
+    showToast('Gagal approve: '+error.message);
+    return;
+  }
+  showToast('Request disetujui, tambahan +'+extra);
+  await fetchQuotaRequests();
+  const req = quotaRequests.find(r=>r.id===id);
+  if(req && req.type==='follow_up' && req.lead_id){
+    const l = leads.find(x=>x.id===req.lead_id);
+    if(l) logActivity(l, 'Limit follow-up harian ditambah +'+extra+' oleh '+currentUser.name);
+  }
+  renderQuotaApprovalView();
+}
+
+async function rejectQuotaRequest(id){
+  const reason = prompt('Alasan reject (opsional, boleh dikosongin):') || null;
+  const { error } = await supabaseClient.from('quota_requests').update({
+    status: 'rejected', reviewed_by: currentUser.name, reviewed_at: new Date().toISOString(), reject_reason: reason
+  }).eq('id', id);
+  if(error){
+    showToast('Gagal reject: '+error.message);
+    return;
+  }
+  showToast('Request ditolak');
+  await fetchQuotaRequests();
+  renderQuotaApprovalView();
+}
+
 let currentUser = null;
 let currentUserProfile = null;
 let editingUserId = null;
@@ -2603,6 +2790,7 @@ async function loadProfileAndEnter(userId){
     quickFilterAdmin = 'all';
   }
   await fetchUserAccountsFromSupabase();
+  await fetchQuotaRequests();
   applyRoleRestrictions();
   document.getElementById('leads-rowlist').innerHTML = '<div class="empty-note" style="text-align:center; padding:30px;">Memuat data lead dari server...</div>';
   await fetchLeadsFromSupabase();
@@ -2837,6 +3025,9 @@ function applyRoleRestrictions(){
   const monitoringNav = document.getElementById('nav-monitoring-item');
   if(monitoringNav) monitoringNav.style.display = canManageUsers ? '' : 'none';
   if(!canManageUsers && document.getElementById('view-monitoring') && document.getElementById('view-monitoring').classList.contains('active')) switchView('overview', true);
+  const quotaApprovalNav = document.getElementById('nav-quota-approval-item');
+  if(quotaApprovalNav) quotaApprovalNav.style.display = canManageUsers ? '' : 'none';
+  if(!canManageUsers && document.getElementById('view-quota-approval') && document.getElementById('view-quota-approval').classList.contains('active')) switchView('overview', true);
   ['admin-locked-badge-leads','admin-locked-badge-overview'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
@@ -2862,6 +3053,7 @@ function applyRoleRestrictions(){
   if(!isSupervisor && document.getElementById('view-request-admin') && document.getElementById('view-request-admin').classList.contains('active')) switchView('overview', true);
   if(!canManageUsers && document.getElementById('view-admin-approval') && document.getElementById('view-admin-approval').classList.contains('active')) switchView('overview', true);
   if(canManageUsers) refreshAdminApprovalCount();
+  if(canManageUsers) refreshQuotaApprovalCount();
 }
 
 function getFocusableUserList(){
@@ -3688,6 +3880,17 @@ function addFollowUpLog(){
     alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Silakan kembali ke daftar dan buka ulang.');
     return;
   }
+  const todayFollowUpCount = followUpCountToday(l);
+  const followUpLimit = followUpLimitToday(l.id);
+  if(todayFollowUpCount >= followUpLimit){
+    openQuotaRequestModal('follow_up', {
+      leadId: l.id,
+      leadCompany: l.company,
+      currentLimit: followUpLimit,
+      message: 'Riwayat follow-up buat "'+l.company+'" udah kena limit harian ('+followUpLimit+' entri hari ini). Catatan yang udah kamu tulis gak ilang -- kirim request tambahan ke Master/Super Admin, terus klik "Tambah catatan" lagi setelah di-approve.'
+    });
+    return;
+  }
   l.history.push({date:noteDate, time:timeStr, channel:noteChannel, note});
   l.history.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
   persistLeadFields(l, {history: l.history});
@@ -3775,6 +3978,10 @@ function addProductLine(){
     return;
   }
   if(!l.products) l.products = [];
+  if(editingProductId===null && l.products.length >= 2){
+    showToast('Maksimal 2 produk per lead. Hapus salah satu dulu kalau mau ganti.');
+    return;
+  }
   if(editingProductId !== null){
     const p = l.products.find(x=>x.id===editingProductId);
     const wasLunas = p ? !!p.lunas : false;
@@ -4002,6 +4209,17 @@ async function saveQuickLead(){
     document.getElementById('ql-note').focus();
     return;
   }
+  const quickTargetAdmin = document.getElementById('ql-admin').value;
+  const quickAdminLimit = leadCountLimit(quickTargetAdmin);
+  const quickAdminCount = leadCountCurrent(quickTargetAdmin, null);
+  if(quickAdminCount >= quickAdminLimit){
+    openQuotaRequestModal('lead_count', {
+      targetAdmin: quickTargetAdmin,
+      currentLimit: quickAdminLimit,
+      message: 'Admin "'+quickTargetAdmin+'" udah pegang lead maksimal ('+quickAdminLimit+'). Kirim request tambahan slot ke Master/Super Admin dulu sebelum bisa nambahin lead baru buat '+quickTargetAdmin+'.'
+    });
+    return;
+  }
   const now = new Date();
   const noteTime = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const quickPenawaran = unformatNumberInput(document.getElementById('ql-product-penawaran').value);
@@ -4079,6 +4297,16 @@ async function saveLeadDataOnly(){
   const noteTime = String(nowT.getHours()).padStart(2,'0')+':'+String(nowT.getMinutes()).padStart(2,'0');
 
   if(currentEditId===null){
+    const newLeadLimit = leadCountLimit(data.admin);
+    const newLeadCount = leadCountCurrent(data.admin, null);
+    if(newLeadCount >= newLeadLimit){
+      openQuotaRequestModal('lead_count', {
+        targetAdmin: data.admin,
+        currentLimit: newLeadLimit,
+        message: 'Admin "'+data.admin+'" udah pegang lead maksimal ('+newLeadLimit+'). Kirim request tambahan slot ke Master/Super Admin dulu sebelum bisa nyimpen lead baru ini.'
+      });
+      return false;
+    }
     data.history = newNote ? [{date:noteDate, time:noteTime, channel:noteChannel, note:newNote}] : [];
     const quickPenawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
     let quickProduct = null;
@@ -4110,6 +4338,18 @@ async function saveLeadDataOnly(){
     if(!l){
       alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Perubahan tidak tersimpan, silakan kembali ke daftar.');
       return false;
+    }
+    if(data.admin !== l.admin){
+      const reassignLimit = leadCountLimit(data.admin);
+      const reassignCount = leadCountCurrent(data.admin, l.id);
+      if(reassignCount >= reassignLimit){
+        openQuotaRequestModal('lead_count', {
+          targetAdmin: data.admin,
+          currentLimit: reassignLimit,
+          message: 'Admin "'+data.admin+'" udah pegang lead maksimal ('+reassignLimit+'). Kirim request tambahan slot ke Master/Super Admin dulu sebelum bisa mindahin lead ini ke '+data.admin+'.'
+        });
+        return false;
+      }
     }
     const prevStatus = l.status;
     const prevFollowUp = l.followUp;
