@@ -89,6 +89,7 @@
       <div class="navtree">
         <div class="navsub" data-view="users" onclick="switchView('users')">Tambah User</div>
         <div class="navsub" data-view="admin-approval" onclick="switchView('admin-approval')">User Request <span class="nav-badge" id="nav-admin-approval-count"></span></div>
+        <div class="navsub" data-view="quota-approval" onclick="switchView('quota-approval')">Permintaan Limit <span class="nav-badge" id="nav-quota-approval-count"></span></div>
       </div>
     </div>
     <div class="navitem" data-view="comparison" id="nav-comparison-item" onclick="switchView('comparison')" style="display:none;">
@@ -98,10 +99,6 @@
     <div class="navitem" data-view="monitoring" id="nav-monitoring-item" onclick="switchView('monitoring')" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
       Monitoring User
-    </div>
-    <div class="navitem" data-view="quota-approval" id="nav-quota-approval-item" onclick="switchView('quota-approval')" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-      Permintaan Limit <span class="nav-badge" id="nav-quota-approval-count"></span>
     </div>
     <div class="navitem" data-view="request-admin" id="nav-request-admin-item" onclick="switchView('request-admin')" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
@@ -3025,8 +3022,6 @@ function applyRoleRestrictions(){
   const monitoringNav = document.getElementById('nav-monitoring-item');
   if(monitoringNav) monitoringNav.style.display = canManageUsers ? '' : 'none';
   if(!canManageUsers && document.getElementById('view-monitoring') && document.getElementById('view-monitoring').classList.contains('active')) switchView('overview', true);
-  const quotaApprovalNav = document.getElementById('nav-quota-approval-item');
-  if(quotaApprovalNav) quotaApprovalNav.style.display = canManageUsers ? '' : 'none';
   if(!canManageUsers && document.getElementById('view-quota-approval') && document.getElementById('view-quota-approval').classList.contains('active')) switchView('overview', true);
   ['admin-locked-badge-leads','admin-locked-badge-overview'].forEach(id=>{
     const el = document.getElementById(id);
