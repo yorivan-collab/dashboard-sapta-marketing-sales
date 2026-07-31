@@ -71,8 +71,8 @@
     <div class="nav-label">Omzet</div>
     <div class="navtree">
       <div class="navsub" data-filter="has-product" onclick="goToFilter('has-product')">Rencana omzet</div>
-      <div class="navsub" data-filter="has-deal" onclick="goToFilter('has-deal')">Omzet deal</div>
-      <div class="navsub" data-filter="dp" onclick="goToFilter('dp')">Sudah DP</div>
+      <div class="navsub" data-filter="has-deal" onclick="goToFilter('has-deal')">Realisasi Omzet</div>
+      <div class="navsub" data-filter="dp" onclick="goToFilter('dp')">Sudah Closing</div>
       <div class="navsub" data-filter="lunas" onclick="goToFilter('lunas')">Sudah lunas</div>
     </div>
 
@@ -161,13 +161,13 @@
 
       <div id="section-omzet" class="dash-card">
         <div class="dash-card-head">
-          <div class="dash-card-title">Omzet deal</div>
+          <div class="dash-card-title">Realisasi Omzet</div>
           <div class="period-toggle" id="omzet-period-toggle"></div>
         </div>
         <div style="position:relative; height:190px; max-width:520px;">
           <canvas id="omzet-chart"></canvas>
         </div>
-        <div class="dash-hint">Dihitung dari harga deal produk, berdasarkan tanggal input lead.</div>
+        <div class="dash-hint">Dihitung dari realisasi omzet produk, berdasarkan tanggal input lead.</div>
       </div>
 
       <div id="section-produk" class="dash-card">
@@ -181,7 +181,7 @@
       <div id="section-admin" class="dash-card">
         <div class="dash-card-title" style="margin-bottom:12px;">Performa admin sales</div>
         <table class="admin-table">
-          <thead><tr><td>Admin</td><td>Leads</td><td>Sudah DP</td><td>Omzet deal</td></tr></thead>
+          <thead><tr><td>Admin</td><td>Leads</td><td>Sudah Closing</td><td>Realisasi Omzet</td></tr></thead>
           <tbody id="admin-performance-body"></tbody>
         </table>
       </div>
@@ -231,7 +231,7 @@
           <div class="ovp-about-label">Ringkasan</div>
           <div class="ovp-stat-row"><span>Total lead</span><b id="ovp-stat-lead"></b></div>
           <div class="ovp-stat-row"><span>Closing rate</span><b id="ovp-stat-closing"></b></div>
-          <div class="ovp-stat-row"><span>Omzet deal</span><b id="ovp-stat-omzet"></b></div>
+          <div class="ovp-stat-row"><span>Realisasi Omzet</span><b id="ovp-stat-omzet"></b></div>
         </div>
 
         <div>
@@ -372,19 +372,16 @@
                     <option value="iso">ISO</option>
                   </select>
                 </div>
-                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this)"></div>
-                <div class="field"><label>Harga deal (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-deal" placeholder="Isi kalau sudah closing" oninput="handleRupiahInputFormat(this); toggleLunasCheckboxVisibility();"></div>
+                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
+                <div class="field"><label>Realisasi omzet (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-realisasi" placeholder="Isi kalau udah ada uang masuk" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
               </div>
-              <label for="f-product-lunas" id="product-lunas-wrap" style="display:none; align-items:center; gap:8px; margin-top:6px; margin-bottom:0; text-transform:none; font-weight:500; font-size:12.5px; color:var(--text); cursor:pointer;">
-                <input type="checkbox" id="f-product-lunas" style="width:auto; accent-color:var(--accent); cursor:pointer;">
-                Tandai sudah lunas (pelunasan penuh)
-              </label>
+              <div id="product-piutang-display" style="font-size:12.5px; margin-top:2px; min-height:16px;"></div>
               <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
                 <button id="btn-product-cancel" onclick="cancelEditProduct()" style="display:none;">Batal edit</button>
                 <button class="primary" id="btn-product-submit" onclick="addProductLine()">+ Tambah produk</button>
               </div>
               <div class="product-list" id="product-list" style="margin-top:8px;"></div>
-              <div class="footnote">Harga penawaran jadi basis rencana omzet, harga deal jadi omzet realisasi di Overview. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
+              <div class="footnote">Harga penawaran jadi basis rencana omzet. Realisasi omzet jadi omzet closing beneran di Overview -- sisa piutangnya (penawaran dikurangi realisasi) dihitung otomatis. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
             </div>
 
             <div class="panel">
@@ -672,6 +669,18 @@
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Kepala Cabang? (opsional, label doang - gak ngaruh ke akses data)</label>
         <select id="uf-branch" onchange="handleBranchSelectChange(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
       </div>
+      <div id="uf-atasan-wrap" style="display:none;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Atasan (Supervisor atau Super Admin)</label>
+        <select id="uf-atasan" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
+      </div>
+      <div id="uf-super-team-wrap" style="display:none;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Anggota tim (SPV yang jadi tanggung jawabnya) -- cuma Master Admin yang bisa ubah ini</label>
+        <div id="uf-super-team-checklist" style="display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+      </div>
+      <div id="uf-structure-path-wrap" style="display:none;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Jalur struktur</label>
+        <div id="uf-structure-path" style="font-size:12.5px; color:var(--text-2); line-height:1.5;"></div>
+      </div>
       <div id="uf-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
     </div>
     <div class="modal-actions">
@@ -895,7 +904,7 @@
     <div class="mobile-fab-item" onclick="goToFilter('warm'); closeMobileFab();"><span class="fdot" style="background:var(--warm)"></span>Warm</div>
     <div class="mobile-fab-item" onclick="goToFilter('hot'); closeMobileFab();"><span class="fdot" style="background:var(--hot)"></span>Hot</div>
     <div class="mobile-fab-sep"></div>
-    <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah DP</div>
+    <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah Closing</div>
     <div class="mobile-fab-item" onclick="goToFilter('overdue'); closeMobileFab();">Follow up telat</div>
     <div class="mobile-fab-item" onclick="goToFilter('no-interaction'); closeMobileFab();">Belum ada interaksi</div>
     <div class="mobile-fab-item" onclick="goToFilter('no-followup-date'); closeMobileFab();">Tanggal follow up kosong</div>
@@ -945,7 +954,14 @@ function dbRowToLead(row){
     admin: row.admin || '',
     entryDate: row.entry_date || '',
     chatLog: row.chat_log || '',
-    products: row.products || [],
+    products: (row.products || []).map(p=>({
+      id: p.id,
+      type: p.type,
+      hargaPenawaran: p.hargaPenawaran || 0,
+      // Data lama masih nyimpen "hargaDeal" -- kalau realisasiOmzet belum ada,
+      // ambil dari situ biar angka lama gak ilang pas dibuka ulang.
+      realisasiOmzet: (p.realisasiOmzet !== undefined ? (p.realisasiOmzet || 0) : (p.hargaDeal || 0))
+    })),
     history: row.history || [],
     activityLog: [],
     createdAt: row.created_at || '',
@@ -1077,13 +1093,13 @@ function hasProduct(l){
   return !!(l.products && l.products.length);
 }
 function hasDealProduct(l){
-  return !!(l.products && l.products.some(p=>p.hargaDeal>0));
+  return !!(l.products && l.products.some(p=>p.realisasiOmzet>0));
 }
 function isDpLead(l){
   return hasDealProduct(l);
 }
 function isLunasLead(l){
-  return !!(l.products && l.products.some(p=>p.lunas));
+  return !!(l.products && l.products.some(p=> p.hargaPenawaran>0 && (p.realisasiOmzet||0) >= p.hargaPenawaran));
 }
 function isNoInteraction(l){
   return !(l.history && l.history.length);
@@ -1092,7 +1108,7 @@ function isTrulyOverdue(l){
   if(!l.followUp) return false;
   return isOverdue(l.followUp);
 }
-const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah DP', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Tanggal follow up kosong', 'has-product':'Rencana omzet', 'has-deal':'Omzet deal', lunas:'Sudah Lunas'};
+const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah Closing', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Tanggal follow up kosong', 'has-product':'Rencana omzet', 'has-deal':'Realisasi Omzet', lunas:'Sudah Lunas'};
 function matchesFilter(l, key){
   switch(key){
     case 'all': return true;
@@ -1115,9 +1131,10 @@ function joinNatural(arr){
   return arr.slice(0,-1).join(', ')+', dan '+arr[arr.length-1];
 }
 function productStatusPhrase(l){
-  const parts = (l.products||[]).filter(p=>p.hargaDeal>0).map(p=>{
+  const parts = (l.products||[]).filter(p=>p.realisasiOmzet>0).map(p=>{
     const label = PRODUCT_LABELS[p.type]||p.type;
-    return (p.lunas ? 'sudah lunas '+label : 'masih DP '+label);
+    const piutang = Math.max(0, (p.hargaPenawaran||0) - (p.realisasiOmzet||0));
+    return (piutang<=0 ? 'sudah lunas '+label : 'masih piutang '+label);
   });
   return joinNatural(parts);
 }
@@ -1216,7 +1233,7 @@ function unsavedModalStay(){
 }
 
 function initDirtyTracking(){
-  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note','f-product-type','f-product-penawaran','f-product-deal'];
+  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note','f-product-type','f-product-penawaran','f-product-realisasi'];
   fieldIds.forEach(id=>{
     const el = document.getElementById(id);
     if(el){
@@ -1659,7 +1676,7 @@ function computeOmzetSeries(key, sourceLeads){
       if(!l.entryDate) return sum;
       const d = new Date(l.entryDate+"T00:00:00");
       if(d<b.start || d>=b.end) return sum;
-      return sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0);
+      return sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0);
     },0);
   });
   return {labels:buckets.map(b=>b.label), values};
@@ -1670,7 +1687,7 @@ function computeProductMix(sourceLeads){
   let smk3=0, iso=0;
   src.forEach(l=>{
     (l.products||[]).forEach(p=>{
-      if(p.hargaDeal>0){
+      if(p.realisasiOmzet>0){
         if(p.type==='smk3') smk3++;
         else if(p.type==='iso') iso++;
       }
@@ -1685,7 +1702,7 @@ function computeAdminPerformance(sourceLeads){
   return names.map(name=>{
     const own = src.filter(l=>l.admin===name);
     const dpCount = own.filter(isDpLead).length;
-    const omzet = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+    const omzet = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
     const omzetPenawaran = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
     return {name, leadCount:own.length, dpCount, omzet, omzetPenawaran};
   }).sort((a,b)=> b.omzet - a.omzet);
@@ -1764,9 +1781,9 @@ async function renderComparisonResult(){
         + '<div class="compare-stat cold"><div class="cs-label">Cold</div><div class="cs-value">'+cold+'</div></div>'
         + '<div class="compare-stat warm"><div class="cs-label">Warm</div><div class="cs-value">'+warm+'</div></div>'
         + '<div class="compare-stat hot"><div class="cs-label">Hot</div><div class="cs-value">'+hot+'</div></div>'
-        + '<div class="compare-stat dp"><div class="cs-label">Sudah DP</div><div class="cs-value">'+p.dpCount+'</div></div>'
+        + '<div class="compare-stat dp"><div class="cs-label">Sudah Closing</div><div class="cs-value">'+p.dpCount+'</div></div>'
         + '<div class="compare-stat penawaran"><div class="cs-label">Rencana omzet</div><div class="cs-value">'+formatRupiah(p.omzetPenawaran)+'</div></div>'
-        + '<div class="compare-stat closed"><div class="cs-label">Omzet closed</div><div class="cs-value">'+formatRupiah(p.omzet)+'</div></div>'
+        + '<div class="compare-stat closed"><div class="cs-label">Realisasi Omzet</div><div class="cs-value">'+formatRupiah(p.omzet)+'</div></div>'
       + '</div>'
     + '</div>';
   }).join('') + '</div>';
@@ -1776,6 +1793,14 @@ function structNodeHTML(u, tag){
   return '<div class="struct-node '+u.role+'">'
     + '<div class="struct-name">'+u.name+(tag?' <span class="struct-tag">'+tag+'</span>':'')+'</div>'
     + '<div class="struct-role">'+roleLabelOf(u.role)+'</div>'
+  + '</div>';
+}
+
+function structSupervisorGroupHTML(sp, salesUsers){
+  const teamMembers = salesUsers.filter(s=> (sp.team||[]).includes(s.name));
+  const branchTag = (sp.branch && BRANCH_DEFINITIONS[sp.branch]) ? ('Kepala '+BRANCH_DEFINITIONS[sp.branch].label) : '';
+  return '<div class="struct-group">'+structNodeHTML(sp, branchTag)
+    + (teamMembers.length ? '<div class="struct-team">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>' : '<div class="struct-team-empty">Belum ada anggota tim</div>')
   + '</div>';
 }
 
@@ -1797,42 +1822,63 @@ function renderStructureView(){
     if(role==='master_admin' && master){
       html += '<div class="struct-tier">'+structNodeHTML(master)+'</div><div class="struct-connector"></div>';
     }
+
+    const assignedSupervisorNames = new Set();
+    superAdmins.forEach(sa=> (sa.team||[]).forEach(n=>{ if(supervisors.some(sp=>sp.name===n)) assignedSupervisorNames.add(n); }));
+    const assignedSalesNames = new Set();
+    supervisors.forEach(sp=> (sp.team||[]).forEach(n=>assignedSalesNames.add(n)));
+    superAdmins.forEach(sa=> (sa.team||[]).forEach(n=>{ if(salesUsers.some(s=>s.name===n)) assignedSalesNames.add(n); }));
+
     if(superAdmins.length){
-      html += '<div class="struct-tier">'+superAdmins.map(u=>structNodeHTML(u)).join('')+'</div><div class="struct-connector"></div>';
+      html += '<div class="struct-groups" style="align-items:flex-start;">' + superAdmins.map(sa=>{
+        const mySupervisors = supervisors.filter(sp=> (sa.team||[]).includes(sp.name));
+        const directSales = salesUsers.filter(s=> (sa.team||[]).includes(s.name));
+        let inner = '<div class="struct-groups" style="margin-top:12px;">' + mySupervisors.map(sp=>structSupervisorGroupHTML(sp, salesUsers)).join('');
+        if(directSales.length){
+          inner += '<div class="struct-group"><div class="struct-team-label">Lapor langsung ke '+sa.name+'</div><div class="struct-team" style="margin-top:0; padding-top:0; border-top:none;">'+directSales.map(s=>structNodeHTML(s)).join('')+'</div></div>';
+        }
+        if(!mySupervisors.length && !directSales.length){
+          inner += '<div class="struct-team-empty" style="border-top:none;">Belum ada SPV/Sales di bawah Super Admin ini</div>';
+        }
+        inner += '</div>';
+        return '<div style="border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--surface);">'+structNodeHTML(sa)+inner+'</div>';
+      }).join('') + '</div>';
     }
-    const assignedNames = new Set();
-    supervisors.forEach(sp=> (sp.team||[]).forEach(n=>assignedNames.add(n)));
-    const orphanSales = salesUsers.filter(s=>!assignedNames.has(s.name));
-    html += '<div class="struct-groups">';
-    supervisors.forEach(sp=>{
-      const teamMembers = salesUsers.filter(s=> (sp.team||[]).includes(s.name));
-      const branchTag = (sp.branch && BRANCH_DEFINITIONS[sp.branch]) ? ('Kepala '+BRANCH_DEFINITIONS[sp.branch].label) : '';
-      html += '<div class="struct-group">'+structNodeHTML(sp, branchTag)
-        + (teamMembers.length ? '<div class="struct-team">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>' : '<div class="struct-team-empty">Belum ada anggota tim</div>')
-      + '</div>';
-    });
-    if(orphanSales.length){
-      html += '<div class="struct-group"><div class="struct-team-label">Belum ada SPV</div><div class="struct-team" style="margin-top:0; padding-top:0; border-top:none;">'+orphanSales.map(s=>structNodeHTML(s)).join('')+'</div></div>';
+
+    const orphanSupervisors = supervisors.filter(sp=>!assignedSupervisorNames.has(sp.name));
+    const orphanSales = salesUsers.filter(s=>!assignedSalesNames.has(s.name));
+    if(orphanSupervisors.length || orphanSales.length){
+      html += '<div style="margin-top:18px;"><div class="struct-team-label" style="text-align:center; margin-bottom:10px;">Belum ditugaskan ke Super Admin manapun</div><div class="struct-groups">';
+      html += orphanSupervisors.map(sp=>structSupervisorGroupHTML(sp, salesUsers)).join('');
+      if(orphanSales.length){
+        html += '<div class="struct-group"><div class="struct-team-label">Belum ada SPV</div><div class="struct-team" style="margin-top:0; padding-top:0; border-top:none;">'+orphanSales.map(s=>structNodeHTML(s)).join('')+'</div></div>';
+      }
+      html += '</div></div>';
     }
-    html += '</div>';
-    if(!supervisors.length && !orphanSales.length) html += '<div class="empty-note" style="margin-top:14px;">Belum ada Supervisor atau Sales terdaftar.</div>';
+    if(!superAdmins.length && !orphanSupervisors.length && !orphanSales.length) html += '<div class="empty-note" style="margin-top:14px;">Belum ada Super Admin, Supervisor, atau Sales terdaftar.</div>';
   } else if(role==='supervisor'){
     subtitle = 'Kamu cuma bisa lihat dirimu dan anggota tim kamu sendiri.';
     const me = userAccounts.find(u=>u.name===currentUser.name && u.role==='supervisor');
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : ((me && me.team) ? me.team : []);
     const teamMembers = salesUsers.filter(s=> team.includes(s.name));
+    const myAtasan = me ? findAtasanOf(me.name) : null;
+    if(myAtasan){
+      const holder = userAccounts.find(u=>u.name===myAtasan.name);
+      html += '<div class="struct-tier">'+(holder?structNodeHTML(holder):'')+'</div><div class="struct-connector"></div>';
+    }
     html += '<div class="struct-tier">'+(me ? structNodeHTML(me,'Kamu') : '')+'</div>';
     html += '<div class="struct-connector"></div>';
     html += teamMembers.length
       ? '<div class="struct-team" style="margin:0 auto; border-top:none; padding-top:0;">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>'
       : '<div class="struct-team-empty" style="border-top:none;">Belum ada anggota tim</div>';
   } else if(role==='sales'){
-    subtitle = 'Kamu cuma tau siapa Supervisor kamu.';
-    const mySupervisor = supervisors.find(sp=> (sp.team||[]).includes(currentUser.name));
-    if(mySupervisor){
-      html += '<div class="struct-tier">'+structNodeHTML(mySupervisor)+'</div><div class="struct-connector"></div>';
+    subtitle = 'Kamu cuma tau siapa atasan kamu.';
+    const myAtasan = findAtasanOf(currentUser.name);
+    const atasanHolder = myAtasan ? userAccounts.find(u=>u.name===myAtasan.name) : null;
+    if(atasanHolder){
+      html += '<div class="struct-tier">'+structNodeHTML(atasanHolder)+'</div><div class="struct-connector"></div>';
     } else {
-      html += '<div class="empty-note" style="margin-bottom:14px;">Belum ada Supervisor yang ditugaskan buat kamu.</div>';
+      html += '<div class="empty-note" style="margin-bottom:14px;">Belum ada atasan yang ditugaskan buat kamu.</div>';
     }
     const meUser = salesUsers.find(s=>s.name===currentUser.name) || {name:currentUser.name, role:'sales'};
     html += '<div class="struct-tier">'+structNodeHTML(meUser,'Kamu')+'</div>';
@@ -2295,7 +2341,8 @@ function renderDashboardView(){
   const overdueCount = mine.filter(l=>matchesFilter(l,'overdue')).length;
   const noInteraction = mine.filter(isNoInteraction);
   const totalPenawaran = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
-  const totalDeal = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+  const totalRealisasi = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  const totalPiutang = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+Math.max(0,(p.hargaPenawaran||0)-(p.realisasiOmzet||0)),0), 0);
   const cold = mine.filter(l=>l.status==='cold');
   const warm = mine.filter(l=>l.status==='warm');
   const hot = mine.filter(l=>l.status==='hot');
@@ -2319,7 +2366,7 @@ function renderDashboardView(){
     </div>
     <div class="card" onclick="goToFilterMine('dp')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconCheck}</div>
-      <div class="label">Sudah DP</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
+      <div class="label">Sudah Closing</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
     </div>
     <div class="card" onclick="goToFilterMine('overdue')">
       <div class="card-icon" style="background:var(--hot-bg); color:var(--hot);">${iconClock}</div>
@@ -2335,7 +2382,11 @@ function renderDashboardView(){
     </div>
     <div class="card" onclick="goToFilterMine('has-deal')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconTrend}</div>
-      <div class="label">Omzet deal</div><div class="value" style="font-size:18px;">${formatRupiah(totalDeal)}</div><div class="foot" style="color:var(--success)">realisasi closing</div>
+      <div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(totalRealisasi)}</div><div class="foot" style="color:var(--success)">udah closing</div>
+    </div>
+    <div class="card" onclick="goToFilterMine('has-deal')">
+      <div class="card-icon" style="background:var(--warm-bg); color:var(--warm);">${iconClock}</div>
+      <div class="label">Piutang</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
     </div>
   `;
 
@@ -2381,7 +2432,8 @@ function renderOverview(){
   const overdueCount = scoped.filter(l=>matchesFilter(l,'overdue')).length;
   const noInteraction = scoped.filter(isNoInteraction);
   const totalPenawaran = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
-  const totalDeal = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+  const totalRealisasi = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  const totalPiutang = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+Math.max(0,(p.hargaPenawaran||0)-(p.realisasiOmzet||0)),0), 0);
 
   document.getElementById('nav-leads-count').textContent = leads.length;
   document.getElementById('overview-date').textContent = (isScoped ? 'Terfilter - ' : 'Data live, terhitung otomatis - ') + 'hari ini '+fmtDate(todayIsoStr());
@@ -2400,7 +2452,7 @@ function renderOverview(){
     </div>
     <div class="card" onclick="goToFilter('dp')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconCheck}</div>
-      <div class="label">Sudah DP</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
+      <div class="label">Sudah Closing</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
     </div>
     <div class="card" onclick="goToFilter('overdue')">
       <div class="card-icon" style="background:var(--hot-bg); color:var(--hot);">${iconClock}</div>
@@ -2416,7 +2468,11 @@ function renderOverview(){
     </div>
     <div class="card" onclick="goToFilter('has-deal')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconTrend}</div>
-      <div class="label">Omzet deal</div><div class="value" style="font-size:18px;">${formatRupiah(totalDeal)}</div><div class="foot" style="color:var(--success)">realisasi closing</div>
+      <div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(totalRealisasi)}</div><div class="foot" style="color:var(--success)">udah closing</div>
+    </div>
+    <div class="card" onclick="goToFilter('has-deal')">
+      <div class="card-icon" style="background:var(--warm-bg); color:var(--warm);">${iconClock}</div>
+      <div class="label">Piutang</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
     </div>
   `;
 
@@ -2487,8 +2543,8 @@ function filterChipLabel(key, list){
     return 'Rencana omzet &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
   }
   if(key==='has-deal'){
-    const sum = list.reduce((s,l)=> s+(l.products||[]).reduce((a,p)=>a+(p.hargaDeal||0),0),0);
-    return 'Omzet deal &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
+    const sum = list.reduce((s,l)=> s+(l.products||[]).reduce((a,p)=>a+(p.realisasiOmzet||0),0),0);
+    return 'Realisasi Omzet &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
   }
   return (FILTER_LABELS[key]||key) + ' &middot; '+list.length+' lead';
 }
@@ -3543,6 +3599,8 @@ function renderUsersView(){
 function onUserFormRoleChange(){
   const role = document.getElementById('uf-role').value;
   const wrap = document.getElementById('uf-team-wrap');
+  const atasanWrap = document.getElementById('uf-atasan-wrap');
+  const superTeamWrap = document.getElementById('uf-super-team-wrap');
   if(!wrap) return;
   if(role==='supervisor'){
     wrap.style.display = 'block';
@@ -3551,6 +3609,82 @@ function onUserFormRoleChange(){
   } else {
     wrap.style.display = 'none';
   }
+  if(role==='sales'){
+    if(atasanWrap) atasanWrap.style.display = 'block';
+    renderUserFormAtasanSelect();
+  } else {
+    if(atasanWrap) atasanWrap.style.display = 'none';
+  }
+  if(role==='super_admin'){
+    if(superTeamWrap) superTeamWrap.style.display = 'block';
+    renderUserFormSuperTeamChecklist();
+  } else {
+    if(superTeamWrap) superTeamWrap.style.display = 'none';
+  }
+  renderUserFormStructurePath();
+}
+
+function findAtasanOf(name){
+  const holder = userAccounts.find(u=> (u.role==='supervisor' || u.role==='super_admin') && u.team && u.team.includes(name));
+  return holder ? {name: holder.name, role: holder.role} : null;
+}
+
+function renderUserFormAtasanSelect(){
+  const sel = document.getElementById('uf-atasan');
+  if(!sel) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const supervisors = userAccounts.filter(u=>u.role==='supervisor' && u.status==='active');
+  const superAdmins = userAccounts.filter(u=>u.role==='super_admin' && u.status==='active' && (viewerIsMaster || u.name===currentUser.name));
+  let options = '<option value="">- belum ada atasan -</option>';
+  options += supervisors.map(u=>'<option value="'+u.name+'">'+u.name+' (Supervisor)</option>').join('');
+  options += superAdmins.map(u=>'<option value="'+u.name+'">'+u.name+' (Super Admin)</option>').join('');
+  sel.innerHTML = options;
+  const currentAtasan = editingUser ? findAtasanOf(editingUser.name) : null;
+  sel.value = currentAtasan ? currentAtasan.name : '';
+}
+
+function renderUserFormSuperTeamChecklist(){
+  const list = document.getElementById('uf-super-team-checklist');
+  if(!list) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  const currentTeam = (editingUser && editingUser.team) ? editingUser.team : [];
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const supervisors = userAccounts.filter(u=>u.role==='supervisor' && u.status==='active');
+  const disabledAttr = viewerIsMaster ? '' : 'disabled';
+  list.innerHTML = supervisors.length ? supervisors.map(u=>
+    '<label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2);">'+
+      '<input type="checkbox" value="'+u.name+'" '+(currentTeam.includes(u.name)?'checked':'')+' '+disabledAttr+' style="width:auto;">'+u.name+
+    '</label>'
+  ).join('') : '<div style="font-size:12px; color:var(--muted);">Belum ada SPV aktif.</div>';
+  if(!viewerIsMaster){
+    list.insertAdjacentHTML('beforeend', '<div style="font-size:11px; color:var(--muted); margin-top:4px;">Cuma Master Admin yang bisa ubah daftar ini.</div>');
+  }
+}
+
+function renderUserFormStructurePath(){
+  const wrap = document.getElementById('uf-structure-path-wrap');
+  const el = document.getElementById('uf-structure-path');
+  if(!wrap || !el) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  if(!editingUser || editingUser.role==='master_admin'){
+    wrap.style.display = 'none';
+    return;
+  }
+  const chain = [editingUser.name+' ('+roleLabelOf(editingUser.role)+')'];
+  let cursor = editingUser.name;
+  let guard = 0;
+  while(guard < 6){
+    guard++;
+    const atasan = findAtasanOf(cursor);
+    if(!atasan) break;
+    chain.push(atasan.name+' ('+roleLabelOf(atasan.role)+')');
+    cursor = atasan.name;
+  }
+  const master = userAccounts.find(u=>u.role==='master_admin');
+  if(master) chain.push(master.name+' (Master Admin)');
+  wrap.style.display = 'block';
+  el.textContent = chain.join(' -> ');
 }
 
 function renderUserFormTeamChecklist(){
@@ -3625,6 +3759,8 @@ function openUserForm(id){
     document.getElementById('user-form-title').textContent = 'Edit user';
     document.getElementById('uf-name').value = u.name;
     document.getElementById('uf-email').value = u.email || '';
+    document.getElementById('uf-email').disabled = true;
+    document.getElementById('uf-email').title = 'Ganti email login belum didukung di sini -- cuma buat ditampilin.';
     if(u.role!=='master_admin') roleSelect.value = u.role;
     // Ganti password akun yang udah ada belum didukung di sini -- itu
     // tindakan terpisah (reset password), bukan bagian form edit ini.
@@ -3633,6 +3769,8 @@ function openUserForm(id){
     document.getElementById('user-form-title').textContent = 'Tambah user';
     document.getElementById('uf-name').value = '';
     document.getElementById('uf-email').value = '';
+    document.getElementById('uf-email').disabled = false;
+    document.getElementById('uf-email').title = '';
     roleSelect.value = 'sales';
     if(passwordWrap) passwordWrap.style.display = 'block';
   }
@@ -3672,8 +3810,6 @@ async function submitUserForm(){
   }
 
   if(editingUserId){
-    // Edit user yang udah ada -- masih simulasi lokal (belum ubah akun
-    // Supabase Auth beneran), reset kalau halaman di-refresh.
     const u = userAccounts.find(x=>x.id===editingUserId);
     if(!u) return;
     if(u.role==='master_admin' && !viewerIsMaster){
@@ -3691,17 +3827,80 @@ async function submitUserForm(){
       errorEl.style.display = 'block';
       return;
     }
-    u.name = name;
-    u.email = email;
-    if(u.role!=='master_admin') u.role = role;
-    if(role==='supervisor'){ u.branch = branch; u.team = team; } else { delete u.branch; delete u.team; }
-    if(role==='supervisor' && team.length){
-      userAccounts.forEach(other=>{
-        if(other.role==='supervisor' && other.id!==editingUserId && other.team){
-          other.team = other.team.filter(n=>!team.includes(n));
-        }
-      });
+    const oldRole = u.role;
+    const oldName = u.name;
+    const oldAtasan = findAtasanOf(oldName);
+    let newAtasanName = '';
+    if(role==='sales'){
+      newAtasanName = document.getElementById('uf-atasan').value;
     }
+    let superTeam = null;
+    if(role==='super_admin'){
+      if(!viewerIsMaster){
+        errorEl.textContent = 'Cuma Master Admin yang bisa ubah tim Super Admin.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      const checks = document.querySelectorAll('#uf-super-team-checklist input[type=checkbox]:checked');
+      superTeam = Array.from(checks).map(c=>c.value);
+    }
+
+    const submitBtn = document.querySelector('#user-form-modal .modal-actions .primary');
+    if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+
+    const updatePayload = { name: name, role: (u.role!=='master_admin' ? role : u.role) };
+    if(role==='supervisor'){ updatePayload.branch = branch; updatePayload.team = team; }
+    else if(role==='super_admin'){ updatePayload.branch = null; updatePayload.team = superTeam; }
+    else { updatePayload.branch = null; updatePayload.team = null; }
+
+    const { error: updErr } = await supabaseClient.from('profiles').update(updatePayload).eq('id', editingUserId);
+    if(updErr){
+      if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
+      errorEl.textContent = 'Gagal simpan ke server: '+updErr.message;
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // Dedup: kalau jadi Supervisor dan nyolong anggota dari SPV lain
+    if(role==='supervisor' && team.length){
+      const others = userAccounts.filter(other=> other.role==='supervisor' && other.id!==editingUserId && other.team && other.team.some(n=>team.includes(n)));
+      for(const other of others){
+        const newTeam = other.team.filter(n=>!team.includes(n));
+        const { error: eDedup } = await supabaseClient.from('profiles').update({team:newTeam}).eq('id', other.id);
+        if(!eDedup) other.team = newTeam;
+      }
+    }
+
+    // Lepas dari atasan lama kalau sebelumnya berstatus sales (baik masih sales
+    // dengan atasan baru/beda, maupun udah naik jadi Supervisor/Super Admin).
+    if(oldRole==='sales' && oldAtasan){
+      const oldHolder = userAccounts.find(x=>x.name===oldAtasan.name);
+      if(oldHolder){
+        const newTeam = (oldHolder.team||[]).filter(n=>n!==oldName);
+        const { error: eDetach } = await supabaseClient.from('profiles').update({team:newTeam}).eq('id', oldHolder.id);
+        if(!eDetach) oldHolder.team = newTeam;
+        else showToast('Gak bisa lepas dari atasan lama: '+eDetach.message);
+      }
+    }
+    // Pasang ke atasan baru kalau masih/jadi Sales dan atasan dipilih.
+    if(role==='sales' && newAtasanName){
+      const newHolder = userAccounts.find(x=>x.name===newAtasanName);
+      if(newHolder){
+        const nt = Array.from(new Set([...(newHolder.team||[]).filter(n=>n!==oldName), name]));
+        const { error: eAttach } = await supabaseClient.from('profiles').update({team:nt}).eq('id', newHolder.id);
+        if(!eAttach) newHolder.team = nt;
+        else showToast('Gak bisa masukin ke atasan baru: '+eAttach.message);
+      }
+    }
+
+    // Update cache lokal biar tampilan langsung konsisten
+    u.name = name;
+    if(u.role!=='master_admin') u.role = role;
+    if(role==='supervisor'){ u.branch = branch; u.team = team; }
+    else if(role==='super_admin'){ u.team = superTeam; delete u.branch; }
+    else { delete u.branch; delete u.team; }
+
+    if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
     syncAdminListFromUsers();
     populateQuickFilterDropdowns();
     renderAdminSelectOptions();
@@ -3984,13 +4183,19 @@ function addFollowUpLog(){
 function renderProductList(l){
   const items = l.products || [];
   document.getElementById('product-list').innerHTML = items.length ? items.map(p=>{
-    const dealVal = p.hargaDeal ? '<span class="val deal">'+formatRupiah(p.hargaDeal)+'</span>' : '<span class="val empty">Belum deal</span>';
-    const lunasBadge = p.lunas ? ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>' : '';
+    const realisasiVal = p.realisasiOmzet ? '<span class="val deal">'+formatRupiah(p.realisasiOmzet)+'</span>' : '<span class="val empty">Belum ada realisasi</span>';
+    const piutang = Math.max(0, (p.hargaPenawaran||0) - (p.realisasiOmzet||0));
+    let statusBadge = '';
+    if(p.realisasiOmzet>0 && piutang<=0){
+      statusBadge = ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>';
+    } else if(piutang>0 && p.realisasiOmzet>0){
+      statusBadge = ' <span style="background:var(--warm-bg); color:var(--warm); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">Piutang '+formatRupiah(piutang)+'</span>';
+    }
     return `<div class="product-item">
       <span class="product-badge ${p.type}">${PRODUCT_LABELS[p.type]||p.type}</span>
       <div class="product-info">
         <span class="product-price"><span class="lbl">Penawaran</span><span class="val">${formatRupiah(p.hargaPenawaran)}</span></span>
-        <span class="product-price"><span class="lbl">Deal</span>${dealVal}${lunasBadge}</span>
+        <span class="product-price"><span class="lbl">Realisasi</span>${realisasiVal}${statusBadge}</span>
       </div>
       <button class="product-edit" onclick="editProductLine(${p.id})" aria-label="Edit produk">&#9998;</button>
       <button class="product-remove" onclick="removeProductLine(${p.id})" aria-label="Hapus produk">&times;</button>
@@ -4008,19 +4213,27 @@ function cancelEditProduct(){
   resetProductSubmitButton();
   document.getElementById('f-product-type').value = 'smk3';
   document.getElementById('f-product-penawaran').value = '';
-  document.getElementById('f-product-deal').value = '';
-  toggleLunasCheckboxVisibility();
+  document.getElementById('f-product-realisasi').value = '';
+  updateSisaRealisasiDisplay();
   document.getElementById('product-form-row3').classList.remove('editing-active');
 }
 
-function toggleLunasCheckboxVisibility(){
-  const dealVal = unformatNumberInput(document.getElementById('f-product-deal').value);
-  const wrap = document.getElementById('product-lunas-wrap');
-  if(dealVal > 0){
-    wrap.style.display = 'flex';
+function updateSisaRealisasiDisplay(){
+  const el = document.getElementById('product-piutang-display');
+  if(!el) return;
+  const penawaranEl = document.getElementById('f-product-penawaran');
+  const realisasiEl = document.getElementById('f-product-realisasi');
+  if(!penawaranEl || !realisasiEl) return;
+  const penawaran = unformatNumberInput(penawaranEl.value);
+  const realisasi = unformatNumberInput(realisasiEl.value);
+  if(!realisasi){ el.textContent = ''; return; }
+  const piutang = Math.max(0, penawaran - realisasi);
+  if(piutang>0){
+    el.textContent = 'Sisa piutang: '+formatRupiah(piutang);
+    el.style.color = 'var(--warm)';
   } else {
-    wrap.style.display = 'none';
-    document.getElementById('f-product-lunas').checked = false;
+    el.textContent = 'Lunas (piutang Rp0)';
+    el.style.color = 'var(--success)';
   }
 }
 
@@ -4031,9 +4244,8 @@ function editProductLine(productId){
   if(!p) return;
   document.getElementById('f-product-type').value = p.type;
   document.getElementById('f-product-penawaran').value = formatNumberInputValue(p.hargaPenawaran);
-  document.getElementById('f-product-deal').value = formatNumberInputValue(p.hargaDeal);
-  toggleLunasCheckboxVisibility();
-  document.getElementById('f-product-lunas').checked = !!p.lunas;
+  document.getElementById('f-product-realisasi').value = formatNumberInputValue(p.realisasiOmzet);
+  updateSisaRealisasiDisplay();
   editingProductId = productId;
   document.getElementById('btn-product-submit').textContent = 'Update produk';
   document.getElementById('btn-product-cancel').style.display = 'inline-block';
@@ -4047,8 +4259,7 @@ function addProductLine(){
   }
   const type = document.getElementById('f-product-type').value;
   const penawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
-  const deal = unformatNumberInput(document.getElementById('f-product-deal').value);
-  const lunas = document.getElementById('f-product-lunas').checked;
+  const realisasi = unformatNumberInput(document.getElementById('f-product-realisasi').value);
   if(!penawaran){
     alert('Isi harga penawaran dulu.');
     return;
@@ -4065,32 +4276,31 @@ function addProductLine(){
   }
   if(editingProductId !== null){
     const p = l.products.find(x=>x.id===editingProductId);
-    const wasLunas = p ? !!p.lunas : false;
+    const wasClosing = p ? (p.realisasiOmzet>0) : false;
     if(p){
       p.type = type;
       p.hargaPenawaran = penawaran;
-      p.hargaDeal = deal;
-      p.lunas = lunas;
+      p.realisasiOmzet = realisasi;
     }
     editingProductId = null;
     resetProductSubmitButton();
     document.getElementById('product-form-row3').classList.remove('editing-active');
-    if(lunas && !wasLunas){
-      logActivity(l, 'Produk '+(PRODUCT_LABELS[type]||type)+' ditandai sudah lunas');
-    } else if(!lunas && wasLunas){
-      logActivity(l, 'Tanda lunas produk '+(PRODUCT_LABELS[type]||type)+' dibatalkan');
+    if(realisasi>0 && !wasClosing){
+      logActivity(l, 'Produk '+(PRODUCT_LABELS[type]||type)+' closing -- realisasi omzet '+formatRupiah(realisasi)+' dicatat');
+    } else if(realisasi>0){
+      logActivity(l, 'Update produk '+(PRODUCT_LABELS[type]||type)+' - realisasi omzet diperbarui jadi '+formatRupiah(realisasi));
     } else {
-      logActivity(l, 'Update produk '+(PRODUCT_LABELS[type]||type)+(deal>0 ? ' - harga deal '+formatRupiah(deal)+' dicatat' : ' - harga penawaran diperbarui'));
+      logActivity(l, 'Update produk '+(PRODUCT_LABELS[type]||type)+' - harga penawaran diperbarui');
     }
     showToast('Produk diupdate');
   } else {
-    l.products.push({id: Date.now(), type, hargaPenawaran: penawaran, hargaDeal: deal, lunas});
-    logActivity(l, 'Menambahkan produk '+(PRODUCT_LABELS[type]||type)+' - penawaran '+formatRupiah(penawaran)+(lunas ? ' (langsung lunas)' : ''));
+    l.products.push({id: Date.now(), type, hargaPenawaran: penawaran, realisasiOmzet: realisasi});
+    logActivity(l, 'Menambahkan produk '+(PRODUCT_LABELS[type]||type)+' - penawaran '+formatRupiah(penawaran)+(realisasi>0 ? ' (langsung closing, realisasi '+formatRupiah(realisasi)+')' : ''));
     showToast('Produk ditambahkan');
   }
   document.getElementById('f-product-penawaran').value = '';
-  document.getElementById('f-product-deal').value = '';
-  toggleLunasCheckboxVisibility();
+  document.getElementById('f-product-realisasi').value = '';
+  updateSisaRealisasiDisplay();
   persistLeadFields(l, {products: l.products});
   renderProductList(l);
 }
@@ -4153,8 +4363,8 @@ function openLeadForm(id, force){
   resetProductSubmitButton();
   document.getElementById('f-product-type').value = 'smk3';
   document.getElementById('f-product-penawaran').value = '';
-  document.getElementById('f-product-deal').value = '';
-  toggleLunasCheckboxVisibility();
+  document.getElementById('f-product-realisasi').value = '';
+  updateSisaRealisasiDisplay();
   document.getElementById('product-form-row3').classList.remove('editing-active');
 
   renderHistory(l);
@@ -4308,8 +4518,7 @@ async function saveQuickLead(){
     id: Date.now(),
     type: document.getElementById('ql-product-type').value,
     hargaPenawaran: quickPenawaran,
-    hargaDeal: 0,
-    lunas: false
+    realisasiOmzet: 0
   } : null;
   const data = {
     company: company,
@@ -4396,8 +4605,7 @@ async function saveLeadDataOnly(){
         id: Date.now(),
         type: document.getElementById('f-product-type').value,
         hargaPenawaran: quickPenawaran,
-        hargaDeal: unformatNumberInput(document.getElementById('f-product-deal').value),
-        lunas: document.getElementById('f-product-lunas').checked
+        realisasiOmzet: unformatNumberInput(document.getElementById('f-product-realisasi').value)
       };
     }
     data.products = quickProduct ? [quickProduct] : [];
@@ -4748,12 +4956,14 @@ const ASSISTANT_KB = [
     ]
   },
   {
-    keywords: ['produk','omzet','harga penawaran','dp','lunas','deal'],
+    keywords: ['produk','omzet','harga penawaran','dp','lunas','deal','realisasi','piutang'],
     steps: [
-      'Buka lead-nya, cari bagian "Produk" di form edit.',
-      'Klik "+ Tambah produk", isi jenis produk dan harga penawaran.',
-      'Update status pembayaran (DP/Lunas) di baris produk itu kalau udah ada progress.',
-      'Ringkasan omzet per status (rencana, deal, DP, lunas) bisa dilihat di Overview dan menu Omzet di sidebar.'
+      'Buka lead-nya, cari bagian "Produk & penawaran" di form edit.',
+      'Klik "+ Tambah produk", isi jenis produk dan harga penawaran. Maksimal 2 produk per lead.',
+      'Kalau klien nego harga, tinggal ubah langsung angka "Harga penawaran"-nya -- gak ada field harga deal terpisah lagi.',
+      'Begitu ada uang masuk (DP atau lunas), isi kolom "Realisasi omzet" sebesar yang udah diterima. Sisa piutangnya (penawaran dikurangi realisasi) otomatis kehitung dan ditampilin.',
+      'Lead otomatis kehitung "Sudah Closing" begitu realisasi omzet-nya lebih dari 0 -- gak perlu tandain manual lagi.',
+      'Ringkasan omzet (rencana, realisasi, piutang) bisa dilihat di Overview dan menu Omzet di sidebar.'
     ]
   },
   {
