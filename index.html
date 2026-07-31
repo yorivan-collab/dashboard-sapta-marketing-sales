@@ -381,7 +381,7 @@
                 <button class="primary" id="btn-product-submit" onclick="addProductLine()">+ Tambah produk</button>
               </div>
               <div class="product-list" id="product-list" style="margin-top:8px;"></div>
-              <div class="footnote">Harga penawaran jadi basis rencana omzet. Realisasi omzet jadi omzet closing beneran di Overview -- sisa piutangnya (penawaran dikurangi realisasi) dihitung otomatis. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
+              <div class="footnote">Harga penawaran jadi basis rencana omzet. Realisasi omzet jadi omzet closing beneran di Overview -- sisa realisasinya (penawaran dikurangi realisasi) dihitung otomatis. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
             </div>
 
             <div class="panel">
@@ -1134,7 +1134,7 @@ function productStatusPhrase(l){
   const parts = (l.products||[]).filter(p=>p.realisasiOmzet>0).map(p=>{
     const label = PRODUCT_LABELS[p.type]||p.type;
     const piutang = Math.max(0, (p.hargaPenawaran||0) - (p.realisasiOmzet||0));
-    return (piutang<=0 ? 'sudah lunas '+label : 'masih piutang '+label);
+    return (piutang<=0 ? 'sudah lunas '+label : 'masih ada sisa realisasi '+label);
   });
   return joinNatural(parts);
 }
@@ -2386,7 +2386,7 @@ function renderDashboardView(){
     </div>
     <div class="card" onclick="goToFilterMine('has-deal')">
       <div class="card-icon" style="background:var(--warm-bg); color:var(--warm);">${iconClock}</div>
-      <div class="label">Piutang</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
+      <div class="label">Sisa Realisasi</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
     </div>
   `;
 
@@ -2472,7 +2472,7 @@ function renderOverview(){
     </div>
     <div class="card" onclick="goToFilter('has-deal')">
       <div class="card-icon" style="background:var(--warm-bg); color:var(--warm);">${iconClock}</div>
-      <div class="label">Piutang</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
+      <div class="label">Sisa Realisasi</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
     </div>
   `;
 
@@ -4189,7 +4189,7 @@ function renderProductList(l){
     if(p.realisasiOmzet>0 && piutang<=0){
       statusBadge = ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>';
     } else if(piutang>0 && p.realisasiOmzet>0){
-      statusBadge = ' <span style="background:var(--warm-bg); color:var(--warm); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">Piutang '+formatRupiah(piutang)+'</span>';
+      statusBadge = ' <span style="background:var(--warm-bg); color:var(--warm); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">Sisa realisasi '+formatRupiah(piutang)+'</span>';
     }
     return `<div class="product-item">
       <span class="product-badge ${p.type}">${PRODUCT_LABELS[p.type]||p.type}</span>
@@ -4229,10 +4229,10 @@ function updateSisaRealisasiDisplay(){
   if(!realisasi){ el.textContent = ''; return; }
   const piutang = Math.max(0, penawaran - realisasi);
   if(piutang>0){
-    el.textContent = 'Sisa piutang: '+formatRupiah(piutang);
+    el.textContent = 'Sisa realisasi: '+formatRupiah(piutang);
     el.style.color = 'var(--warm)';
   } else {
-    el.textContent = 'Lunas (piutang Rp0)';
+    el.textContent = 'Lunas (sisa realisasi Rp0)';
     el.style.color = 'var(--success)';
   }
 }
@@ -4961,9 +4961,9 @@ const ASSISTANT_KB = [
       'Buka lead-nya, cari bagian "Produk & penawaran" di form edit.',
       'Klik "+ Tambah produk", isi jenis produk dan harga penawaran. Maksimal 2 produk per lead.',
       'Kalau klien nego harga, tinggal ubah langsung angka "Harga penawaran"-nya -- gak ada field harga deal terpisah lagi.',
-      'Begitu ada uang masuk (DP atau lunas), isi kolom "Realisasi omzet" sebesar yang udah diterima. Sisa piutangnya (penawaran dikurangi realisasi) otomatis kehitung dan ditampilin.',
+      'Begitu ada uang masuk (DP atau lunas), isi kolom "Realisasi omzet" sebesar yang udah diterima. Sisa realisasinya (penawaran dikurangi realisasi) otomatis kehitung dan ditampilin.',
       'Lead otomatis kehitung "Sudah Closing" begitu realisasi omzet-nya lebih dari 0 -- gak perlu tandain manual lagi.',
-      'Ringkasan omzet (rencana, realisasi, piutang) bisa dilihat di Overview dan menu Omzet di sidebar.'
+      'Ringkasan omzet (rencana, realisasi, sisa realisasi) bisa dilihat di Overview dan menu Omzet di sidebar.'
     ]
   },
   {
