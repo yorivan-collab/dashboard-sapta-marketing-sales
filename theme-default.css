@@ -89,7 +89,8 @@
   input.f-req:focus,select.f-req:focus,textarea.f-req:focus{background:var(--surface);}
   .row3.editing-active input,.row3.editing-active select{background:var(--accent-soft)!important; border-color:var(--accent)!important; box-shadow:0 0 0 1px var(--accent) inset; color:var(--hot)!important; font-weight:600;}
 
-  .kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:18px;}
+  .kpis{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px;}
+  .kpis .card{flex:1 1 150px;}
   .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.1rem; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;}
   .card:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(23,20,40,0.10);}
   .card-icon{width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center;}
@@ -156,12 +157,14 @@
   .ovp-about-line{font-size:12.5px; color:var(--text-2); line-height:1.5;}
   .ovp-stat-row{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; padding:6px 0; color:var(--text-2);}
   .ovp-stat-row b{color:var(--text); font-weight:700;}
-  .dash-kpis{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; align-content:start;}
+  .dash-kpis{display:flex; flex-wrap:wrap; gap:12px; align-content:start;}
+  .dash-kpis .card{flex:1 1 calc((100% - 24px)/3);}
   @media (max-width:900px){
     .ovp-cols{grid-template-columns:1fr;}
     .ovp-photo-wrap{aspect-ratio:16/7;}
     .ovp-card{position:static;}
-    .dash-kpis{grid-template-columns:repeat(2, 1fr); gap:8px;}
+    .dash-kpis{gap:8px;}
+    .dash-kpis .card{flex-basis:calc((100% - 8px)/2);}
   }
   .user-action-link:last-child{margin-right:0;}
   .user-action-link.danger{color:var(--hot);}
@@ -450,7 +453,9 @@
     .main{padding:0.9rem 0.9rem 110px 0.9rem;}
     .title{font-size:18px;}
 
-    .kpis{grid-template-columns:repeat(2, 1fr); gap:8px;}
+    .kpis{gap:8px;}
+    .kpis .card{flex-basis:calc((100% - 8px)/2);}
+    .dash-kpis .card{flex-basis:calc((100% - 8px)/2);}
     .card{padding:0.85rem;}
     .card .value{font-size:19px;}
     .temps{grid-template-columns:1fr; gap:8px;}
