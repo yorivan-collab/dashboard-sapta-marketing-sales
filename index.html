@@ -3035,8 +3035,15 @@ async function handleIncomingActivityEvent(row){
   if(!l){
     const { data } = await supabaseClient.from('leads').select('*').eq('id', row.lead_id).single();
     if(!data) return;
-    l = dbRowToLead(data);
-    leads.push(l);
+    // cek ulang setelah await -- kalau ada beberapa activity_log event nyaris
+    // bebarengan (misal lead+catatan+produk ke-log 3x pas quick-add), event
+    // lain mungkin udah keburu nambahin lead yang sama duluan. Tanpa cek ini,
+    // lead yang sama bisa ke-push dobel/triple ke array leads lokal.
+    l = leads.find(x=>x.id===row.lead_id);
+    if(!l){
+      l = dbRowToLead(data);
+      leads.push(l);
+    }
   }
   const owner = userAccounts.find(u=>u.name===l.admin);
   const ownerRole = owner ? owner.role : null;
