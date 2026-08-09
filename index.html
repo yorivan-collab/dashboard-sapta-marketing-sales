@@ -137,6 +137,14 @@
         <span class="focus-filter-badge" id="master-focus-badge-overview" onclick="openFocusFilterModal()"></span>
         <select id="overview-pic-filter-select" onchange="setQuickFilterPic(this.value)"></select>
         <select id="overview-location-filter-select" onchange="setQuickFilterLocation(this.value)"></select>
+        <select id="overview-date-field-select" onchange="setQuickFilterDateField(this.value)">
+          <option value="entryDate">Tanggal input</option>
+          <option value="followUp">Tanggal follow-up</option>
+        </select>
+        <input type="date" id="overview-date-from-input" onchange="setQuickFilterDateFrom(this.value)" title="Dari tanggal">
+        <span style="font-size:11.5px; color:var(--muted);">s/d</span>
+        <input type="date" id="overview-date-to-input" onchange="setQuickFilterDateTo(this.value)" title="Sampai tanggal">
+        <span class="admin-locked-badge" id="date-filter-clear-overview" onclick="clearQuickFilterDate()" style="cursor:pointer;">Reset tanggal <span class="focus-reset-x">&times;</span></span>
       </div>
 
       <div id="section-kpi">
@@ -275,6 +283,14 @@
         <span class="filter-pill" id="group-by-admin-toggle" onclick="toggleGroupByAdmin()">Kelompokkan per admin</span>
         <select id="pic-filter-select" onchange="setQuickFilterPic(this.value)"></select>
         <select id="location-filter-select" onchange="setQuickFilterLocation(this.value)"></select>
+        <select id="date-field-select" onchange="setQuickFilterDateField(this.value)">
+          <option value="entryDate">Tanggal input</option>
+          <option value="followUp">Tanggal follow-up</option>
+        </select>
+        <input type="date" id="date-from-input" onchange="setQuickFilterDateFrom(this.value)" title="Dari tanggal">
+        <span style="font-size:11.5px; color:var(--muted);">s/d</span>
+        <input type="date" id="date-to-input" onchange="setQuickFilterDateTo(this.value)" title="Sampai tanggal">
+        <span class="admin-locked-badge" id="date-filter-clear-leads" onclick="clearQuickFilterDate()" style="cursor:pointer;">Reset tanggal <span class="focus-reset-x">&times;</span></span>
       </div>
       <div id="filter-chip-wrap" style="display:none; margin-bottom:10px;"></div>
 
@@ -2422,7 +2438,7 @@ function renderDashboardView(){
 
 function renderOverview(){
   const scoped = getOverviewScopedLeads();
-  const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterAdmin!=='all' || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
+  const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterAdmin!=='all' || !!quickFilterDateFrom || !!quickFilterDateTo || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
   const total = scoped.length;
   const hot = scoped.filter(l=>l.status==='hot');
   const warm = scoped.filter(l=>l.status==='warm');
@@ -2577,6 +2593,13 @@ function matchesSearchTerm(l, term){
 let quickFilterPic = 'all';
 let quickFilterLocation = 'all';
 let quickFilterAdmin = 'all';
+
+// Filter rentang tanggal ala Airtable (Where [field] is on/after X and
+// is on/before Y) tapi disederhanain jadi satu date-range picker.
+// Field-nya bisa pilih tanggal input lead atau tanggal follow-up.
+let quickFilterDateField = 'entryDate'; // 'entryDate' | 'followUp'
+let quickFilterDateFrom = '';
+let quickFilterDateTo = '';
 
 // Fokus tampilan -- KHUSUS Master Admin. Kalau diisi (1+ nama), seluruh
 // sistem (Overview, Leads, Follow-up, tabel performa) otomatis nyempit
@@ -3025,6 +3048,18 @@ function stopActivityRealtimeSub(){
   if(activityRealtimeChannel){ supabaseClient.removeChannel(activityRealtimeChannel); activityRealtimeChannel = null; }
 }
 
+// Browser (terutama Edge/Chrome) suka nge-freeze tab ke "back-forward cache"
+// pas user pindah halaman/tab terus balik lagi -- koneksi WebSocket realtime
+// otomatis diputus paksa waktu itu terjadi (ini normal, bukan error jaringan).
+// Tanpa langganan ulang, notifikasi live bakal diam2 berhenti kerja sampai
+// halaman di-refresh manual. pageshow dengan persisted=true nandain kondisi
+// itu, jadi kita sambungin ulang begitu halaman aktif lagi.
+window.addEventListener('pageshow', function(e){
+  if(e.persisted && currentUser){
+    startActivityRealtimeSub();
+  }
+});
+
 async function handleIncomingActivityEvent(row){
   if(!currentUser || !row || row.lead_id===null || row.lead_id===undefined) return;
   if(row.changed_by === currentUser.name) return;
@@ -3445,6 +3480,12 @@ function matchesQuickFilters(l){
       if(!quickFilterAdmin.includes(l.admin)) return false;
     } else if(l.admin!==quickFilterAdmin) return false;
   }
+  if(quickFilterDateFrom || quickFilterDateTo){
+    const raw = quickFilterDateField==='followUp' ? l.followUp : l.entryDate;
+    if(!raw) return false;
+    if(quickFilterDateFrom && raw < quickFilterDateFrom) return false;
+    if(quickFilterDateTo && raw > quickFilterDateTo) return false;
+  }
   return true;
 }
 
@@ -3480,6 +3521,52 @@ function populateQuickFilterDropdowns(){
     const lockedName = !Array.isArray(quickFilterAdmin) ? quickFilterAdmin : null;
     el.value = (lockedName && adminUsers.some(u=>u.name===lockedName)) ? lockedName : 'all';
   });
+  ['date-field-select','overview-date-field-select'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = quickFilterDateField;
+  });
+  ['date-from-input','overview-date-from-input'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = quickFilterDateFrom;
+  });
+  ['date-to-input','overview-date-to-input'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = quickFilterDateTo;
+  });
+  const dateFilterActive = !!(quickFilterDateFrom || quickFilterDateTo);
+  ['date-filter-clear-leads','date-filter-clear-overview'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = dateFilterActive ? 'inline-flex' : 'none';
+  });
+}
+
+function setQuickFilterDateField(val){
+  quickFilterDateField = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function setQuickFilterDateFrom(val){
+  quickFilterDateFrom = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function setQuickFilterDateTo(val){
+  quickFilterDateTo = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function clearQuickFilterDate(){
+  quickFilterDateFrom = '';
+  quickFilterDateTo = '';
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
 }
 
 function setQuickFilterPic(val){
