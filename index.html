@@ -402,23 +402,17 @@
 
             <div class="panel">
               <div class="panel-title">Laporan follow up <span class="opt-pill">Opsional</span></div>
-              <div class="row3">
-                <div class="field"><label>Tanggal percakapan <span class="opt-pill">Opsional</span></label><input type="date" id="f-note-date"></div>
-                <div class="field"><label>Sumber percakapan <span class="opt-pill">Opsional</span></label>
-                  <select id="f-note-channel">
-                    <option value="wa">Pesan WhatsApp</option>
-                    <option value="website">Pesan dari website</option>
-                    <option value="call">Catatan telepon</option>
-                    <option value="lainnya">Lainnya</option>
-                  </select>
-                </div>
-                <div class="field" style="display:flex; align-items:flex-end;">
-                  <div class="footnote" style="margin-top:0;">Tanggal ini yang dipakai di riwayat, bukan tanggal hari ini otomatis.</div>
-                </div>
+              <div class="field"><label>Sumber percakapan <span class="opt-pill">Opsional</span></label>
+                <select id="f-note-channel">
+                  <option value="wa">Pesan WhatsApp</option>
+                  <option value="website">Pesan dari website</option>
+                  <option value="call">Catatan telepon</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
               </div>
               <div class="field"><label>Laporan dan rencana follow up</label>
               <textarea id="f-new-note" rows="2" placeholder="Isi pesan WA / pesan website / ringkasan telepon..."></textarea>
-              <div class="footnote">Catatan perencanaan/pelaksanaan, atau update informasi terbaru dari lead ini.</div></div>
+              <div class="footnote">Catatan perencanaan/pelaksanaan, atau update informasi terbaru dari lead ini. Tanggal &amp; jam otomatis dicatat sesuai jam server pas kamu simpan -- gak bisa diedit manual.</div></div>
               <div style="display:flex; justify-content:flex-end; margin-top:8px;">
                 <button class="primary" onclick="addFollowUpLog()">Update riwayat follow-up</button>
               </div>
@@ -953,7 +947,7 @@
 
 <script>
 let leadsLoadedFromSupabase = false;
-function dbRowToLead(row){
+function dbRowToLead(row, followUpHistory){
   return {
     id: row.id,
     company: row.company || '',
@@ -978,7 +972,11 @@ function dbRowToLead(row){
       // ambil dari situ biar angka lama gak ilang pas dibuka ulang.
       realisasiOmzet: (p.realisasiOmzet !== undefined ? (p.realisasiOmzet || 0) : (p.hargaDeal || 0))
     })),
-    history: row.history || [],
+    // Riwayat follow-up sekarang datang dari tabel follow_ups sendiri
+    // (di-fetch terpisah, lihat fetchFollowUpsByLeadMap), bukan dari
+    // kolom leads.history lagi -- kolom itu dibiarin apa adanya di
+    // database sebagai arsip data lama, cuma udah gak dibaca/ditulis.
+    history: followUpHistory || [],
     activityLog: [],
     createdAt: row.created_at || '',
     firstViewedAt: row.first_viewed_at || null
@@ -1000,8 +998,9 @@ function leadToDbRow(data){
     admin: data.admin || null,
     entry_date: data.entryDate ? data.entryDate : null,
     chat_log: data.chatLog || null,
-    products: data.products || [],
-    history: data.history || []
+    products: data.products || []
+    // history sengaja gak ada di sini lagi -- catatan follow-up sekarang
+    // ditulis ke tabel follow_ups sendiri lewat insertFollowUpNote().
   };
 }
 function persistLeadFields(l, fields){
@@ -1010,15 +1009,57 @@ function persistLeadFields(l, fields){
   });
 }
 
+// Tarik SEMUA catatan follow-up sekaligus (data kecil, aman di-fetch penuh
+// kayak leads/userAccounts), dikelompokin per lead_id, biar isNoInteraction/
+// lastNote/followUpCountToday dkk yang jalan sinkron di banyak lead sekaligus
+// tetap kepake tanpa perlu fetch satu-satu per lead.
+async function fetchFollowUpsByLeadMap(){
+  const { data, error } = await supabaseClient.from('follow_ups').select('*').order('created_at', {ascending:true});
+  if(error){
+    console.warn('Gagal memuat riwayat follow-up dari server:', error.message);
+    return {};
+  }
+  const map = {};
+  (data||[]).forEach(row=>{
+    const parts = localDateTimeParts(row.created_at);
+    if(!map[row.lead_id]) map[row.lead_id] = [];
+    map[row.lead_id].push({ id: row.id, date: parts.date, time: parts.time, channel: row.channel, note: row.note });
+  });
+  return map;
+}
+
+// Nyimpen satu catatan follow-up baru -- date/time-nya SELALU dari created_at
+// yang dibalikin server (bukan dari input manual), jadi gak ada celah buat
+// nge-backdate atau ngatur jam sendiri. Dipakai bareng di addFollowUpLog(),
+// saveQuickLead(), dan saveLeadDataOnly().
+async function insertFollowUpNote(leadId, channel, note){
+  const { data, error } = await supabaseClient.from('follow_ups').insert({
+    lead_id: leadId, channel: channel, note: note
+  }).select().single();
+  if(error){
+    showToast('Gagal simpan catatan follow-up ke server: '+error.message);
+    return null;
+  }
+  const parts = localDateTimeParts(data.created_at);
+  return { id: data.id, date: parts.date, time: parts.time, channel: data.channel, note: data.note };
+}
+
 async function fetchLeadsFromSupabase(){
-  const { data, error } = await supabaseClient.from('leads').select('*').order('id', {ascending:true});
+  const [leadsResult, followUpsMap] = await Promise.all([
+    supabaseClient.from('leads').select('*').order('id', {ascending:true}),
+    fetchFollowUpsByLeadMap()
+  ]);
+  const { data, error } = leadsResult;
   if(error){
     showToast('Gagal memuat data lead dari server: '+error.message);
     leads = [];
     leadsLoadedFromSupabase = false;
     return;
   }
-  leads = (data||[]).map(dbRowToLead);
+  // Perhatikan: bukan .map(dbRowToLead) langsung -- .map ngirim (item, index)
+  // ke callback-nya, dan index itu bakal kesasar jadi argumen followUpHistory
+  // kalau gak dibungkus arrow function eksplisit kayak gini.
+  leads = (data||[]).map(row => dbRowToLead(row, followUpsMap[row.id]||[]));
   leadsLoadedFromSupabase = true;
 }
 
@@ -1057,6 +1098,21 @@ function initials(name){
   return (parts[0][0]+(parts[1]?parts[1][0]:'')).toUpperCase();
 }
 function todayIsoStr(){ return new Date().toISOString().slice(0,10); }
+
+// Ubah timestamp SERVER (created_at, timestamptz dari Postgres -- selalu
+// akurat, gak peduli jam device siapapun) jadi tanggal+jam lokal buat
+// ditampilin. Dipakai di Log Aktivitas supaya jam yang kelihatan gak lagi
+// ikut jam laptop/HP user yang kadang salah setel, tapi tetap ikut zona
+// waktu device-nya (itu beda hal -- zona waktu jarang salah, jamnya yang
+// suka ngaco).
+function localDateTimeParts(isoTimestamp){
+  const d = new Date(isoTimestamp);
+  const pad = n => String(n).padStart(2,'0');
+  return {
+    date: d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
+    time: pad(d.getHours())+':'+pad(d.getMinutes())
+  };
+}
 function fmtDate(iso){
   if(!iso) return "-";
   const d = new Date(iso+"T00:00:00");
@@ -1311,9 +1367,13 @@ function logGlobalActivity(text, company){
   const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const changedBy = currentUser ? currentUser.name : '-';
   globalActivityLog.push({leadId: null, company: company||'-', status: null, date: todayIsoStr(), time: timeStr, text, changedBy});
+  // log_date/log_time sengaja gak dikirim -- biarin log_date kepakein default
+  // CURRENT_DATE dari database (akurat, server-side), dan log_time gak usah
+  // dipercaya sama sekali. Yang ditampilin ke user diambil dari created_at
+  // (lihat getAllActivityEntries), bukan dari kolom ini.
   supabaseClient.from('activity_log').insert({
     lead_id: null, company: company||'-', status: null,
-    log_date: todayIsoStr(), log_time: timeStr, note: text, changed_by: changedBy
+    note: text, changed_by: changedBy
   }).then(({error})=>{ if(error) console.warn('Gagal simpan log ke server:', error.message); });
 }
 
@@ -1323,10 +1383,16 @@ async function getAllActivityEntries(){
     console.warn('Gagal memuat log aktivitas dari server:', error.message);
     return [];
   }
-  return (data||[]).map(a=>({
-    leadId: a.lead_id, company: a.company || '-', status: a.status,
-    date: a.log_date, time: a.log_time, text: a.note, changedBy: a.changed_by || '-'
-  }));
+  return (data||[]).map(a=>{
+    // created_at (timestamptz server) yang jadi acuan tampilan, bukan
+    // log_date/log_time (itu hasil hitungan jam device pas disimpen --
+    // gak bisa dipercaya kalau jam laptop/HP user-nya salah setel).
+    const parts = a.created_at ? localDateTimeParts(a.created_at) : {date:a.log_date, time:a.log_time};
+    return {
+      leadId: a.lead_id, company: a.company || '-', status: a.status,
+      date: parts.date, time: parts.time, text: a.note, changedBy: a.changed_by || '-'
+    };
+  });
 }
 
 async function renderActivityLogView(){
@@ -4220,9 +4286,10 @@ function logActivity(l, text){
   const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const changedBy = currentUser ? currentUser.name : '-';
   l.activityLog.push({date: todayIsoStr(), time: timeStr, text, changedBy});
+  // log_date/log_time sengaja gak dikirim, lihat catatan di logGlobalActivity().
   supabaseClient.from('activity_log').insert({
     lead_id: l.id, company: l.company, status: l.status,
-    log_date: todayIsoStr(), log_time: timeStr, note: text, changed_by: changedBy
+    note: text, changed_by: changedBy
   }).then(({error})=>{ if(error) console.warn('Gagal simpan log ke server:', error.message); });
 }
 
@@ -4235,7 +4302,7 @@ function setChatLogHeight(size){
   document.querySelector('.height-pill[data-size="'+size+'"]').classList.add('active');
 }
 
-function addFollowUpLog(){
+async function addFollowUpLog(){
   if(currentEditId===null){
     alert('Lead ini belum tersimpan. Kalau mau nambah catatan pertama, isi field di atas terus klik "Simpan lead" -- otomatis ikut kesimpan. Tombol ini buat nambah catatan susulan setelah lead-nya ada.');
     return;
@@ -4245,10 +4312,7 @@ function addFollowUpLog(){
     alert('Isi laporan follow up dulu.');
     return;
   }
-  const noteDate = document.getElementById('f-note-date').value || todayIsoStr();
   const noteChannel = document.getElementById('f-note-channel').value;
-  const now = new Date();
-  const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const l = leads.find(x=>x.id===currentEditId);
   if(!l){
     alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Silakan kembali ke daftar dan buka ulang.');
@@ -4265,9 +4329,10 @@ function addFollowUpLog(){
     });
     return;
   }
-  l.history.push({date:noteDate, time:timeStr, channel:noteChannel, note});
+  const entry = await insertFollowUpNote(l.id, noteChannel, note);
+  if(!entry) return; // toast error udah dimunculin di insertFollowUpNote
+  l.history.push(entry);
   l.history.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
-  persistLeadFields(l, {history: l.history});
   logActivity(l, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
   document.getElementById('f-new-note').value = '';
   renderHistory(l);
@@ -4447,7 +4512,6 @@ function openLeadForm(id, force){
   updateAdminFieldVisibility();
   autoExpandLengkapiNantiIfFilled(l);
   document.getElementById('f-company-hint').style.display = 'none';
-  document.getElementById('f-note-date').value = todayIsoStr();
   document.getElementById('f-note-channel').value = 'wa';
   document.getElementById('f-new-note').value = '';
   document.getElementById('f-chatlog').value = l.chatLog || '';
@@ -4605,8 +4669,6 @@ async function saveQuickLead(){
     });
     return;
   }
-  const now = new Date();
-  const noteTime = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const quickPenawaran = unformatNumberInput(document.getElementById('ql-product-penawaran').value);
   const quickProduct = quickPenawaran > 0 ? {
     id: Date.now(),
@@ -4629,7 +4691,6 @@ async function saveQuickLead(){
     followUp: '',
     admin: document.getElementById('ql-admin').value,
     chatLog: '',
-    history: noteText ? [{date:todayIsoStr(), time:noteTime, channel:'wa', note:noteText}] : [],
     products: quickProduct ? [quickProduct] : []
   };
   const { data: inserted, error } = await supabaseClient.from('leads').insert(leadToDbRow(data)).select().single();
@@ -4643,7 +4704,16 @@ async function saveQuickLead(){
   lastViewedId = newLead.id;
   lastActionWasAdd = true;
   logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
-  if(noteText) logActivity(newLead, 'Menambahkan catatan follow-up (WhatsApp)');
+  // Catatan follow-up awal sengaja gak ditunggu (fire-and-forget) biar popup
+  // "tambah lead cepat" gak kerasa lambat -- begitu selesai, history-nya
+  // ditempel ke lead yang udah ada di memori dan tampilan disegarkan lagi.
+  insertFollowUpNote(newLead.id, 'wa', noteText).then(entry=>{
+    if(!entry) return;
+    newLead.history.push(entry);
+    if(currentEditId===newLead.id) renderHistory(newLead);
+    if(document.getElementById('view-leads')?.classList.contains('active')) refreshLeadsListing();
+  });
+  logActivity(newLead, 'Menambahkan catatan follow-up (WhatsApp)');
   if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
   closeQuickLeadModal();
   showToast('Lead baru ditambahkan');
@@ -4675,10 +4745,7 @@ async function saveLeadDataOnly(){
     chatLog: document.getElementById('f-chatlog').value
   };
   const newNote = document.getElementById('f-new-note').value.trim();
-  const noteDate = document.getElementById('f-note-date').value || todayIsoStr();
   const noteChannel = document.getElementById('f-note-channel').value;
-  const nowT = new Date();
-  const noteTime = String(nowT.getHours()).padStart(2,'0')+':'+String(nowT.getMinutes()).padStart(2,'0');
 
   if(currentEditId===null){
     const newLeadLimit = leadCountLimit(data.admin);
@@ -4691,7 +4758,6 @@ async function saveLeadDataOnly(){
       });
       return false;
     }
-    data.history = newNote ? [{date:noteDate, time:noteTime, channel:noteChannel, note:newNote}] : [];
     const quickPenawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
     let quickProduct = null;
     if(quickPenawaran > 0){
@@ -4714,7 +4780,11 @@ async function saveLeadDataOnly(){
     lastActionWasAdd = true;
     currentEditId = newLead.id;
     logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
-    if(newNote) logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+    if(newNote){
+      const entry = await insertFollowUpNote(newLead.id, noteChannel, newNote);
+      if(entry) newLead.history.push(entry);
+      logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+    }
     if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
   } else {
     const l = leads.find(x=>x.id===currentEditId);
@@ -4738,17 +4808,20 @@ async function saveLeadDataOnly(){
     const prevFollowUp = l.followUp;
     const prevSnapshot = {};
     Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{ prevSnapshot[f] = l[f]; });
-    const updatedHistory = (l.history || []).slice();
-    if(newNote) updatedHistory.push({date:noteDate, time:noteTime, channel:noteChannel, note:newNote});
-    updatedHistory.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
-    const dbRow = leadToDbRow(Object.assign({}, data, {history: updatedHistory, products: l.products||[]}));
+    const dbRow = leadToDbRow(Object.assign({}, data, {products: l.products||[]}));
     const { error } = await supabaseClient.from('leads').update(dbRow).eq('id', currentEditId);
     if(error){
       alert('Gagal menyimpan perubahan ke server: '+error.message);
       return false;
     }
     Object.assign(l, data);
-    l.history = updatedHistory;
+    if(newNote){
+      const entry = await insertFollowUpNote(l.id, noteChannel, newNote);
+      if(entry){
+        l.history.push(entry);
+        l.history.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
+      }
+    }
     Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{
       let before = (prevSnapshot[f]||'').toString().trim();
       let after = (l[f]||'').toString().trim();
