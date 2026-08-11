@@ -407,6 +407,7 @@
               <div class="footnote">Harga penawaran jadi basis rencana omzet. Realisasi omzet jadi omzet closing beneran di Overview -- sisa realisasinya (penawaran dikurangi realisasi) dihitung otomatis. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
             </div>
 
+            <div id="scaleup-panel-home-anchor" style="display:none;"></div>
             <div class="panel" id="scaleup-panel-wrap">
               <div class="panel-title">Scale Up <span class="opt-pill">Opsional</span></div>
               <div class="row3" id="scaleup-form-row3">
@@ -572,18 +573,41 @@
 
     <!-- SCALE UP PROJECT (modul uji coba, khusus Master Admin -- lihat SCALE_UP_ENABLED) -->
     <div class="view" id="view-scaleup">
-      <div class="topbar">
-        <div>
-          <div class="title">Scale Up Project</div>
-          <div class="subtitle">Cuma nampilin lead yang udah diisi minimal 1 item Scale Up -- masih tahap uji coba</div>
+      <div id="scaleup-fulllist-wrap">
+        <div class="topbar">
+          <div>
+            <div class="title">Scale Up Project</div>
+            <div class="subtitle">Cuma nampilin lead yang udah diisi minimal 1 item Scale Up -- masih tahap uji coba</div>
+          </div>
+        </div>
+        <div class="kpis" id="scaleup-kpi-row"></div>
+        <div class="panel" style="margin-top:14px;">
+          <div class="rowlist-header">
+            <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+          </div>
+          <div class="rowlist" id="scaleup-rowlist"></div>
         </div>
       </div>
-      <div class="kpis" id="scaleup-kpi-row"></div>
-      <div class="panel" style="margin-top:14px;">
-        <div class="rowlist-header">
-          <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+
+      <div class="leads-split" id="scaleup-split-wrap" style="display:none;">
+        <div class="split-list-col">
+          <div class="split-namelist" id="scaleup-split-namelist"></div>
         </div>
-        <div class="rowlist" id="scaleup-rowlist"></div>
+        <div class="split-form-col" id="scaleup-split-form-col">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <button class="icon-btn" onclick="exitScaleUpDetail()" aria-label="Kembali ke daftar Scale Up">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="avatar" id="scaleup-detail-avatar"></div>
+            <div style="min-width:0; flex:1;">
+              <div class="title" id="scaleup-detail-company" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</div>
+              <div class="subtitle" id="scaleup-detail-pic"></div>
+            </div>
+            <span id="scaleup-detail-status-wrap"></span>
+          </div>
+          <div class="footnote" style="margin:-6px 0 12px;">Cuma data Scale Up lead ini yang ditampilin di sini. Mau lihat/edit data lengkap lead-nya (produk, chat log, riwayat follow-up, dst)? <a href="javascript:void(0)" onclick="openLeadForm(currentEditId)" style="color:var(--accent); font-weight:600; text-decoration:underline; cursor:pointer;">Buka detail lengkap lead</a>.</div>
+          <!-- panel #scaleup-panel-wrap dipindah ke sini pas dibuka (JS) -->
+        </div>
       </div>
     </div>
 
@@ -1290,7 +1314,7 @@ function leadOwnerLabel(l){
   return owner ? (l.admin+' ('+roleLabelOf(owner.role)+')') : l.admin;
 }
 
-function leadRowHTML(l, showNote, selectable, idx){
+function leadRowHTML(l, showNote, selectable, idx, clickFn){
   const sub = [l.city, l.phone].filter(Boolean).join(' &middot; ') || 'Belum ada lokasi';
   const isJust = l.id === lastViewedId;
   const isJustAdd = isJust && lastActionWasAdd;
@@ -1304,7 +1328,7 @@ function leadRowHTML(l, showNote, selectable, idx){
   const entryColHTML = currentFilter==='has-product'
     ? '<span class="lead-omzet-value">'+formatRupiah(leadTotalPenawaran(l))+'</span>'
     : fmtDate(l.entryDate)+(entryTime ? '<br><span class="lead-entrytime">'+entryTime+'</span>' : '');
-  return `<div class="lead-row${selectable ? ' selectable' : ''}${isJustView ? ' just-viewed' : ''}${isJustAdd ? ' just-added' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
+  return `<div class="lead-row${selectable ? ' selectable' : ''}${isJustView ? ' just-viewed' : ''}${isJustAdd ? ' just-added' : ''}" id="lead-row-${l.id}" onclick="${clickFn||'openLeadForm'}(${l.id})">
     ${selectCell}
     <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
     <div class="lead-info">
@@ -1678,6 +1702,11 @@ function exitSplitMode(){
   const fuList = document.getElementById('followup-list-panel');
   if(fuWrap) fuWrap.style.display = 'none';
   if(fuList) fuList.style.display = 'block';
+  const suWrap = document.getElementById('scaleup-split-wrap');
+  const suList = document.getElementById('scaleup-fulllist-wrap');
+  if(suWrap) suWrap.style.display = 'none';
+  if(suList) suList.style.display = 'block';
+  placeScaleUpPanel('home');
 }
 
 function refreshLeadsListing(){
@@ -4723,8 +4752,75 @@ function renderScaleUpView(){
   const sorted = scoped.slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
   const rowlist = document.getElementById('scaleup-rowlist');
   if(rowlist){
-    rowlist.innerHTML = sorted.length ? sorted.map(l=>leadRowHTML(l,true)).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang diisi item Scale Up.</div>';
+    rowlist.innerHTML = sorted.length ? sorted.map(l=>leadRowHTML(l,true,false,undefined,'openScaleUpDetail')).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang diisi item Scale Up.</div>';
   }
+  const splitWrap = document.getElementById('scaleup-split-wrap');
+  if(splitWrap && splitWrap.style.display !== 'none') renderScaleUpSplitNameList();
+}
+
+// Pindahin panel #scaleup-panel-wrap antara "rumah" aslinya (di dalam form
+// lengkap edit lead) dan slot di split-view Scale Up -- node DOM-nya sama
+// persis, cuma dipindah-pindah posisinya (bukan diduplikat), biar fungsi
+// tambah/edit/hapus item Scale Up yang udah ada (addScaleUpLine dkk, yang
+// baca elemen lewat id tetap kayak f-scaleup-name) tetap jalan di mana pun
+// panel ini lagi ditaro.
+function placeScaleUpPanel(targetId){
+  const panel = document.getElementById('scaleup-panel-wrap');
+  if(!panel) return;
+  if(targetId==='home'){
+    const anchor = document.getElementById('scaleup-panel-home-anchor');
+    if(anchor) anchor.insertAdjacentElement('afterend', panel);
+    return;
+  }
+  const target = document.getElementById(targetId);
+  if(target) target.appendChild(panel);
+}
+
+// Daftar lead yang muncul di kolom kiri split-view Scale Up -- sama kayak
+// daftar utamanya (cuma yang udah ada item Scale Up), diurut sama.
+function renderScaleUpSplitNameList(){
+  const scoped = leads.filter(l => (l.scaleUp||[]).length > 0).slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
+  document.getElementById('scaleup-split-namelist').innerHTML = scoped.length ? scoped.map(l=>{
+    const isActive = l.id === currentEditId;
+    return `<div class="split-name-item${isActive?' active':''}" onclick="openScaleUpDetail(${l.id})">
+      <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
+      <span class="sn-name">${l.company}</span>
+      <span class="split-status-dot" style="background:var(--${l.status})"></span>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="padding:10px;">Belum ada lead Scale Up</div>';
+}
+
+function enterScaleUpSplitMode(){
+  document.getElementById('scaleup-fulllist-wrap').style.display = 'none';
+  document.getElementById('scaleup-split-wrap').style.display = 'grid';
+  placeScaleUpPanel('scaleup-split-form-col');
+}
+
+// Buka detail KHUSUS Scale Up satu lead -- TETAP di menu Scale Up (gak
+// pindah ke menu Leads kayak openLeadForm biasa), dan cuma nampilin data
+// yang relevan buat Scale Up (nama perusahaan, PIC, status, item Scale
+// Up-nya) -- bukan seluruh form lead (produk, chat log, dst).
+function openScaleUpDetail(id){
+  const l = leads.find(x=>x.id===id);
+  if(!l) return;
+  currentEditId = id;
+  document.getElementById('scaleup-detail-avatar').style.background = avatarColor(l.company);
+  document.getElementById('scaleup-detail-avatar').textContent = initials(l.company);
+  document.getElementById('scaleup-detail-company').textContent = l.company || '-';
+  document.getElementById('scaleup-detail-pic').textContent = l.pic ? ('PIC: '+l.pic) : 'Belum ada PIC';
+  document.getElementById('scaleup-detail-status-wrap').innerHTML = badge(l.status);
+  cancelEditScaleUp();
+  renderScaleUpList(l);
+  enterScaleUpSplitMode();
+  renderScaleUpSplitNameList();
+}
+
+// Balik dari detail ke daftar Scale Up (tetap di menu Scale Up).
+function exitScaleUpDetail(){
+  document.getElementById('scaleup-split-wrap').style.display = 'none';
+  document.getElementById('scaleup-fulllist-wrap').style.display = 'block';
+  placeScaleUpPanel('home');
+  renderScaleUpView();
 }
 
 function openLeadForm(id, force){
