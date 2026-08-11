@@ -105,6 +105,13 @@
       Ajukan Admin Baru
     </div>
 
+    <div id="nav-develop-section" style="display:none;">
+      <div class="nav-label">Develop</div>
+      <div class="navtree">
+        <div class="navsub" data-view="scaleup" onclick="switchView('scaleup')">Scale Up</div>
+      </div>
+    </div>
+
     <div class="sidebar-foot">
       <div class="user-chip" id="sidebar-user-chip"></div>
     </div>
@@ -400,6 +407,22 @@
               <div class="footnote">Harga penawaran jadi basis rencana omzet. Realisasi omzet jadi omzet closing beneran di Overview -- sisa realisasinya (penawaran dikurangi realisasi) dihitung otomatis. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
             </div>
 
+            <div class="panel" id="scaleup-panel-wrap">
+              <div class="panel-title">Scale Up <span class="opt-pill">Opsional</span></div>
+              <div class="row3" id="scaleup-form-row3">
+                <div class="field"><label>Nama item <span class="opt-pill">Opsional</span></label><input type="text" id="f-scaleup-name" placeholder="Ketik nama sendiri..."></div>
+                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-scaleup-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this); updateScaleUpSisaDisplay();"></div>
+                <div class="field"><label>Realisasi omzet (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-scaleup-realisasi" placeholder="Isi kalau udah ada uang masuk" oninput="handleRupiahInputFormat(this); updateScaleUpSisaDisplay();"></div>
+              </div>
+              <div id="scaleup-piutang-display" style="font-size:12.5px; margin-top:2px; min-height:16px;"></div>
+              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
+                <button id="btn-scaleup-cancel" onclick="cancelEditScaleUp()" style="display:none;">Batal edit</button>
+                <button class="primary" id="btn-scaleup-submit" onclick="addScaleUpLine()">+ Tambah Scale Up</button>
+              </div>
+              <div class="product-list" id="scaleup-list" style="margin-top:8px;"></div>
+              <div class="footnote">Beda sama "Produk &amp; penawaran" di atas -- nama itemnya bebas kamu ketik sendiri (bukan pilihan tetap), maksimal 5 item per lead. Bagian dari modul Scale Up Project yang lagi diuji coba (menu "Develop", khusus Master Admin).</div>
+            </div>
+
             <div class="panel">
               <div class="panel-title">Laporan follow up <span class="opt-pill">Opsional</span></div>
               <div class="field"><label>Sumber percakapan <span class="opt-pill">Opsional</span></label>
@@ -545,6 +568,23 @@
         </div>
       </div>
       <div id="compare-result-wrap"></div>
+    </div>
+
+    <!-- SCALE UP PROJECT (modul uji coba, khusus Master Admin -- lihat SCALE_UP_ENABLED) -->
+    <div class="view" id="view-scaleup">
+      <div class="topbar">
+        <div>
+          <div class="title">Scale Up Project</div>
+          <div class="subtitle">Cuma nampilin lead yang udah diisi minimal 1 item Scale Up -- masih tahap uji coba</div>
+        </div>
+      </div>
+      <div class="kpis" id="scaleup-kpi-row"></div>
+      <div class="panel" style="margin-top:14px;">
+        <div class="rowlist-header">
+          <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+        </div>
+        <div class="rowlist" id="scaleup-rowlist"></div>
+      </div>
     </div>
 
     <!-- MONITORING USER -->
@@ -972,6 +1012,13 @@ function dbRowToLead(row, followUpHistory){
       // ambil dari situ biar angka lama gak ilang pas dibuka ulang.
       realisasiOmzet: (p.realisasiOmzet !== undefined ? (p.realisasiOmzet || 0) : (p.hargaDeal || 0))
     })),
+    // Item modul "Scale Up Project" (uji coba, lihat SCALE_UP_ENABLED) --
+    // polanya sama kayak products, cuma name-nya bebas diketik manual.
+    scaleUp: (row.scale_up || []).map(s=>({
+      id: s.id, name: s.name || '',
+      hargaPenawaran: s.hargaPenawaran || 0,
+      realisasiOmzet: s.realisasiOmzet || 0
+    })),
     // Riwayat follow-up sekarang datang dari tabel follow_ups sendiri
     // (di-fetch terpisah, lihat fetchFollowUpsByLeadMap), bukan dari
     // kolom leads.history lagi -- kolom itu dibiarin apa adanya di
@@ -998,7 +1045,8 @@ function leadToDbRow(data){
     admin: data.admin || null,
     entry_date: data.entryDate ? data.entryDate : null,
     chat_log: data.chatLog || null,
-    products: data.products || []
+    products: data.products || [],
+    scale_up: data.scaleUp || []
     // history sengaja gak ada di sini lagi -- catatan follow-up sekarang
     // ditulis ke tabel follow_ups sendiri lewat insertFollowUpNote().
   };
@@ -1073,6 +1121,17 @@ let lastActionWasAdd = false;
 let originView = "leads";
 let toastTimer = null;
 let editingProductId = null;
+
+// ============================================================
+// SAKELAR MODUL "SCALE UP PROJECT" -- masih tahap uji coba.
+// Ganti jadi `false` buat matiin fitur ini sepenuhnya (menu Develop,
+// panel Scale Up di form lead, halaman Scale Up) tanpa perlu hapus
+// kode apa-apa -- upload ulang index.html abis ganti nilai ini aja
+// cukup. Balikin ke `true` buat nyalain lagi kapan pun.
+// ============================================================
+const SCALE_UP_ENABLED = true;
+let editingScaleUpId = null;
+
 let formDirty = false;
 let pendingLeaveAction = null;
 let calendarYear = new Date().getFullYear();
@@ -1326,7 +1385,7 @@ const MOBILE_VIEW_TITLES = {
   overview:'Overview', dashboard:'Dashboard', leads:'Daftar Leads', followup:'Rencana Follow Up',
   activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
   monitoring:'Monitoring User', structure:'Struktur Organisasi', 'request-admin':'Ajukan Admin Baru',
-  'admin-approval':'Approval Admin Baru'
+  'admin-approval':'Approval Admin Baru', scaleup:'Scale Up'
 };
 
 function switchView(view, force){
@@ -1357,6 +1416,7 @@ function switchView(view, force){
   if(view==='request-admin') renderRequestAdminView();
   if(view==='admin-approval') renderAdminApprovalView();
   if(view==='quota-approval') renderQuotaApprovalView();
+  if(view==='scaleup') renderScaleUpView();
   sendHeartbeat(false);
 }
 
@@ -3011,7 +3071,7 @@ function initIdleAutoLogout(){
 const VIEW_LABELS = {
   overview:'Overview', leads:'Leads', followup:'Rencana follow up',
   activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
-  monitoring:'Monitoring User', structure:'Struktur Organisasi'
+  monitoring:'Monitoring User', structure:'Struktur Organisasi', scaleup:'Scale Up'
 };
 function getCurrentViewLabel(){
   const activeEl = document.querySelector('.view.active');
@@ -3299,6 +3359,17 @@ function applyRoleRestrictions(){
   if(!canManageUsers && document.getElementById('view-admin-approval') && document.getElementById('view-admin-approval').classList.contains('active')) switchView('overview', true);
   if(canManageUsers) refreshAdminApprovalCount();
   if(canManageUsers) refreshQuotaApprovalCount();
+
+  // Modul "Scale Up Project" (uji coba) -- menu "Develop" cuma boleh
+  // kelihatan buat Master Admin, dan cuma kalau SCALE_UP_ENABLED masih
+  // nyala. Kalau salah satu syarat gak kepenuhin, nendang balik ke
+  // Overview kalau kebetulan lagi buka halamannya.
+  const developSection = document.getElementById('nav-develop-section');
+  const showDevelop = isMaster && SCALE_UP_ENABLED;
+  if(developSection) developSection.style.display = showDevelop ? '' : 'none';
+  if(!showDevelop && document.getElementById('view-scaleup') && document.getElementById('view-scaleup').classList.contains('active')) switchView('overview', true);
+  const scaleUpPanel = document.getElementById('scaleup-panel-wrap');
+  if(scaleUpPanel) scaleUpPanel.style.display = SCALE_UP_ENABLED ? '' : 'none';
 }
 
 function getFocusableUserList(){
@@ -4476,6 +4547,186 @@ function removeProductLine(productId){
   renderProductList(l);
 }
 
+// ============================================================
+// MODUL "SCALE UP PROJECT" (uji coba) -- polanya sengaja dibikin
+// mirip persis fungsi produk di atas, cuma nama itemnya bebas
+// diketik manual (bukan dropdown tetap) dan capnya 5 bukan 2.
+// Semua fungsi ini aman dipanggil biarpun SCALE_UP_ENABLED=false --
+// yang beneran nyembunyiin fitur ini dari user itu applyRoleRestrictions()
+// (nav Develop) dan initScaleUpFeatureFlag() (panel di form lead).
+// ============================================================
+function renderScaleUpList(l){
+  const items = l.scaleUp || [];
+  const listEl = document.getElementById('scaleup-list');
+  if(!listEl) return;
+  listEl.innerHTML = items.length ? items.map(p=>{
+    const realisasiVal = p.realisasiOmzet ? '<span class="val deal">'+formatRupiah(p.realisasiOmzet)+'</span>' : '<span class="val empty">Belum ada realisasi</span>';
+    const piutang = Math.max(0, (p.hargaPenawaran||0) - (p.realisasiOmzet||0));
+    let statusBadge = '';
+    if(p.realisasiOmzet>0 && piutang<=0){
+      statusBadge = ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>';
+    } else if(piutang>0 && p.realisasiOmzet>0){
+      statusBadge = ' <span style="background:var(--warm-bg); color:var(--warm); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">Sisa realisasi '+formatRupiah(piutang)+'</span>';
+    }
+    return `<div class="product-item">
+      <span class="product-badge" style="background:var(--accent-soft); color:var(--accent-text);">${p.name||'-'}</span>
+      <div class="product-info">
+        <span class="product-price"><span class="lbl">Penawaran</span><span class="val">${formatRupiah(p.hargaPenawaran)}</span></span>
+        <span class="product-price"><span class="lbl">Realisasi</span>${realisasiVal}${statusBadge}</span>
+      </div>
+      <button class="product-edit" onclick="editScaleUpLine(${p.id})" aria-label="Edit item Scale Up">&#9998;</button>
+      <button class="product-remove" onclick="removeScaleUpLine(${p.id})" aria-label="Hapus item Scale Up">&times;</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Belum ada item Scale Up ditambahkan.</div>';
+}
+
+function resetScaleUpSubmitButton(){
+  const btn = document.getElementById('btn-scaleup-submit');
+  const cancelBtn = document.getElementById('btn-scaleup-cancel');
+  if(btn) btn.textContent = '+ Tambah Scale Up';
+  if(cancelBtn) cancelBtn.style.display = 'none';
+}
+
+function cancelEditScaleUp(){
+  editingScaleUpId = null;
+  resetScaleUpSubmitButton();
+  const nameEl = document.getElementById('f-scaleup-name');
+  const penawaranEl = document.getElementById('f-scaleup-penawaran');
+  const realisasiEl = document.getElementById('f-scaleup-realisasi');
+  if(nameEl) nameEl.value = '';
+  if(penawaranEl) penawaranEl.value = '';
+  if(realisasiEl) realisasiEl.value = '';
+  updateScaleUpSisaDisplay();
+  const row3 = document.getElementById('scaleup-form-row3');
+  if(row3) row3.classList.remove('editing-active');
+}
+
+function updateScaleUpSisaDisplay(){
+  const el = document.getElementById('scaleup-piutang-display');
+  if(!el) return;
+  const penawaranEl = document.getElementById('f-scaleup-penawaran');
+  const realisasiEl = document.getElementById('f-scaleup-realisasi');
+  if(!penawaranEl || !realisasiEl) return;
+  const penawaran = unformatNumberInput(penawaranEl.value);
+  const realisasi = unformatNumberInput(realisasiEl.value);
+  if(!realisasi){ el.textContent = ''; return; }
+  const piutang = Math.max(0, penawaran - realisasi);
+  if(piutang>0){
+    el.textContent = 'Sisa realisasi: '+formatRupiah(piutang);
+    el.style.color = 'var(--warm)';
+  } else {
+    el.textContent = 'Lunas (sisa realisasi Rp0)';
+    el.style.color = 'var(--success)';
+  }
+}
+
+function editScaleUpLine(itemId){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  const p = (l.scaleUp||[]).find(x=>x.id===itemId);
+  if(!p) return;
+  document.getElementById('f-scaleup-name').value = p.name;
+  document.getElementById('f-scaleup-penawaran').value = formatNumberInputValue(p.hargaPenawaran);
+  document.getElementById('f-scaleup-realisasi').value = formatNumberInputValue(p.realisasiOmzet);
+  updateScaleUpSisaDisplay();
+  editingScaleUpId = itemId;
+  document.getElementById('btn-scaleup-submit').textContent = 'Update Scale Up';
+  document.getElementById('btn-scaleup-cancel').style.display = 'inline-block';
+  document.getElementById('scaleup-form-row3').classList.add('editing-active');
+}
+
+function addScaleUpLine(){
+  if(currentEditId===null){
+    alert('Lead ini belum tersimpan. Simpan lead dulu, baru bisa nambah item Scale Up.');
+    return;
+  }
+  const name = document.getElementById('f-scaleup-name').value.trim();
+  const penawaran = unformatNumberInput(document.getElementById('f-scaleup-penawaran').value);
+  const realisasi = unformatNumberInput(document.getElementById('f-scaleup-realisasi').value);
+  if(!name){
+    alert('Isi nama item Scale Up dulu.');
+    return;
+  }
+  if(!penawaran){
+    alert('Isi harga penawaran dulu.');
+    return;
+  }
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l){
+    alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Silakan kembali ke daftar dan buka ulang.');
+    return;
+  }
+  if(!l.scaleUp) l.scaleUp = [];
+  if(editingScaleUpId===null && l.scaleUp.length >= 5){
+    showToast('Maksimal 5 item Scale Up per lead. Hapus salah satu dulu kalau mau ganti.');
+    return;
+  }
+  if(editingScaleUpId !== null){
+    const p = l.scaleUp.find(x=>x.id===editingScaleUpId);
+    if(p){
+      p.name = name;
+      p.hargaPenawaran = penawaran;
+      p.realisasiOmzet = realisasi;
+    }
+    editingScaleUpId = null;
+    resetScaleUpSubmitButton();
+    document.getElementById('scaleup-form-row3').classList.remove('editing-active');
+    logActivity(l, 'Update item Scale Up "'+name+'"');
+    showToast('Item Scale Up diupdate');
+  } else {
+    l.scaleUp.push({id: Date.now(), name, hargaPenawaran: penawaran, realisasiOmzet: realisasi});
+    logActivity(l, 'Menambahkan item Scale Up "'+name+'" - penawaran '+formatRupiah(penawaran));
+    showToast('Item Scale Up ditambahkan');
+  }
+  document.getElementById('f-scaleup-name').value = '';
+  document.getElementById('f-scaleup-penawaran').value = '';
+  document.getElementById('f-scaleup-realisasi').value = '';
+  updateScaleUpSisaDisplay();
+  persistLeadFields(l, {scale_up: l.scaleUp});
+  renderScaleUpList(l);
+}
+
+function removeScaleUpLine(itemId){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  if(!confirm('Anda mau hapus item Scale Up ini?')) return;
+  const removed = (l.scaleUp||[]).find(p=>p.id===itemId);
+  l.scaleUp = (l.scaleUp||[]).filter(p=>p.id!==itemId);
+  if(editingScaleUpId === itemId) cancelEditScaleUp();
+  if(removed) logActivity(l, 'Menghapus item Scale Up "'+removed.name+'"');
+  persistLeadFields(l, {scale_up: l.scaleUp});
+  renderScaleUpList(l);
+}
+
+function renderScaleUpView(){
+  const scoped = leads.filter(l => (l.scaleUp||[]).length > 0);
+  const totalPenawaran = scoped.reduce((sum,l)=> sum + l.scaleUp.reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+  const totalRealisasi = scoped.reduce((sum,l)=> sum + l.scaleUp.reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  const hotCount = scoped.filter(l=>l.status==='hot').length;
+  const kpiRow = document.getElementById('scaleup-kpi-row');
+  if(kpiRow){
+    kpiRow.innerHTML = `
+      <div class="card">
+        <div class="label">Rencana omzet Scale Up</div><div class="value" style="font-size:18px;">${formatRupiah(totalPenawaran)}</div>
+      </div>
+      <div class="card">
+        <div class="label">Jumlah lead Scale Up</div><div class="value">${scoped.length}</div>
+      </div>
+      <div class="card">
+        <div class="label">Hot lead Scale Up</div><div class="value">${hotCount}</div>
+      </div>
+      <div class="card">
+        <div class="label">Realisasi Omzet Scale Up</div><div class="value" style="font-size:18px;">${formatRupiah(totalRealisasi)}</div>
+      </div>
+    `;
+  }
+  const sorted = scoped.slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
+  const rowlist = document.getElementById('scaleup-rowlist');
+  if(rowlist){
+    rowlist.innerHTML = sorted.length ? sorted.map(l=>leadRowHTML(l,true)).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang diisi item Scale Up.</div>';
+  }
+}
+
 function openLeadForm(id, force){
   if(!force && formDirty && isEditingContext()){
     guardLeave(()=>openLeadForm(id, true));
@@ -4524,9 +4775,11 @@ function openLeadForm(id, force){
   document.getElementById('f-product-realisasi').value = '';
   updateSisaRealisasiDisplay();
   document.getElementById('product-form-row3').classList.remove('editing-active');
+  cancelEditScaleUp();
 
   renderHistory(l);
   renderProductList(l);
+  renderScaleUpList(l);
   formDirty = false;
 
   if(originView === 'followup'){
