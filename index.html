@@ -551,7 +551,7 @@
           <tbody id="users-table-body"></tbody>
         </table>
       </div>
-      <div class="dash-hint" style="margin-top:10px;">Ini masih simulasi tampilan (data reset kalau halaman di-refresh). Login beneran per-user baru aktif begitu masuk Supabase Auth.</div>
+      <div class="dash-hint" style="margin-top:10px;">Edit, Ganti password, Nonaktifkan, dan Hapus di sini semuanya beneran nyimpen ke server (bukan simulasi tampilan lagi) -- termasuk "Hapus" yang sifatnya PERMANEN, akun login-nya gak bisa dipake lagi dan gak bisa dibatalkan.</div>
     </div>
 
     <!-- PERBANDINGAN KINERJA -->
@@ -760,6 +760,25 @@
     <div class="modal-actions">
       <button class="primary" onclick="submitUserForm()">Simpan</button>
       <button onclick="closeUserForm()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="password-reset-modal">
+  <div class="modal-card">
+    <div class="modal-title">Ganti password</div>
+    <div class="modal-sub" id="pr-user-label" style="margin-bottom:10px;"></div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin:4px 0 14px;">
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Password baru (min. 6 karakter)</label>
+        <input type="text" id="pr-password" placeholder="Password login baru" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        <div class="footnote" style="margin-top:6px;">Password langsung aktif begitu disimpan. Kabarin ke orangnya sendiri secara langsung (bukan lewat email otomatis) -- sama kayak alur tambah user baru.</div>
+      </div>
+      <div id="pr-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitPasswordReset()">Simpan password baru</button>
+      <button onclick="closePasswordResetModal()">Batal</button>
     </div>
   </div>
 </div>
@@ -2969,6 +2988,7 @@ async function rejectQuotaRequest(id){
 let currentUser = null;
 let currentUserProfile = null;
 let editingUserId = null;
+let resettingPasswordUserId = null;
 
 const SUPABASE_URL = 'https://hnwgpwkkpqdblrofjrvh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_T_gwqYbB-v1mlP_IIlKTfw_gwohJH6L';
@@ -3833,6 +3853,7 @@ function renderUsersView(){
     const isSelfRow = !!(currentUser && currentUser.name===u.name && currentUser.role===u.role);
     const canEdit = viewerIsMaster || (viewerIsSuperAdmin && (u.role==='sales' || u.role==='supervisor'));
     const canToggleDelete = canEdit && !isMaster && !isSelfRow;
+    const canResetPassword = canEdit && !isSelfRow;
     const roleLabel = roleLabelOf(u.role);
     const statusLabel = u.status==='active' ? 'Aktif' : 'Nonaktif';
     const toggleLabel = u.status==='active' ? 'Nonaktifkan' : 'Aktifkan';
@@ -3849,6 +3870,7 @@ function renderUsersView(){
       '<td><span class="status-badge-user '+(u.status==='active'?'active':'nonaktif')+'">'+statusLabel+'</span></td>'+
       '<td>'+
         '<span class="user-action-link '+(canEdit?'':'disabled')+'" onclick="openUserForm(\''+u.id+'\')">Edit</span>'+
+        '<span class="user-action-link '+(canResetPassword?'':'disabled')+'" onclick="openPasswordResetModal(\''+u.id+'\')">Ganti password</span>'+
         '<span class="user-action-link '+(canToggleDelete?'':'disabled')+'" onclick="toggleUserStatus(\''+u.id+'\')">'+toggleLabel+'</span>'+
         '<span class="user-action-link danger '+(canToggleDelete?'':'disabled')+'" onclick="deleteUserAccount(\''+u.id+'\')">Hapus</span>'+
       '</td>'+
@@ -4212,7 +4234,58 @@ async function submitUserForm(){
   showToast('User ditambahkan, akun login sudah aktif');
 }
 
-function toggleUserStatus(id){
+function openPasswordResetModal(id){
+  const u = userAccounts.find(x=>x.id===id);
+  if(!u) return;
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const viewerIsSuperAdmin = !!(currentUser && currentUser.role==='super_admin');
+  const canEdit = viewerIsMaster || (viewerIsSuperAdmin && (u.role==='sales' || u.role==='supervisor'));
+  if(!canEdit){ showToast('Gak punya akses buat ganti password user ini'); return; }
+  resettingPasswordUserId = id;
+  document.getElementById('pr-user-label').textContent = 'Buat akun: '+u.name+' ('+(u.email||'-')+')';
+  document.getElementById('pr-password').value = '';
+  const errorEl = document.getElementById('pr-error');
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+  document.getElementById('password-reset-modal').style.display = 'flex';
+}
+
+function closePasswordResetModal(){
+  document.getElementById('password-reset-modal').style.display = 'none';
+  resettingPasswordUserId = null;
+}
+
+async function submitPasswordReset(){
+  const errorEl = document.getElementById('pr-error');
+  errorEl.style.display = 'none';
+  const u = userAccounts.find(x=>x.id===resettingPasswordUserId);
+  if(!u){ closePasswordResetModal(); return; }
+  const password = document.getElementById('pr-password').value;
+  if(!password || password.length < 6){
+    errorEl.textContent = 'Password wajib diisi, minimal 6 karakter.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  const submitBtn = document.querySelector('#password-reset-modal .modal-actions .primary');
+  if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+
+  const { data, error } = await supabaseClient.functions.invoke('reset-user-password', {
+    body: { userId: u.id, newPassword: password }
+  });
+
+  if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan password baru'; }
+
+  if(error || !data || data.error){
+    errorEl.textContent = 'Gagal ganti password: ' + (error ? error.message : (data && data.error));
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  closePasswordResetModal();
+  showToast('Password '+u.name+' udah diganti');
+}
+
+async function toggleUserStatus(id){
   const u = userAccounts.find(x=>x.id===id);
   if(!u) return;
   const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
@@ -4222,15 +4295,19 @@ function toggleUserStatus(id){
     showToast('Tidak bisa menonaktifkan diri sendiri');
     return;
   }
-  u.status = u.status==='active' ? 'nonaktif' : 'active';
+  const newStatus = u.status==='active' ? 'nonaktif' : 'active';
+  const { error } = await supabaseClient.from('profiles').update({status: newStatus}).eq('id', id);
+  if(error){ showToast('Gagal ubah status: '+error.message); return; }
+  u.status = newStatus;
   syncAdminListFromUsers();
   populateQuickFilterDropdowns();
   renderAdminSelectOptions();
   renderLoginOptions();
   renderUsersView();
+  showToast(newStatus==='active' ? u.name+' diaktifkan lagi' : u.name+' dinonaktifkan -- gak bisa login/akses data lagi');
 }
 
-function deleteUserAccount(id){
+async function deleteUserAccount(id){
   const u = userAccounts.find(x=>x.id===id);
   if(!u) return;
   const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
@@ -4240,14 +4317,19 @@ function deleteUserAccount(id){
     showToast('Tidak bisa menghapus diri sendiri');
     return;
   }
-  if(!confirm('Hapus user "'+u.name+'"? Lead yang sudah ditugaskan ke dia tidak ikut terhapus.')) return;
+  if(!confirm('Hapus user "'+u.name+'"? Akun login-nya PERMANEN gak bisa dipake lagi (gak bisa dibatalkan). Lead yang sudah ditugaskan ke dia tidak ikut terhapus.')) return;
+  const { data, error } = await supabaseClient.functions.invoke('delete-user-account', { body: { userId: id } });
+  if(error || !data || data.error){
+    showToast('Gagal hapus user: ' + (error ? error.message : (data && data.error)));
+    return;
+  }
   userAccounts = userAccounts.filter(x=>x.id!==id);
   syncAdminListFromUsers();
   populateQuickFilterDropdowns();
   renderAdminSelectOptions();
   renderLoginOptions();
   renderUsersView();
-  showToast('User dihapus');
+  showToast('User dihapus permanen');
 }
 
 function renderLeadsList(){
