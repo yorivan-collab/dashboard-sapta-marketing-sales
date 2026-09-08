@@ -71,6 +71,13 @@
   button:hover{background:var(--bg);}
   button.primary{background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 2px 8px rgba(124,92,255,0.35);}
   button.primary:hover{background:#6a4bff;}
+  /* Efek "lagi ditekan" pas tombol "+ Tambah lead" diklik -- murni CSS
+     (pakai :active bawaan browser, nyala PERSIS pas mousedown, ilang PERSIS
+     pas mouseup), jadi bisa dipakai buat ngecek kalau lagi direkam layar:
+     kalau efek ini gak pernah nongol pas diklik, berarti klik-nya emang gak
+     nyampe ke tombol ini sama sekali. */
+  #btn-tambah-lead-quick, #mobile-fab-tambah-lead{transition:background .12s, box-shadow .12s, transform .08s ease, filter .08s ease;}
+  #btn-tambah-lead-quick:active, #mobile-fab-tambah-lead:active{transform:scale(0.94); filter:brightness(0.85);}
   button.danger-btn{color:var(--hot); border-color:#f4d3dc;}
   button.danger-btn:hover{background:var(--hot-bg);}
 
