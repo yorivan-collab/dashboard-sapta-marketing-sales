@@ -266,7 +266,7 @@
           <button onclick="exportData()">Export data</button>
           <button onclick="document.getElementById('import-file').click()">Import data</button>
           <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
-          <button class="primary" id="btn-tambah-lead-quick" onclick="handleTambahLeadClick(this)">+ Tambah lead</button>
+          <button class="primary" id="btn-tambah-lead-quick" onclick="openQuickLeadModal()">+ Tambah lead</button>
         </div>
       </div>
       <div class="toolbar">
@@ -987,7 +987,7 @@
   </button>
   <div class="mobile-topbar-title" id="mobile-topbar-title">Dashboard</div>
   <div class="mobile-fab-menu" id="mobile-fab-menu">
-    <div class="mobile-fab-item accent" id="mobile-fab-tambah-lead" onclick="handleTambahLeadClick(this); closeMobileFab();">+ Tambah lead</div>
+    <div class="mobile-fab-item accent" id="mobile-fab-tambah-lead" onclick="openQuickLeadModal(); closeMobileFab();">+ Tambah lead</div>
     <div class="mobile-fab-item" onclick="switchView('dashboard'); closeMobileFab();">Dashboard</div>
     <div class="mobile-fab-item" onclick="switchView('overview'); closeMobileFab();">Overview</div>
     <div class="mobile-fab-item" onclick="switchView('followup'); closeMobileFab();">Rencana Follow Up</div>
@@ -1164,7 +1164,6 @@ let lastActionWasAdd = false;
 let originView = "leads";
 let toastTimer = null;
 let editingProductId = null;
-let tambahLeadClickCount = 0;
 
 // ============================================================
 // SAKELAR MODUL "SCALE UP PROJECT" -- masih tahap uji coba.
@@ -5053,27 +5052,6 @@ function toggleQuickLengkapiNanti(force){
   const open = force !== undefined ? force : (body.style.display === 'none');
   body.style.display = open ? 'block' : 'none';
   if(chevron) chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
-}
-
-// Pembungkus tombol "+ Tambah lead" -- KHUSUS buat nyari penyebab bug
-// "kadang harus diklik 3-4 kali baru popup-nya muncul". Fungsi ini kasih
-// efek kedip kuning di tombolnya + catatan waktu di console & toast, PERSIS
-// pas klik-nya beneran nyampe ke browser. Jadi kalau lagi direkam layar,
-// keliatan jelas mana klik yang "kedeteksi" dan mana yang kayaknya nge-klik
-// tapi ternyata gak nyantol -- baru bisa dibedain itu soal browser/device-nya
-// yang telat, atau soal kode-nya yang lambat/nge-block.
-function handleTambahLeadClick(btn){
-  tambahLeadClickCount++;
-  const n = tambahLeadClickCount;
-  const jam = new Date().toLocaleTimeString('id-ID', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3});
-  console.log('[Tambah lead] klik #'+n+' kedeteksi jam '+jam);
-  if(btn){
-    btn.classList.remove('click-detect-flash');
-    void btn.offsetWidth; // paksa reflow biar animasinya bisa ke-restart kalau diklik beruntun cepat
-    btn.classList.add('click-detect-flash');
-  }
-  showToast('Klik #'+n+' kedeteksi jam '+jam);
-  openQuickLeadModal();
 }
 
 function openQuickLeadModal(){
