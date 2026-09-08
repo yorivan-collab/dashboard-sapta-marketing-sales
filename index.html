@@ -3040,7 +3040,11 @@ async function loadProfileAndEnter(userId){
   if(profile.role==='sales'){
     quickFilterAdmin = profile.name;
   } else if(profile.role==='supervisor'){
-    quickFilterAdmin = (profile.team && profile.team.length) ? profile.team.slice() : [];
+    // Scope Supervisor = dirinya SENDIRI + anggota tim -- sebelumnya cuma
+    // masukin tim doang, jadi lead yang dia pegang atas namanya sendiri
+    // ilang dari tampilan Leads/Overview/Dashboard (padahal datanya aman,
+    // cuma kefilter doang).
+    quickFilterAdmin = (profile.team && profile.team.length) ? [...profile.team, profile.name] : [profile.name];
   } else if(profile.role==='master_admin'){
     loadMasterFocusFilterFromStorage();
     applyMasterFocusFilterToQuickFilter();
@@ -3683,7 +3687,7 @@ function populateQuickFilterDropdowns(){
   let adminUsers = userAccounts.filter(u=>u.role!=='master_admin' && u.status==='active');
   if(currentUser && currentUser.role==='supervisor'){
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : [];
-    adminUsers = adminUsers.filter(u=>team.includes(u.name));
+    adminUsers = adminUsers.filter(u=>team.includes(u.name) || u.name===currentUser.name);
   } else if(currentUser && currentUser.role==='sales'){
     adminUsers = adminUsers.filter(u=>u.name===currentUser.name);
   }
@@ -3772,8 +3776,11 @@ function setQuickFilterLocation(val){
 function setQuickFilterAdmin(val){
   if(val==='all' && currentUser && currentUser.role==='supervisor'){
     // Supervisor gak boleh "keluar" dari scope tim-nya lewat filter ini --
-    // pilih "Semua admin" dikembalikan ke daftar tim dia sendiri, bukan ke semua orang.
-    quickFilterAdmin = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
+    // pilih "Semua admin" dikembalikan ke tim dia + dirinya sendiri, bukan
+    // ke semua orang (dan bukan cuma tim doang -- itu bug lama yang bikin
+    // lead atas nama Supervisor sendiri ilang dari tampilan).
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : [];
+    quickFilterAdmin = [...team, currentUserProfile.name];
   } else if(val==='all' && currentUser && currentUser.role==='sales'){
     quickFilterAdmin = currentUser.name;
   } else {
