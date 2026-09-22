@@ -84,6 +84,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="6" rx="1"></rect><rect x="3" y="15" width="6" height="6" rx="1"></rect><rect x="15" y="15" width="6" height="6" rx="1"></rect><path d="M12 9v3M12 12H6v3M12 12h6v3"></path></svg>
       Struktur Organisasi
     </div>
+    <div class="navitem" data-view="campaign" id="nav-campaign-item" onclick="switchView('campaign')" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+      Campaign
+    </div>
     <div id="nav-users-section" style="display:none;">
       <div class="nav-label">Kelola Pengguna</div>
       <div class="navtree">
@@ -357,6 +361,10 @@
                   <select id="f-admin" onchange="handleAdminSelectChange(this)"></select>
                 </div>
               </div>
+              <div class="field" style="margin-top:9px;"><label>Campaign <span class="opt-pill">Opsional</span></label>
+                <select id="f-campaign"></select>
+                <div class="footnote">Tandain kalau lead ini masuk dari campaign tertentu. Lead-nya tetap kehitung normal di semua laporan (Overview/Dashboard/Omzet) -- tanda ini cuma buat nampilin performa campaign itu sendiri di menu Campaign.</div>
+              </div>
             </div>
 
             <div class="panel">
@@ -611,6 +619,49 @@
       </div>
     </div>
 
+    <!-- CAMPAIGN -->
+    <div class="view" id="view-campaign">
+      <div id="campaign-fulllist-wrap">
+        <div class="topbar">
+          <div>
+            <div class="title">Campaign</div>
+            <div class="subtitle">Lead yang ditandain campaign tertentu -- tetap kehitung normal di laporan keseluruhan, cuma dipisah tampilan/KPI-nya di sini.</div>
+          </div>
+          <button class="primary" id="btn-campaign-new" onclick="openCampaignFormModal()" style="display:none;">+ Buat Campaign</button>
+        </div>
+        <div id="campaign-list-wrap"></div>
+      </div>
+
+      <div class="leads-split" id="campaign-split-wrap" style="display:none;">
+        <div class="split-list-col">
+          <div class="split-namelist" id="campaign-split-namelist"></div>
+        </div>
+        <div class="split-form-col" id="campaign-split-form-col">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+            <button class="icon-btn" onclick="exitCampaignDetail()" aria-label="Kembali ke daftar Campaign">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div style="min-width:0; flex:1;">
+              <div class="title" id="campaign-detail-name" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</div>
+              <div class="subtitle" id="campaign-detail-period"></div>
+            </div>
+            <span id="campaign-detail-status-wrap"></span>
+            <button class="icon-btn" id="btn-campaign-edit" onclick="openCampaignFormModal(currentCampaignId)" aria-label="Edit campaign" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+            </button>
+          </div>
+          <div class="footnote" id="campaign-detail-assigned" style="margin:-6px 0 12px;"></div>
+          <div class="kpis" id="campaign-detail-kpis"></div>
+          <div class="panel" style="margin-top:14px;">
+            <div class="rowlist-header">
+              <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+            </div>
+            <div class="rowlist" id="campaign-detail-rowlist"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- MONITORING USER -->
     <div class="view" id="view-monitoring">
       <div class="topbar">
@@ -760,6 +811,46 @@
     <div class="modal-actions">
       <button class="primary" onclick="submitUserForm()">Simpan</button>
       <button onclick="closeUserForm()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="campaign-form-modal">
+  <div class="modal-card" style="max-width:440px;">
+    <div class="modal-title" id="campaign-form-title">Buat Campaign</div>
+    <div class="modal-sub">Lead yang ditandain campaign ini bakal kehitung di KPI campaign, tapi tetap masuk laporan keseluruhan seperti biasa.</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin:4px 0 14px;">
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama campaign</label>
+        <input type="text" id="cf-name" placeholder="Misal: Promo Agustus" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div class="row2">
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Tanggal mulai</label>
+          <input type="date" id="cf-start" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Tanggal selesai</label>
+          <input type="date" id="cf-end" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Status</label>
+        <select id="cf-status" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+          <option value="aktif">Aktif</option>
+          <option value="selesai">Selesai</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Super Admin yang ditunjuk ngawasin <span class="opt-pill">Opsional</span></label>
+        <div id="cf-assigned-checklist" style="display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px 10px;"></div>
+        <div class="footnote">Kosongin semua kalau cuma Master Admin doang yang perlu bisa liat campaign ini.</div>
+      </div>
+      <div id="cf-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitCampaignForm()">Simpan campaign</button>
+      <button onclick="closeCampaignFormModal()">Batal</button>
     </div>
   </div>
 </div>
@@ -1045,6 +1136,7 @@ function dbRowToLead(row, followUpHistory){
     source: row.source || '',
     followUp: row.follow_up || '',
     admin: row.admin || '',
+    campaignId: row.campaign_id || null,
     entryDate: row.entry_date || '',
     chatLog: row.chat_log || '',
     products: (row.products || []).map(p=>({
@@ -1086,6 +1178,7 @@ function leadToDbRow(data){
     source: data.source || null,
     follow_up: data.followUp ? data.followUp : null,
     admin: data.admin || null,
+    campaign_id: data.campaignId || null,
     entry_date: data.entryDate ? data.entryDate : null,
     chat_log: data.chatLog || null,
     products: data.products || [],
@@ -1428,7 +1521,7 @@ const MOBILE_VIEW_TITLES = {
   overview:'Overview', dashboard:'Dashboard', leads:'Daftar Leads', followup:'Rencana Follow Up',
   activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
   monitoring:'Monitoring User', structure:'Struktur Organisasi', 'request-admin':'Ajukan Admin Baru',
-  'admin-approval':'Approval Admin Baru', scaleup:'Scale Up'
+  'admin-approval':'Approval Admin Baru', scaleup:'Scale Up', campaign:'Campaign'
 };
 
 function switchView(view, force){
@@ -1460,6 +1553,7 @@ function switchView(view, force){
   if(view==='admin-approval') renderAdminApprovalView();
   if(view==='quota-approval') renderQuotaApprovalView();
   if(view==='scaleup') renderScaleUpView();
+  if(view==='campaign') renderCampaignListView();
   sendHeartbeat(false);
 }
 
@@ -1726,6 +1820,10 @@ function exitSplitMode(){
   if(suWrap) suWrap.style.display = 'none';
   if(suList) suList.style.display = 'block';
   placeScaleUpPanel('home');
+  const cWrap = document.getElementById('campaign-split-wrap');
+  const cList = document.getElementById('campaign-fulllist-wrap');
+  if(cWrap) cWrap.style.display = 'none';
+  if(cList) cList.style.display = 'block';
 }
 
 function refreshLeadsListing(){
@@ -2846,6 +2944,36 @@ async function fetchQuotaRequests(){
   quotaRequests = data || [];
 }
 
+// ============================================================
+// CAMPAIGN -- lead yang ditandain campaign tertentu tetap "satu universe"
+// sama lead lain (kehitung normal di semua laporan keseluruhan), cuma
+// dikasih tanda tambahan biar performanya bisa dipantau sendiri di sini.
+// ============================================================
+let campaigns = [];
+
+async function fetchCampaignsFromSupabase(){
+  const { data, error } = await supabaseClient.from('campaigns').select('*').order('start_date', {ascending:false});
+  if(error){
+    console.warn('Gagal memuat campaigns:', error.message);
+    return;
+  }
+  campaigns = (data||[]).map(c=>({
+    id: c.id, name: c.name, startDate: c.start_date, endDate: c.end_date,
+    status: c.status, assignedSuperAdmins: c.assigned_super_admins || [], createdBy: c.created_by
+  }));
+}
+
+function canViewCampaign(c){
+  if(!currentUser) return false;
+  if(currentUser.role==='master_admin') return true;
+  if(currentUser.role==='super_admin') return c.assignedSuperAdmins.includes(currentUser.name);
+  return false;
+}
+
+function myVisibleCampaigns(){
+  return campaigns.filter(canViewCampaign);
+}
+
 function followUpApprovedExtraToday(leadId){
   const today = todayIsoStr();
   return quotaRequests.filter(r=> r.type==='follow_up' && r.lead_id===leadId && r.status==='approved' && r.reviewed_at && r.reviewed_at.slice(0,10)===today)
@@ -3053,6 +3181,7 @@ async function loadProfileAndEnter(userId){
   }
   await fetchUserAccountsFromSupabase();
   await fetchQuotaRequests();
+  await fetchCampaignsFromSupabase();
   applyRoleRestrictions();
   document.getElementById('leads-rowlist').innerHTML = '<div class="empty-note" style="text-align:center; padding:30px;">Memuat data lead dari server...</div>';
   await fetchLeadsFromSupabase();
@@ -3124,7 +3253,7 @@ function initIdleAutoLogout(){
 const VIEW_LABELS = {
   overview:'Overview', leads:'Leads', followup:'Rencana follow up',
   activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
-  monitoring:'Monitoring User', structure:'Struktur Organisasi', scaleup:'Scale Up'
+  monitoring:'Monitoring User', structure:'Struktur Organisasi', scaleup:'Scale Up', campaign:'Campaign'
 };
 function getCurrentViewLabel(){
   const activeEl = document.querySelector('.view.active');
@@ -3423,6 +3552,15 @@ function applyRoleRestrictions(){
   if(!showDevelop && document.getElementById('view-scaleup') && document.getElementById('view-scaleup').classList.contains('active')) switchView('overview', true);
   const scaleUpPanel = document.getElementById('scaleup-panel-wrap');
   if(scaleUpPanel) scaleUpPanel.style.display = SCALE_UP_ENABLED ? '' : 'none';
+
+  // Menu Campaign: Master Admin selalu liat, Super Admin cuma kalau dia
+  // ditunjuk di minimal satu campaign.
+  const canSeeCampaignMenu = isMaster || (currentUser && currentUser.role==='super_admin' && myVisibleCampaigns().length>0);
+  const campaignNav = document.getElementById('nav-campaign-item');
+  if(campaignNav) campaignNav.style.display = canSeeCampaignMenu ? '' : 'none';
+  const campaignNewBtn = document.getElementById('btn-campaign-new');
+  if(campaignNewBtn) campaignNewBtn.style.display = isMaster ? '' : 'none';
+  if(!canSeeCampaignMenu && document.getElementById('view-campaign') && document.getElementById('view-campaign').classList.contains('active')) switchView('overview', true);
 }
 
 function getFocusableUserList(){
@@ -4912,6 +5050,181 @@ function exitScaleUpDetail(){
   renderScaleUpView();
 }
 
+// ============================================================
+// CAMPAIGN -- daftar campaign + detail per-campaign (KPI + lead yang
+// ditandain). Lead-nya sendiri TETAP kehitung normal di semua laporan
+// keseluruhan (Overview/Dashboard/performa admin) -- di sini cuma dilihat
+// dari sudut pandang campaign-nya doang.
+// ============================================================
+let currentCampaignId = null;
+
+function campaignStatusBadgeHTML(status){
+  const isAktif = status==='aktif';
+  return '<span style="display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; background:'+(isAktif?'var(--success-bg)':'var(--border-soft)')+'; color:'+(isAktif?'var(--success)':'var(--muted)')+';">'+(isAktif?'Aktif':'Selesai')+'</span>';
+}
+
+function campaignLeadsOf(campaignId){
+  return leads.filter(l=>l.campaignId===campaignId);
+}
+
+function campaignKPI(campaignId){
+  const scoped = campaignLeadsOf(campaignId);
+  const total = scoped.length;
+  const cold = scoped.filter(l=>l.status==='cold').length;
+  const warm = scoped.filter(l=>l.status==='warm').length;
+  const hot = scoped.filter(l=>l.status==='hot').length;
+  const closingCount = scoped.filter(hasDealProduct).length;
+  const closingRate = total ? Math.round((closingCount/total)*100) : 0;
+  const omzet = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  return {total, cold, warm, hot, closingCount, closingRate, omzet};
+}
+
+function renderCampaignListView(){
+  const wrap = document.getElementById('campaign-list-wrap');
+  if(!wrap) return;
+  const visible = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+  if(!visible.length){
+    wrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada campaign'+(currentUser && currentUser.role==='super_admin' ? ' yang ditunjuk ke kamu' : '')+'.</div>';
+    return;
+  }
+  wrap.innerHTML = visible.map(c=>{
+    const k = campaignKPI(c.id);
+    return `<div class="card" style="cursor:pointer; margin-bottom:10px;" onclick="openCampaignDetail(${c.id})">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14.5px; font-weight:700; color:var(--text);">${c.name}</div>
+          <div class="footnote" style="margin-top:2px;">${fmtDate(c.startDate)} - ${fmtDate(c.endDate)}</div>
+        </div>
+        ${campaignStatusBadgeHTML(c.status)}
+      </div>
+      <div style="display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--text-2);">
+        <span><b style="color:var(--text);">${k.total}</b> lead</span>
+        <span><b style="color:var(--text);">${k.closingRate}%</b> closing rate</span>
+        <span><b style="color:var(--accent-text);">${formatRupiah(k.omzet)}</b> omzet</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCampaignSplitNameList(){
+  const visible = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+  document.getElementById('campaign-split-namelist').innerHTML = visible.length ? visible.map(c=>{
+    const isActive = c.id === currentCampaignId;
+    return `<div class="split-name-item${isActive?' active':''}" onclick="openCampaignDetail(${c.id})">
+      <span class="sn-name">${c.name}</span>
+      <span class="split-status-dot" style="background:${c.status==='aktif'?'var(--success)':'var(--muted)'}"></span>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="padding:10px;">Belum ada campaign</div>';
+}
+
+function openCampaignDetail(id){
+  const c = campaigns.find(x=>x.id===id);
+  if(!c || !canViewCampaign(c)) return;
+  currentCampaignId = id;
+  document.getElementById('campaign-detail-name').textContent = c.name;
+  document.getElementById('campaign-detail-period').textContent = fmtDate(c.startDate)+' - '+fmtDate(c.endDate);
+  document.getElementById('campaign-detail-status-wrap').innerHTML = campaignStatusBadgeHTML(c.status);
+  document.getElementById('campaign-detail-assigned').textContent = c.assignedSuperAdmins.length ? ('Super Admin ditunjuk: '+c.assignedSuperAdmins.join(', ')) : 'Belum ada Super Admin yang ditunjuk -- cuma Master Admin yang bisa liat ini.';
+  const isMaster = !!(currentUser && currentUser.role==='master_admin');
+  const editBtn = document.getElementById('btn-campaign-edit');
+  if(editBtn) editBtn.style.display = isMaster ? '' : 'none';
+  const k = campaignKPI(id);
+  document.getElementById('campaign-detail-kpis').innerHTML = `
+    <div class="card"><div class="label">Total lead</div><div class="value">${k.total}</div></div>
+    <div class="card"><div class="label">Cold / Warm / Hot</div><div class="value" style="font-size:16px;">${k.cold} / ${k.warm} / ${k.hot}</div></div>
+    <div class="card"><div class="label">Closing rate</div><div class="value">${k.closingRate}%</div></div>
+    <div class="card"><div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(k.omzet)}</div></div>
+  `;
+  const scoped = campaignLeadsOf(id).slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
+  document.getElementById('campaign-detail-rowlist').innerHTML = scoped.length ? scoped.map(l=>leadRowHTML(l,true,false,undefined,'openLeadForm')).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang ditandain campaign ini.</div>';
+  document.getElementById('campaign-fulllist-wrap').style.display = 'none';
+  document.getElementById('campaign-split-wrap').style.display = 'grid';
+  renderCampaignSplitNameList();
+}
+
+function exitCampaignDetail(){
+  document.getElementById('campaign-split-wrap').style.display = 'none';
+  document.getElementById('campaign-fulllist-wrap').style.display = 'block';
+  renderCampaignListView();
+}
+
+// ---- Modal buat/edit campaign (Master Admin doang) ----
+function renderCampaignAssignedChecklist(currentAssigned){
+  const list = document.getElementById('cf-assigned-checklist');
+  if(!list) return;
+  const superAdmins = userAccounts.filter(u=>u.role==='super_admin' && u.status==='active');
+  const assigned = currentAssigned || [];
+  list.innerHTML = superAdmins.length ? superAdmins.map(u=>
+    '<label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2);">'+
+      '<input type="checkbox" value="'+u.name+'" '+(assigned.includes(u.name)?'checked':'')+' style="width:auto;">'+u.name+
+    '</label>'
+  ).join('') : '<div style="font-size:12px; color:var(--muted);">Belum ada Super Admin aktif.</div>';
+}
+
+function openCampaignFormModal(editId){
+  const isMaster = !!(currentUser && currentUser.role==='master_admin');
+  if(!isMaster) return;
+  const editing = editId ? campaigns.find(c=>c.id===editId) : null;
+  document.getElementById('campaign-form-title').textContent = editing ? 'Edit Campaign' : 'Buat Campaign';
+  document.getElementById('cf-name').value = editing ? editing.name : '';
+  document.getElementById('cf-start').value = editing ? editing.startDate : '';
+  document.getElementById('cf-end').value = editing ? editing.endDate : '';
+  document.getElementById('cf-status').value = editing ? editing.status : 'aktif';
+  document.getElementById('cf-error').style.display = 'none';
+  renderCampaignAssignedChecklist(editing ? editing.assignedSuperAdmins : []);
+  document.getElementById('campaign-form-modal').dataset.editId = editId || '';
+  document.getElementById('campaign-form-modal').style.display = 'flex';
+}
+
+function closeCampaignFormModal(){
+  document.getElementById('campaign-form-modal').style.display = 'none';
+}
+
+async function submitCampaignForm(){
+  const errEl = document.getElementById('cf-error');
+  errEl.style.display = 'none';
+  const name = document.getElementById('cf-name').value.trim();
+  const start = document.getElementById('cf-start').value;
+  const end = document.getElementById('cf-end').value;
+  const status = document.getElementById('cf-status').value;
+  const assigned = Array.from(document.querySelectorAll('#cf-assigned-checklist input[type=checkbox]:checked')).map(el=>el.value);
+  if(!name){ errEl.textContent = 'Nama campaign wajib diisi.'; errEl.style.display = 'block'; return; }
+  if(!start || !end){ errEl.textContent = 'Tanggal mulai dan selesai wajib diisi.'; errEl.style.display = 'block'; return; }
+  if(end < start){ errEl.textContent = 'Tanggal selesai gak boleh sebelum tanggal mulai.'; errEl.style.display = 'block'; return; }
+  const editId = document.getElementById('campaign-form-modal').dataset.editId;
+  const payload = {name, start_date: start, end_date: end, status, assigned_super_admins: assigned};
+  if(editId){
+    const { error } = await supabaseClient.from('campaigns').update(payload).eq('id', Number(editId));
+    if(error){ errEl.textContent = 'Gagal simpan: '+error.message; errEl.style.display = 'block'; return; }
+  } else {
+    payload.created_by = currentUser ? currentUser.name : null;
+    const { error } = await supabaseClient.from('campaigns').insert(payload);
+    if(error){ errEl.textContent = 'Gagal simpan: '+error.message; errEl.style.display = 'block'; return; }
+  }
+  await fetchCampaignsFromSupabase();
+  closeCampaignFormModal();
+  applyRoleRestrictions();
+  renderLeadCampaignSelectOptions(document.getElementById('f-campaign') ? document.getElementById('f-campaign').value : null);
+  if(document.getElementById('view-campaign').classList.contains('active')){
+    if(editId && currentCampaignId===Number(editId)) openCampaignDetail(Number(editId));
+    else renderCampaignListView();
+  }
+  showToast(editId ? 'Campaign diupdate' : 'Campaign dibuat');
+}
+
+// Dropdown "Campaign" di form lead -- isinya campaign yang lagi "aktif",
+// DITAMBAH campaign lama yang udah "selesai" kalau lead ini emang lagi
+// ditandain ke situ (biar gak ilang/kereset pas dibuka ulang).
+function renderLeadCampaignSelectOptions(currentCampaignIdOnLead){
+  const sel = document.getElementById('f-campaign');
+  if(!sel) return;
+  const pool = campaigns.filter(c=> c.status==='aktif' || c.id===currentCampaignIdOnLead);
+  let options = '<option value="">Tidak ada / lead reguler</option>';
+  options += pool.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
+  sel.innerHTML = options;
+  sel.value = currentCampaignIdOnLead ? String(currentCampaignIdOnLead) : '';
+}
+
 function openLeadForm(id, force){
   if(!force && formDirty && isEditingContext()){
     guardLeave(()=>openLeadForm(id, true));
@@ -4946,6 +5259,7 @@ function openLeadForm(id, force){
   renderAdminSelectOptions();
   document.getElementById('f-admin').value = l.admin || ADMIN_LIST[0];
   updateAdminFieldVisibility();
+  renderLeadCampaignSelectOptions(l.campaignId);
   autoExpandLengkapiNantiIfFilled(l);
   document.getElementById('f-company-hint').style.display = 'none';
   document.getElementById('f-note-channel').value = 'wa';
@@ -5180,6 +5494,7 @@ async function saveLeadDataOnly(){
     entryDate: document.getElementById('f-entrydate').value || todayIsoStr(),
     followUp: document.getElementById('f-followup').value,
     admin: document.getElementById('f-admin').value,
+    campaignId: document.getElementById('f-campaign').value ? Number(document.getElementById('f-campaign').value) : null,
     chatLog: document.getElementById('f-chatlog').value
   };
   const newNote = document.getElementById('f-new-note').value.trim();
