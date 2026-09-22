@@ -637,7 +637,7 @@
           <div class="split-namelist" id="campaign-split-namelist"></div>
         </div>
         <div class="split-form-col" id="campaign-split-form-col">
-          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+          <div id="campaign-detail-header" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
             <button class="icon-btn" onclick="exitCampaignDetail()" aria-label="Kembali ke daftar Campaign">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
             </button>
@@ -662,23 +662,11 @@
             </div>
           </div>
 
-          <div id="campaign-lead-detail" style="display:none;">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-              <button class="icon-btn" onclick="exitCampaignLeadDetail()" aria-label="Kembali ke daftar lead campaign">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-              </button>
-              <div class="avatar" id="campaign-lead-avatar"></div>
-              <div style="min-width:0; flex:1;">
-                <div class="title" id="campaign-lead-company" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</div>
-                <div class="subtitle" id="campaign-lead-pic"></div>
-              </div>
-              <span id="campaign-lead-status-wrap"></span>
-            </div>
-            <div class="footnote" style="margin:-6px 0 12px;">Cuma ringkasan lead ini yang ditampilin di sini, gak keluar dari menu Campaign. Mau lihat/edit data lengkap (produk, chat log, riwayat follow-up, dst)? <a href="javascript:void(0)" onclick="openLeadForm(currentCampaignLeadId)" style="color:var(--accent); font-weight:600; text-decoration:underline; cursor:pointer;">Buka detail lengkap lead</a>.</div>
-            <div class="panel" style="padding:16px;">
-              <div id="campaign-lead-summary" style="display:flex; flex-direction:column; gap:10px; font-size:13px; color:var(--text-2);"></div>
-            </div>
-          </div>
+          <!-- Klik lead di tabel atas -> form lead LENGKAP (sama persis kayak
+               menu Leads, form-nya dipindahin ke sini pakai placeLeadFormPanel)
+               dimuat di sini, gak pindah menu. Tombol "kembali" di form itu
+               (goBack) otomatis balik ke detail campaign ini lagi. -->
+          <div id="campaign-lead-form-mount" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -1484,9 +1472,11 @@ function leadRowHTML(l, showNote, selectable, idx, clickFn){
 function isEditingContext(){
   const leadsSplit = document.getElementById('leads-split-wrap');
   const fuSplit = document.getElementById('followup-split-wrap');
+  const campaignLeadMount = document.getElementById('campaign-lead-form-mount');
   const leadsVisible = leadsSplit && leadsSplit.style.display !== 'none';
   const fuVisible = fuSplit && fuSplit.style.display !== 'none';
-  return !!(leadsVisible || fuVisible);
+  const campaignLeadVisible = campaignLeadMount && campaignLeadMount.style.display !== 'none';
+  return !!(leadsVisible || fuVisible || campaignLeadVisible);
 }
 
 function markFormDirty(){
@@ -1849,6 +1839,12 @@ function exitSplitMode(){
   const cList = document.getElementById('campaign-fulllist-wrap');
   if(cWrap) cWrap.style.display = 'none';
   if(cList) cList.style.display = 'block';
+  const cLeadMount = document.getElementById('campaign-lead-form-mount');
+  if(cLeadMount) cLeadMount.style.display = 'none';
+  const cHeader = document.getElementById('campaign-detail-header');
+  const cBody = document.getElementById('campaign-detail-body');
+  if(cHeader) cHeader.style.display = 'flex';
+  if(cBody) cBody.style.display = 'block';
 }
 
 function refreshLeadsListing(){
@@ -1891,7 +1887,12 @@ function goBack(action, force){
   }
   action = action || 'view';
   const lead = lastViewedId!==null ? leads.find(x=>x.id===lastViewedId) : null;
+  const cameFromCampaignDetail = originView === 'campaign' && currentCampaignId!==null;
   switchView(originView, true);
+  // switchView('campaign') defaultnya nampilin daftar campaign -- kalau
+  // balik dari edit lead yang dibuka dari DALAM satu campaign, buka lagi
+  // detail campaign yang sama (bukan balik ke daftar campaign).
+  if(cameFromCampaignDetail) openCampaignDetail(currentCampaignId);
   if(lead){
     setTimeout(()=>{
       const row = document.getElementById('lead-row-'+lead.id);
@@ -5082,7 +5083,6 @@ function exitScaleUpDetail(){
 // dari sudut pandang campaign-nya doang.
 // ============================================================
 let currentCampaignId = null;
-let currentCampaignLeadId = null;
 
 function campaignStatusBadgeHTML(status){
   const isAktif = status==='aktif';
@@ -5162,10 +5162,10 @@ function openCampaignDetail(id){
     <div class="card"><div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(k.omzet)}</div></div>
   `;
   const scoped = campaignLeadsOf(id).slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
-  document.getElementById('campaign-detail-rowlist').innerHTML = scoped.length ? scoped.map(l=>leadRowHTML(l,true,false,undefined,'openCampaignLeadDetail')).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang ditandain campaign ini.</div>';
+  document.getElementById('campaign-detail-rowlist').innerHTML = scoped.length ? scoped.map(l=>leadRowHTML(l,true,false,undefined,'openLeadForm')).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang ditandain campaign ini.</div>';
   document.getElementById('campaign-fulllist-wrap').style.display = 'none';
   document.getElementById('campaign-split-wrap').style.display = 'grid';
-  exitCampaignLeadDetail();
+  exitCampaignLeadFormMode();
   renderCampaignSplitNameList();
 }
 
@@ -5175,33 +5175,20 @@ function exitCampaignDetail(){
   renderCampaignListView();
 }
 
-// Klik satu lead di tabel campaign -- BUKAN pindah ke menu Leads, tapi ganti
-// isi kolom kanan (masih di dalam menu Campaign) jadi ringkasan lead itu doang.
-// Pola persis kayak Scale Up Project (leads-split col kiri tetap, kanan gonta-ganti).
-function openCampaignLeadDetail(id){
-  const l = leads.find(x=>x.id===id);
-  if(!l) return;
-  currentCampaignLeadId = id;
-  document.getElementById('campaign-lead-avatar').style.background = avatarColor(l.company);
-  document.getElementById('campaign-lead-avatar').textContent = initials(l.company);
-  document.getElementById('campaign-lead-company').textContent = l.company || '-';
-  document.getElementById('campaign-lead-pic').textContent = l.pic ? ('PIC: '+l.pic) : 'Belum ada PIC';
-  document.getElementById('campaign-lead-status-wrap').innerHTML = badge(l.status);
-  document.getElementById('campaign-lead-summary').innerHTML = `
-    <div><b style="color:var(--text);">Admin sales:</b> ${leadOwnerLabel(l)}</div>
-    <div><b style="color:var(--text);">No. telepon:</b> ${l.phone || '-'}</div>
-    <div><b style="color:var(--text);">Tanggal input:</b> ${fmtDate(l.entryDate)}</div>
-    <div><b style="color:var(--text);">Produk:</b> ${productTypesLabel(l)}</div>
-    <div><b style="color:var(--text);">Follow up:</b> ${followUpChip(l)}</div>
-    <div><b style="color:var(--text);">Catatan terakhir:</b> ${lastNote(l)}</div>
-  `;
+// Klik satu lead di tabel campaign -- BUKAN pindah ke menu Leads, tapi form
+// lead LENGKAP (sama persis kayak buka lead dari menu Leads, panel formnya
+// beneran dipindah ke sini via placeLeadFormPanel) tampil ganti kolom kanan,
+// masih di dalam menu Campaign. Dipicu dari openLeadForm() lewat originView.
+function enterCampaignLeadFullMode(){
+  document.getElementById('campaign-detail-header').style.display = 'none';
   document.getElementById('campaign-detail-body').style.display = 'none';
-  document.getElementById('campaign-lead-detail').style.display = 'block';
+  document.getElementById('campaign-lead-form-mount').style.display = 'block';
+  placeLeadFormPanel('campaign-lead-form-mount');
 }
 
-function exitCampaignLeadDetail(){
-  currentCampaignLeadId = null;
-  document.getElementById('campaign-lead-detail').style.display = 'none';
+function exitCampaignLeadFormMode(){
+  document.getElementById('campaign-lead-form-mount').style.display = 'none';
+  document.getElementById('campaign-detail-header').style.display = 'flex';
   document.getElementById('campaign-detail-body').style.display = 'block';
 }
 
@@ -5355,6 +5342,8 @@ function openLeadForm(id, force){
     enterFollowupSplitMode();
   } else if(originView === 'leads'){
     enterSplitMode();
+  } else if(originView === 'campaign'){
+    enterCampaignLeadFullMode();
   } else {
     switchView('leads', true);
     enterSplitMode();
@@ -5672,7 +5661,7 @@ async function saveLeadDataOnly(){
 async function saveLead(){
   const ok = await saveLeadDataOnly();
   if(!ok) return;
-  if(originView !== 'followup'){ originView = 'leads'; }
+  if(originView !== 'followup' && originView !== 'campaign'){ originView = 'leads'; }
   goBack('saved', true);
 }
 
