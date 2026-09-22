@@ -1004,6 +1004,10 @@
           <select id="ql-admin" onchange="handleQuickAdminSelectChange(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
         </div>
       </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Campaign <span class="opt-pill">Opsional</span></label>
+        <select id="ql-campaign" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
+      </div>
       <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
         <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">Produk &amp; penawaran <span class="opt-pill">Opsional</span></div>
         <div class="row2">
@@ -5225,6 +5229,19 @@ function renderLeadCampaignSelectOptions(currentCampaignIdOnLead){
   sel.value = currentCampaignIdOnLead ? String(currentCampaignIdOnLead) : '';
 }
 
+// Dropdown Campaign di popup "Tambah lead baru" (quick-lead-modal) -- cuma
+// nampilin campaign yang lagi "aktif" (wajar, lead baru gak mungkin
+// ditempel ke campaign yang udah "selesai").
+function renderQuickCampaignSelectOptions(){
+  const sel = document.getElementById('ql-campaign');
+  if(!sel) return;
+  const pool = campaigns.filter(c=> c.status==='aktif');
+  let options = '<option value="">Tidak ada / lead reguler</option>';
+  options += pool.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
+  sel.innerHTML = options;
+  sel.value = '';
+}
+
 function openLeadForm(id, force){
   if(!force && formDirty && isEditingContext()){
     guardLeave(()=>openLeadForm(id, true));
@@ -5380,6 +5397,7 @@ function openQuickLeadModal(){
   document.getElementById('ql-error').style.display = 'none';
   toggleQuickLengkapiNanti(false);
   renderQuickAdminSelectOptions();
+  renderQuickCampaignSelectOptions();
   document.getElementById('ql-admin').value = (currentUser && currentUser.name) ? currentUser.name : (ADMIN_LIST[0] || '');
   const adminWrap = document.getElementById('ql-admin-wrap');
   if(adminWrap) adminWrap.style.display = (currentUser && currentUser.role==='sales') ? 'none' : '';
@@ -5443,6 +5461,7 @@ async function saveQuickLead(){
     followUp: '',
     admin: document.getElementById('ql-admin').value,
     chatLog: '',
+    campaignId: document.getElementById('ql-campaign').value ? Number(document.getElementById('ql-campaign').value) : null,
     products: quickProduct ? [quickProduct] : []
   };
   const { data: inserted, error } = await supabaseClient.from('leads').insert(leadToDbRow(data)).select().single();
