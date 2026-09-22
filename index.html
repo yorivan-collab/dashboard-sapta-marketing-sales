@@ -651,12 +651,33 @@
             </button>
           </div>
           <div class="footnote" id="campaign-detail-assigned" style="margin:-6px 0 12px;"></div>
-          <div class="kpis" id="campaign-detail-kpis"></div>
-          <div class="panel" style="margin-top:14px;">
-            <div class="rowlist-header">
-              <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+
+          <div id="campaign-detail-body">
+            <div class="kpis" id="campaign-detail-kpis"></div>
+            <div class="panel" style="margin-top:14px;">
+              <div class="rowlist-header">
+                <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+              </div>
+              <div class="rowlist" id="campaign-detail-rowlist"></div>
             </div>
-            <div class="rowlist" id="campaign-detail-rowlist"></div>
+          </div>
+
+          <div id="campaign-lead-detail" style="display:none;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+              <button class="icon-btn" onclick="exitCampaignLeadDetail()" aria-label="Kembali ke daftar lead campaign">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <div class="avatar" id="campaign-lead-avatar"></div>
+              <div style="min-width:0; flex:1;">
+                <div class="title" id="campaign-lead-company" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</div>
+                <div class="subtitle" id="campaign-lead-pic"></div>
+              </div>
+              <span id="campaign-lead-status-wrap"></span>
+            </div>
+            <div class="footnote" style="margin:-6px 0 12px;">Cuma ringkasan lead ini yang ditampilin di sini, gak keluar dari menu Campaign. Mau lihat/edit data lengkap (produk, chat log, riwayat follow-up, dst)? <a href="javascript:void(0)" onclick="openLeadForm(currentCampaignLeadId)" style="color:var(--accent); font-weight:600; text-decoration:underline; cursor:pointer;">Buka detail lengkap lead</a>.</div>
+            <div class="panel" style="padding:16px;">
+              <div id="campaign-lead-summary" style="display:flex; flex-direction:column; gap:10px; font-size:13px; color:var(--text-2);"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -5061,6 +5082,7 @@ function exitScaleUpDetail(){
 // dari sudut pandang campaign-nya doang.
 // ============================================================
 let currentCampaignId = null;
+let currentCampaignLeadId = null;
 
 function campaignStatusBadgeHTML(status){
   const isAktif = status==='aktif';
@@ -5140,9 +5162,10 @@ function openCampaignDetail(id){
     <div class="card"><div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(k.omzet)}</div></div>
   `;
   const scoped = campaignLeadsOf(id).slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
-  document.getElementById('campaign-detail-rowlist').innerHTML = scoped.length ? scoped.map(l=>leadRowHTML(l,true,false,undefined,'openLeadForm')).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang ditandain campaign ini.</div>';
+  document.getElementById('campaign-detail-rowlist').innerHTML = scoped.length ? scoped.map(l=>leadRowHTML(l,true,false,undefined,'openCampaignLeadDetail')).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang ditandain campaign ini.</div>';
   document.getElementById('campaign-fulllist-wrap').style.display = 'none';
   document.getElementById('campaign-split-wrap').style.display = 'grid';
+  exitCampaignLeadDetail();
   renderCampaignSplitNameList();
 }
 
@@ -5150,6 +5173,36 @@ function exitCampaignDetail(){
   document.getElementById('campaign-split-wrap').style.display = 'none';
   document.getElementById('campaign-fulllist-wrap').style.display = 'block';
   renderCampaignListView();
+}
+
+// Klik satu lead di tabel campaign -- BUKAN pindah ke menu Leads, tapi ganti
+// isi kolom kanan (masih di dalam menu Campaign) jadi ringkasan lead itu doang.
+// Pola persis kayak Scale Up Project (leads-split col kiri tetap, kanan gonta-ganti).
+function openCampaignLeadDetail(id){
+  const l = leads.find(x=>x.id===id);
+  if(!l) return;
+  currentCampaignLeadId = id;
+  document.getElementById('campaign-lead-avatar').style.background = avatarColor(l.company);
+  document.getElementById('campaign-lead-avatar').textContent = initials(l.company);
+  document.getElementById('campaign-lead-company').textContent = l.company || '-';
+  document.getElementById('campaign-lead-pic').textContent = l.pic ? ('PIC: '+l.pic) : 'Belum ada PIC';
+  document.getElementById('campaign-lead-status-wrap').innerHTML = badge(l.status);
+  document.getElementById('campaign-lead-summary').innerHTML = `
+    <div><b style="color:var(--text);">Admin sales:</b> ${leadOwnerLabel(l)}</div>
+    <div><b style="color:var(--text);">No. telepon:</b> ${l.phone || '-'}</div>
+    <div><b style="color:var(--text);">Tanggal input:</b> ${fmtDate(l.entryDate)}</div>
+    <div><b style="color:var(--text);">Produk:</b> ${productTypesLabel(l)}</div>
+    <div><b style="color:var(--text);">Follow up:</b> ${followUpChip(l)}</div>
+    <div><b style="color:var(--text);">Catatan terakhir:</b> ${lastNote(l)}</div>
+  `;
+  document.getElementById('campaign-detail-body').style.display = 'none';
+  document.getElementById('campaign-lead-detail').style.display = 'block';
+}
+
+function exitCampaignLeadDetail(){
+  currentCampaignLeadId = null;
+  document.getElementById('campaign-lead-detail').style.display = 'none';
+  document.getElementById('campaign-detail-body').style.display = 'block';
 }
 
 // ---- Modal buat/edit campaign (Master Admin doang) ----
