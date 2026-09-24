@@ -2899,7 +2899,7 @@ function renderActiveFiltersBanner(){
   }
   banner.className = 'active-filters-banner';
   banner.style.display = 'flex';
-  banner.innerHTML = '<span>Filter aktif -- '+parts.join(' &middot; ')+'</span><button type="button" class="afb-reset" onclick="resetAllLeadsFilters()">Reset semua</button>';
+  banner.innerHTML = '<span class="afb-dot"></span><span>Filter aktif -- '+parts.join(' &middot; ')+'</span><button type="button" class="afb-reset" onclick="resetAllLeadsFilters()">Reset semua</button>';
 }
 
 // Reset semua filter Leads sekaligus (kecuali Fokus tampilan -- itu preferensi
