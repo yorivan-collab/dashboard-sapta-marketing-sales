@@ -231,6 +231,7 @@
   .chev svg{width:16px; height:16px;}
   .just-tag{display:none; font-size:9.5px; font-weight:700; color:#fff3c4; background:#5d3d00; padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:middle; text-transform:uppercase; letter-spacing:0.02em;}
   .owner-tag{display:inline-block; font-size:10px; font-weight:600; color:var(--text-2); background:var(--border-soft); padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:middle;}
+  .campaign-tag{display:inline-block; font-size:10px; font-weight:600; color:var(--accent-text); background:var(--accent-soft); padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:middle;}
   .lead-row.just-viewed .just-tag{display:inline-block;}
   .lead-row.just-added .just-tag{display:inline-block; color:#eafff2; background:#0d5c3f;}
 
@@ -418,6 +419,13 @@
   .active-filter-chip{display:inline-flex; align-items:center; gap:8px; background:var(--accent-soft); color:var(--accent-text); font-size:12.5px; font-weight:500; padding:6px 8px 6px 14px; border-radius:20px;}
   .active-filter-chip button{background:transparent; border:none; color:var(--accent-text); font-size:16px; line-height:1; padding:2px 6px; border-radius:50%; cursor:pointer;}
   .active-filter-chip button:hover{background:rgba(124,92,255,0.15);}
+
+  /* Ringkasan "filter aktif" -- sengaja kalem (bukan warna ngejreng kayak
+     accent), cuma pengingat halus biar gak lupa lagi nyaring apa doang. */
+  .active-filters-banner{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--bg); border:1px dashed var(--border); border-radius:10px; padding:7px 12px; font-size:12px; color:var(--text-2);}
+  .active-filters-banner b{color:var(--text-2); font-weight:600;}
+  .active-filters-banner .afb-reset{background:transparent; border:none; color:var(--accent-text); font-size:11.5px; font-weight:600; padding:0; cursor:pointer; text-decoration:underline; margin-left:auto;}
+  .active-filters-banner .afb-reset:hover{color:var(--accent);}
 
   .toast{position:fixed; bottom:24px; right:24px; background:#20202b; color:#fff; padding:12px 18px; border-radius:11px; font-size:13px; font-weight:500; box-shadow:0 10px 28px rgba(15,12,30,0.28); opacity:0; transform:translateY(12px); transition:opacity .25s ease, transform .25s ease; pointer-events:none; z-index:80; display:flex; align-items:center; gap:9px;}
   .toast.show{opacity:1; transform:translateY(0);}
