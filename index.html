@@ -304,6 +304,7 @@
         <input type="date" id="date-to-input" onchange="setQuickFilterDateTo(this.value)" title="Sampai tanggal">
         <span class="admin-locked-badge" id="date-filter-clear-leads" onclick="clearQuickFilterDate()" style="cursor:pointer;">Reset tanggal <span class="focus-reset-x">&times;</span></span>
       </div>
+      <div id="active-filters-banner" style="display:none; margin-bottom:10px;"></div>
       <div id="filter-chip-wrap" style="display:none; margin-bottom:10px;"></div>
 
       <div id="leads-fulllist-wrap">
@@ -2863,6 +2864,63 @@ function matchesQuickFilterCampaign(l){
   return quickFilterCampaign==='all' || l.campaignId===quickFilterCampaign;
 }
 
+// Ringkasan "filter aktif" di atas tabel Leads -- pengingat kalem biar gak
+// lupa lagi nyaring apa doang (gampang lupa soalnya filter-nya kesebar di
+// beberapa dropdown/toggle beda-beda). Cuma nongol kalau emang ada yang aktif.
+function renderActiveFiltersBanner(){
+  const banner = document.getElementById('active-filters-banner');
+  if(!banner) return;
+  const parts = [];
+  const term = (document.getElementById('search-input')?.value || '').trim();
+  if(term) parts.push('cari "'+term+'"');
+  if(currentFilter && currentFilter!=='all') parts.push('status: <b>'+(FILTER_LABELS[currentFilter]||currentFilter)+'</b>');
+  if(quickFilterPic && quickFilterPic!=='all') parts.push('PIC: <b>'+quickFilterPic+'</b>');
+  if(quickFilterLocation && quickFilterLocation!=='all') parts.push('lokasi: <b>'+quickFilterLocation+'</b>');
+  if(quickFilterCampaign && quickFilterCampaign!=='all'){
+    const c = campaigns.find(x=>x.id===quickFilterCampaign);
+    parts.push('campaign: <b>'+(c ? c.name : '(gak ketemu)')+'</b>');
+  }
+  if(quickFilterDateFrom || quickFilterDateTo){
+    const fieldLabel = quickFilterDateField==='followUp' ? 'tgl follow-up' : 'tgl input';
+    parts.push(fieldLabel+': <b>'+(quickFilterDateFrom||'...')+' s/d '+(quickFilterDateTo||'...')+'</b>');
+  }
+  if(masterFocusFilter && masterFocusFilter.length){
+    parts.push('fokus: <b>'+masterFocusFilter.join(', ')+'</b>');
+  } else if(currentUser && currentUser.role==='master_admin' && quickFilterAdmin && quickFilterAdmin!=='all' && !Array.isArray(quickFilterAdmin)){
+    // Admin dipilih manual dari dropdown (bukan lewat Fokus) -- gak ada
+    // badge lain yang nunjukkin ini, jadi wajib disebut di sini.
+    parts.push('admin: <b>'+quickFilterAdmin+'</b>');
+  }
+  if(groupByAdminEnabled) parts.push('dikelompokkan per admin');
+  if(!parts.length){
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+    return;
+  }
+  banner.className = 'active-filters-banner';
+  banner.style.display = 'flex';
+  banner.innerHTML = '<span>Filter aktif -- '+parts.join(' &middot; ')+'</span><button type="button" class="afb-reset" onclick="resetAllLeadsFilters()">Reset semua</button>';
+}
+
+// Reset semua filter Leads sekaligus (kecuali Fokus tampilan -- itu preferensi
+// lintas-menu punya Master, reset-nya udah ada sendiri lewat badge Fokus).
+function resetAllLeadsFilters(){
+  const searchEl = document.getElementById('search-input');
+  if(searchEl) searchEl.value = '';
+  quickFilterPic = 'all';
+  quickFilterLocation = 'all';
+  quickFilterCampaign = 'all';
+  quickFilterDateFrom = '';
+  quickFilterDateTo = '';
+  if(currentUser && currentUser.role==='master_admin' && !Array.isArray(quickFilterAdmin)){
+    quickFilterAdmin = 'all';
+  }
+  setFilter('all');
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
 function leadSortTimestamp(l){
   // created_at (jam presisi) diutamakan supaya lead yang ditambah di hari
   // yang sama tetap keurut bener -- entryDate (tanggal doang) cuma fallback
@@ -4560,6 +4618,7 @@ function renderLeadsList(){
   }
   const colHeaderEntrydate = document.getElementById('col-header-entrydate');
   if(colHeaderEntrydate) colHeaderEntrydate.textContent = currentFilter==='has-product' ? 'Nilai omzet' : 'Tanggal input';
+  renderActiveFiltersBanner();
 
   document.getElementById('leads-rowlist').innerHTML = filtered.length
     ? (groupByAdminEnabled ? buildGroupedLeadRowsHTML(filtered) : filtered.map((l,i)=>leadRowHTML(l,false,true,i+1)).join(''))
