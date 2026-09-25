@@ -2861,7 +2861,9 @@ function getQuickFilteredLeads(){
 // Filter Campaign sengaja DIPISAH dari matchesQuickFilters() -- itu dipakai
 // bareng sama Overview, dan filter Campaign ini KHUSUS Leads doang.
 function matchesQuickFilterCampaign(l){
-  return quickFilterCampaign==='all' || l.campaignId===quickFilterCampaign;
+  if(quickFilterCampaign==='all') return true;
+  if(quickFilterCampaign==='none') return !l.campaignId;
+  return l.campaignId===quickFilterCampaign;
 }
 
 // Ringkasan "filter aktif" di atas tabel Leads -- pengingat kalem biar gak
@@ -2876,7 +2878,13 @@ function renderActiveFiltersBanner(){
   if(currentFilter && currentFilter!=='all') parts.push('status: <b>'+(FILTER_LABELS[currentFilter]||currentFilter)+'</b>');
   if(quickFilterPic && quickFilterPic!=='all') parts.push('PIC: <b>'+quickFilterPic+'</b>');
   if(quickFilterLocation && quickFilterLocation!=='all') parts.push('lokasi: <b>'+quickFilterLocation+'</b>');
-  if(quickFilterCampaign && quickFilterCampaign!=='all'){
+  // 'none' (Tanpa campaign) itu DEFAULT tampilan sekarang -- sengaja gak
+  // disebut di banner ini (bukan penyimpangan dari normal). Yang disebut
+  // cuma kalau dilebarin ('all', nampilin campaign juga) atau dipersempit
+  // ke satu campaign tertentu.
+  if(quickFilterCampaign==='all'){
+    parts.push('campaign: <b>semua (termasuk yang campaign)</b>');
+  } else if(quickFilterCampaign!=='none'){
     const c = campaigns.find(x=>x.id===quickFilterCampaign);
     parts.push('campaign: <b>'+(c ? c.name : '(gak ketemu)')+'</b>');
   }
@@ -2909,7 +2917,7 @@ function resetAllLeadsFilters(){
   if(searchEl) searchEl.value = '';
   quickFilterPic = 'all';
   quickFilterLocation = 'all';
-  quickFilterCampaign = 'all';
+  quickFilterCampaign = 'none';
   quickFilterDateFrom = '';
   quickFilterDateTo = '';
   if(currentUser && currentUser.role==='master_admin' && !Array.isArray(quickFilterAdmin)){
@@ -2954,8 +2962,9 @@ let quickFilterDateTo = '';
 
 // Filter "Campaign" -- KHUSUS menu Leads (gak ngaruh ke Overview/Dashboard/
 // laporan lain, itu sengaja -- campaign cuma "lensa" tampilan di Leads).
-// Default 'all' = nampilin semua lead kayak biasa.
-let quickFilterCampaign = 'all';
+// Default 'none' = nampilin lead yang TANPA campaign aja. 'all' = semua
+// (termasuk yang campaign), atau bisa pilih ID campaign tertentu.
+let quickFilterCampaign = 'none';
 
 // Fokus tampilan -- KHUSUS Master Admin. Kalau diisi (1+ nama), seluruh
 // sistem (Overview, Leads, Follow-up, tabel performa) otomatis nyempit
@@ -3959,12 +3968,12 @@ function populateQuickFilterDropdowns(){
   if(campaignSel){
     const visibleCampaigns = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
     if(visibleCampaigns.length){
-      campaignSel.innerHTML = '<option value="all">Semua campaign</option>' + visibleCampaigns.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
-      campaignSel.value = visibleCampaigns.some(c=>c.id===quickFilterCampaign) ? String(quickFilterCampaign) : 'all';
+      campaignSel.innerHTML = '<option value="none">Tanpa campaign</option><option value="all">Semua campaign</option>' + visibleCampaigns.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
+      campaignSel.value = visibleCampaigns.some(c=>c.id===quickFilterCampaign) ? String(quickFilterCampaign) : (quickFilterCampaign==='all' ? 'all' : 'none');
       campaignSel.style.display = '';
     } else {
       campaignSel.style.display = 'none';
-      quickFilterCampaign = 'all';
+      quickFilterCampaign = 'none';
     }
   }
 }
@@ -4015,7 +4024,7 @@ function setQuickFilterLocation(val){
 // KHUSUS Leads -- sengaja gak panggil renderOverview() (Campaign gak boleh
 // ngaruh ke angka Overview/Dashboard, itu tetap ngitung semua lead).
 function setQuickFilterCampaign(val){
-  quickFilterCampaign = val==='all' ? 'all' : Number(val);
+  quickFilterCampaign = (val==='all' || val==='none') ? val : Number(val);
   populateQuickFilterDropdowns();
   refreshLeadsListing();
 }
