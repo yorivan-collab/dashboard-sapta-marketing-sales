@@ -71,8 +71,8 @@
     <div class="nav-label">Omzet</div>
     <div class="navtree">
       <div class="navsub" data-filter="has-product" onclick="goToFilter('has-product')">Rencana omzet</div>
-      <div class="navsub" data-filter="has-deal" onclick="goToFilter('has-deal')">Omzet deal</div>
-      <div class="navsub" data-filter="dp" onclick="goToFilter('dp')">Sudah DP</div>
+      <div class="navsub" data-filter="has-deal" onclick="goToFilter('has-deal')">Realisasi Omzet</div>
+      <div class="navsub" data-filter="dp" onclick="goToFilter('dp')">Sudah Closing</div>
       <div class="navsub" data-filter="lunas" onclick="goToFilter('lunas')">Sudah lunas</div>
     </div>
 
@@ -84,11 +84,16 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="6" rx="1"></rect><rect x="3" y="15" width="6" height="6" rx="1"></rect><rect x="15" y="15" width="6" height="6" rx="1"></rect><path d="M12 9v3M12 12H6v3M12 12h6v3"></path></svg>
       Struktur Organisasi
     </div>
+    <div class="navitem" data-view="campaign" id="nav-campaign-item" onclick="switchView('campaign')" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+      Campaign
+    </div>
     <div id="nav-users-section" style="display:none;">
       <div class="nav-label">Kelola Pengguna</div>
       <div class="navtree">
         <div class="navsub" data-view="users" onclick="switchView('users')">Tambah User</div>
         <div class="navsub" data-view="admin-approval" onclick="switchView('admin-approval')">User Request <span class="nav-badge" id="nav-admin-approval-count"></span></div>
+        <div class="navsub" data-view="quota-approval" onclick="switchView('quota-approval')">Permintaan Limit <span class="nav-badge" id="nav-quota-approval-count"></span></div>
       </div>
     </div>
     <div class="navitem" data-view="comparison" id="nav-comparison-item" onclick="switchView('comparison')" style="display:none;">
@@ -102,6 +107,13 @@
     <div class="navitem" data-view="request-admin" id="nav-request-admin-item" onclick="switchView('request-admin')" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
       Ajukan Admin Baru
+    </div>
+
+    <div id="nav-develop-section" style="display:none;">
+      <div class="nav-label">Develop</div>
+      <div class="navtree">
+        <div class="navsub" data-view="scaleup" onclick="switchView('scaleup')">Scale Up</div>
+      </div>
     </div>
 
     <div class="sidebar-foot">
@@ -136,6 +148,14 @@
         <span class="focus-filter-badge" id="master-focus-badge-overview" onclick="openFocusFilterModal()"></span>
         <select id="overview-pic-filter-select" onchange="setQuickFilterPic(this.value)"></select>
         <select id="overview-location-filter-select" onchange="setQuickFilterLocation(this.value)"></select>
+        <select id="overview-date-field-select" onchange="setQuickFilterDateField(this.value)">
+          <option value="entryDate">Tanggal input</option>
+          <option value="followUp">Tanggal follow-up</option>
+        </select>
+        <input type="date" id="overview-date-from-input" onchange="setQuickFilterDateFrom(this.value)" title="Dari tanggal">
+        <span style="font-size:11.5px; color:var(--muted);">s/d</span>
+        <input type="date" id="overview-date-to-input" onchange="setQuickFilterDateTo(this.value)" title="Sampai tanggal">
+        <span class="admin-locked-badge" id="date-filter-clear-overview" onclick="clearQuickFilterDate()" style="cursor:pointer;">Reset tanggal <span class="focus-reset-x">&times;</span></span>
       </div>
 
       <div id="section-kpi">
@@ -160,13 +180,13 @@
 
       <div id="section-omzet" class="dash-card">
         <div class="dash-card-head">
-          <div class="dash-card-title">Omzet deal</div>
+          <div class="dash-card-title">Realisasi Omzet</div>
           <div class="period-toggle" id="omzet-period-toggle"></div>
         </div>
         <div style="position:relative; height:190px; max-width:520px;">
           <canvas id="omzet-chart"></canvas>
         </div>
-        <div class="dash-hint">Dihitung dari harga deal produk, berdasarkan tanggal input lead.</div>
+        <div class="dash-hint">Dihitung dari realisasi omzet produk, berdasarkan tanggal input lead.</div>
       </div>
 
       <div id="section-produk" class="dash-card">
@@ -180,7 +200,7 @@
       <div id="section-admin" class="dash-card">
         <div class="dash-card-title" style="margin-bottom:12px;">Performa admin sales</div>
         <table class="admin-table">
-          <thead><tr><td>Admin</td><td>Leads</td><td>Sudah DP</td><td>Omzet deal</td></tr></thead>
+          <thead><tr><td>Admin</td><td>Leads</td><td>Sudah Closing</td><td>Realisasi Omzet</td></tr></thead>
           <tbody id="admin-performance-body"></tbody>
         </table>
       </div>
@@ -230,7 +250,7 @@
           <div class="ovp-about-label">Ringkasan</div>
           <div class="ovp-stat-row"><span>Total lead</span><b id="ovp-stat-lead"></b></div>
           <div class="ovp-stat-row"><span>Closing rate</span><b id="ovp-stat-closing"></b></div>
-          <div class="ovp-stat-row"><span>Omzet deal</span><b id="ovp-stat-omzet"></b></div>
+          <div class="ovp-stat-row"><span>Realisasi Omzet</span><b id="ovp-stat-omzet"></b></div>
         </div>
 
         <div>
@@ -250,7 +270,7 @@
           <button onclick="exportData()">Export data</button>
           <button onclick="document.getElementById('import-file').click()">Import data</button>
           <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
-          <button class="primary" onclick="openQuickLeadModal()">+ Tambah lead</button>
+          <button class="primary" id="btn-tambah-lead-quick" onclick="openQuickLeadModal()">+ Tambah lead</button>
         </div>
       </div>
       <div class="toolbar">
@@ -274,13 +294,23 @@
         <span class="filter-pill" id="group-by-admin-toggle" onclick="toggleGroupByAdmin()">Kelompokkan per admin</span>
         <select id="pic-filter-select" onchange="setQuickFilterPic(this.value)"></select>
         <select id="location-filter-select" onchange="setQuickFilterLocation(this.value)"></select>
+        <select id="campaign-filter-select" onchange="setQuickFilterCampaign(this.value)" style="display:none;"></select>
+        <select id="date-field-select" onchange="setQuickFilterDateField(this.value)">
+          <option value="entryDate">Tanggal input</option>
+          <option value="followUp">Tanggal follow-up</option>
+        </select>
+        <input type="date" id="date-from-input" onchange="setQuickFilterDateFrom(this.value)" title="Dari tanggal">
+        <span style="font-size:11.5px; color:var(--muted);">s/d</span>
+        <input type="date" id="date-to-input" onchange="setQuickFilterDateTo(this.value)" title="Sampai tanggal">
+        <span class="admin-locked-badge" id="date-filter-clear-leads" onclick="clearQuickFilterDate()" style="cursor:pointer;">Reset tanggal <span class="focus-reset-x">&times;</span></span>
       </div>
+      <div id="active-filters-banner" style="display:none; margin-bottom:10px;"></div>
       <div id="filter-chip-wrap" style="display:none; margin-bottom:10px;"></div>
 
       <div id="leads-fulllist-wrap">
         <div class="panel">
           <div class="rowlist-header selectable">
-            <span class="rowlist-selectall-cell"><input type="checkbox" id="leads-selectall" onclick="toggleSelectAll()"></span><span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+            <span class="rowlist-selectall-cell"><input type="checkbox" id="leads-selectall" onclick="toggleSelectAll()"></span><span></span><span>Perusahaan</span><span id="col-header-entrydate">Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
           </div>
           <div class="rowlist" id="leads-rowlist"></div>
         </div>
@@ -333,6 +363,10 @@
                   <select id="f-admin" onchange="handleAdminSelectChange(this)"></select>
                 </div>
               </div>
+              <div class="field" style="margin-top:9px;"><label>Campaign <span class="opt-pill">Opsional</span></label>
+                <select id="f-campaign"></select>
+                <div class="footnote">Tandain kalau lead ini masuk dari campaign tertentu. Lead-nya tetap kehitung normal di semua laporan (Overview/Dashboard/Omzet) -- tanda ini cuma buat nampilin performa campaign itu sendiri di menu Campaign.</div>
+              </div>
             </div>
 
             <div class="panel">
@@ -371,39 +405,48 @@
                     <option value="iso">ISO</option>
                   </select>
                 </div>
-                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="number" id="f-product-penawaran" min="0" step="100000" placeholder="0"></div>
-                <div class="field"><label>Harga deal (Rp) <span class="opt-pill">Opsional</span></label><input type="number" id="f-product-deal" min="0" step="100000" placeholder="Isi kalau sudah closing" oninput="toggleLunasCheckboxVisibility()"></div>
+                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
+                <div class="field"><label>Realisasi omzet (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-realisasi" placeholder="Isi kalau udah ada uang masuk" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
               </div>
-              <label for="f-product-lunas" id="product-lunas-wrap" style="display:none; align-items:center; gap:8px; margin-top:6px; margin-bottom:0; text-transform:none; font-weight:500; font-size:12.5px; color:var(--text); cursor:pointer;">
-                <input type="checkbox" id="f-product-lunas" style="width:auto; accent-color:var(--accent); cursor:pointer;">
-                Tandai sudah lunas (pelunasan penuh)
-              </label>
+              <div id="product-piutang-display" style="font-size:12.5px; margin-top:2px; min-height:16px;"></div>
               <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
                 <button id="btn-product-cancel" onclick="cancelEditProduct()" style="display:none;">Batal edit</button>
                 <button class="primary" id="btn-product-submit" onclick="addProductLine()">+ Tambah produk</button>
               </div>
               <div class="product-list" id="product-list" style="margin-top:8px;"></div>
-              <div class="footnote">Harga penawaran jadi basis rencana omzet, harga deal jadi omzet realisasi di Overview. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
+              <div class="footnote">Harga penawaran jadi basis rencana omzet. Realisasi omzet jadi omzet closing beneran di Overview -- sisa realisasinya (penawaran dikurangi realisasi) dihitung otomatis. Kalau ini lead baru, produk pertama otomatis ikut kesimpan pas klik "Simpan lead" di bawah -- tombol "+ Tambah produk" di sini buat nambah produk ke-2 dst setelah lead-nya ada.</div>
+            </div>
+
+            <div id="scaleup-panel-home-anchor" style="display:none;"></div>
+            <div class="panel" id="scaleup-panel-wrap">
+              <div class="panel-title">Scale Up <span class="opt-pill">Opsional</span></div>
+              <div class="row3" id="scaleup-form-row3">
+                <div class="field"><label>Nama item <span class="opt-pill">Opsional</span></label><input type="text" id="f-scaleup-name" placeholder="Ketik nama sendiri..."></div>
+                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-scaleup-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this); updateScaleUpSisaDisplay();"></div>
+                <div class="field"><label>Realisasi omzet (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-scaleup-realisasi" placeholder="Isi kalau udah ada uang masuk" oninput="handleRupiahInputFormat(this); updateScaleUpSisaDisplay();"></div>
+              </div>
+              <div id="scaleup-piutang-display" style="font-size:12.5px; margin-top:2px; min-height:16px;"></div>
+              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
+                <button id="btn-scaleup-cancel" onclick="cancelEditScaleUp()" style="display:none;">Batal edit</button>
+                <button class="primary" id="btn-scaleup-submit" onclick="addScaleUpLine()">+ Tambah Scale Up</button>
+              </div>
+              <div class="product-list" id="scaleup-list" style="margin-top:8px;"></div>
+              <div class="footnote">Beda sama "Produk &amp; penawaran" di atas -- nama itemnya bebas kamu ketik sendiri (bukan pilihan tetap), maksimal 5 item per lead. Bagian dari modul Scale Up Project yang lagi diuji coba (menu "Develop", khusus Master Admin).</div>
             </div>
 
             <div class="panel">
               <div class="panel-title">Laporan follow up <span class="opt-pill">Opsional</span></div>
-              <div class="row3">
-                <div class="field"><label>Tanggal percakapan <span class="opt-pill">Opsional</span></label><input type="date" id="f-note-date"></div>
-                <div class="field"><label>Sumber percakapan <span class="opt-pill">Opsional</span></label>
-                  <select id="f-note-channel">
-                    <option value="wa">Pesan WhatsApp</option>
-                    <option value="website">Pesan dari website</option>
-                    <option value="call">Catatan telepon</option>
-                    <option value="lainnya">Lainnya</option>
-                  </select>
-                </div>
-                <div class="field" style="display:flex; align-items:flex-end;">
-                  <div class="footnote" style="margin-top:0;">Tanggal ini yang dipakai di riwayat, bukan tanggal hari ini otomatis.</div>
-                </div>
+              <div class="field"><label>Sumber percakapan <span class="opt-pill">Opsional</span></label>
+                <select id="f-note-channel">
+                  <option value="wa">Pesan WhatsApp</option>
+                  <option value="website">Pesan dari website</option>
+                  <option value="call">Catatan telepon</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
               </div>
-              <div class="field"><label>Ringkasan percakapan</label>
-              <textarea id="f-new-note" rows="2" placeholder="Isi pesan WA / pesan website / ringkasan telepon..."></textarea></div>
+              <div class="field"><label>Laporan dan rencana follow up</label>
+              <textarea id="f-new-note" rows="2" placeholder="Isi pesan WA / pesan website / ringkasan telepon..."></textarea>
+              <div class="footnote">Catatan perencanaan/pelaksanaan, atau update informasi terbaru dari lead ini. Tanggal &amp; jam otomatis dicatat sesuai jam server pas kamu simpan -- gak bisa diedit manual.</div></div>
               <div style="display:flex; justify-content:flex-end; margin-top:8px;">
                 <button class="primary" onclick="addFollowUpLog()">Update riwayat follow-up</button>
               </div>
@@ -518,7 +561,7 @@
           <tbody id="users-table-body"></tbody>
         </table>
       </div>
-      <div class="dash-hint" style="margin-top:10px;">Ini masih simulasi tampilan (data reset kalau halaman di-refresh). Login beneran per-user baru aktif begitu masuk Supabase Auth.</div>
+      <div class="dash-hint" style="margin-top:10px;">Edit, Ganti password, Nonaktifkan, dan Hapus di sini semuanya beneran nyimpen ke server (bukan simulasi tampilan lagi) -- termasuk "Hapus" yang sifatnya PERMANEN, akun login-nya gak bisa dipake lagi dan gak bisa dibatalkan.</div>
     </div>
 
     <!-- PERBANDINGAN KINERJA -->
@@ -536,6 +579,89 @@
         </div>
       </div>
       <div id="compare-result-wrap"></div>
+    </div>
+
+    <!-- SCALE UP PROJECT (modul uji coba, khusus Master Admin -- lihat SCALE_UP_ENABLED) -->
+    <div class="view" id="view-scaleup">
+      <div id="scaleup-fulllist-wrap">
+        <div class="topbar">
+          <div>
+            <div class="title">Scale Up Project</div>
+            <div class="subtitle">Cuma nampilin lead yang udah diisi minimal 1 item Scale Up -- masih tahap uji coba</div>
+          </div>
+        </div>
+        <div class="kpis" id="scaleup-kpi-row"></div>
+        <div class="panel" style="margin-top:14px;">
+          <div class="rowlist-header">
+            <span></span><span>Perusahaan</span><span>Tanggal input</span><span>Produk</span><span>Status</span><span>Follow up</span><span></span>
+          </div>
+          <div class="rowlist" id="scaleup-rowlist"></div>
+        </div>
+      </div>
+
+      <div class="leads-split" id="scaleup-split-wrap" style="display:none;">
+        <div class="split-list-col">
+          <div class="split-namelist" id="scaleup-split-namelist"></div>
+        </div>
+        <div class="split-form-col" id="scaleup-split-form-col">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <button class="icon-btn" onclick="exitScaleUpDetail()" aria-label="Kembali ke daftar Scale Up">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="avatar" id="scaleup-detail-avatar"></div>
+            <div style="min-width:0; flex:1;">
+              <div class="title" id="scaleup-detail-company" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</div>
+              <div class="subtitle" id="scaleup-detail-pic"></div>
+            </div>
+            <span id="scaleup-detail-status-wrap"></span>
+          </div>
+          <div class="footnote" style="margin:-6px 0 12px;">Cuma data Scale Up lead ini yang ditampilin di sini. Mau lihat/edit data lengkap lead-nya (produk, chat log, riwayat follow-up, dst)? <a href="javascript:void(0)" onclick="openLeadForm(currentEditId)" style="color:var(--accent); font-weight:600; text-decoration:underline; cursor:pointer;">Buka detail lengkap lead</a>.</div>
+          <!-- panel #scaleup-panel-wrap dipindah ke sini pas dibuka (JS) -->
+        </div>
+      </div>
+    </div>
+
+    <!-- CAMPAIGN -->
+    <div class="view" id="view-campaign">
+      <div id="campaign-fulllist-wrap">
+        <div class="topbar">
+          <div>
+            <div class="title">Campaign</div>
+            <div class="subtitle">Lead yang ditandain campaign tertentu -- tetap kehitung normal di laporan keseluruhan, cuma dipisah tampilan/KPI-nya di sini.</div>
+          </div>
+          <button class="primary" id="btn-campaign-new" onclick="openCampaignFormModal()" style="display:none;">+ Buat Campaign</button>
+        </div>
+        <div id="campaign-list-wrap"></div>
+      </div>
+
+      <div class="leads-split" id="campaign-split-wrap" style="display:none;">
+        <div class="split-list-col">
+          <div class="split-namelist" id="campaign-split-namelist"></div>
+        </div>
+        <div class="split-form-col" id="campaign-split-form-col">
+          <div id="campaign-detail-header" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+            <button class="icon-btn" onclick="exitCampaignDetail()" aria-label="Kembali ke daftar Campaign">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div style="min-width:0; flex:1;">
+              <div class="title" id="campaign-detail-name" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</div>
+              <div class="subtitle" id="campaign-detail-period"></div>
+            </div>
+            <span id="campaign-detail-status-wrap"></span>
+            <button class="icon-btn" id="btn-campaign-edit" onclick="openCampaignFormModal(currentCampaignId)" aria-label="Edit campaign" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+            </button>
+          </div>
+          <div class="footnote" id="campaign-detail-assigned" style="margin:-6px 0 12px;"></div>
+
+          <div class="kpis" id="campaign-detail-kpis"></div>
+
+          <!-- Sengaja gak ada daftar lead di sini -- Campaign cuma buat kelola
+               info + lihat angka ringkasan. Daftar PT-nya dilihat dari menu
+               Leads, pakai dropdown filter "Campaign" di toolbar situ. -->
+          <div class="footnote" style="margin-top:14px;">Mau lihat daftar lead yang ditandain campaign ini? Buka menu <a href="javascript:void(0)" onclick="goToLeadsFilteredByCampaign(currentCampaignId)" style="color:var(--accent); font-weight:600; text-decoration:underline; cursor:pointer;">Leads (sudah kefilter)</a>.</div>
+        </div>
+      </div>
     </div>
 
     <!-- MONITORING USER -->
@@ -614,10 +740,31 @@
       <div id="admin-approval-list"></div>
     </div>
 
+    <!-- PERMINTAAN LIMIT (Master/Super Admin) -->
+    <div class="view" id="view-quota-approval">
+      <div class="topbar">
+        <div>
+          <div class="title">Permintaan Limit</div>
+          <div class="subtitle">Request tambahan follow-up harian / jumlah lead dari user</div>
+        </div>
+        <button class="icon-btn" onclick="renderQuotaApprovalView()" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        </button>
+      </div>
+      <div id="quota-approval-list"></div>
+    </div>
+
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="toast live-notify-toast" id="live-notify-toast" onclick="openLiveNotifyLead()">
+  <span class="tdot"></span>
+  <div>
+    <div id="live-notify-text"></div>
+    <div class="live-notify-hint">Klik buat lihat lead-nya</div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="user-form-modal">
   <div class="modal-card">
@@ -649,11 +796,82 @@
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Kepala Cabang? (opsional, label doang - gak ngaruh ke akses data)</label>
         <select id="uf-branch" onchange="handleBranchSelectChange(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
       </div>
+      <div id="uf-atasan-wrap" style="display:none;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Atasan (Supervisor atau Super Admin)</label>
+        <select id="uf-atasan" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
+      </div>
+      <div id="uf-super-team-wrap" style="display:none;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Anggota tim (SPV yang jadi tanggung jawabnya) -- cuma Master Admin yang bisa ubah ini</label>
+        <div id="uf-super-team-checklist" style="display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+      </div>
+      <div id="uf-structure-path-wrap" style="display:none;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Jalur struktur</label>
+        <div id="uf-structure-path" style="font-size:12.5px; color:var(--text-2); line-height:1.5;"></div>
+      </div>
       <div id="uf-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
     </div>
     <div class="modal-actions">
       <button class="primary" onclick="submitUserForm()">Simpan</button>
       <button onclick="closeUserForm()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="campaign-form-modal">
+  <div class="modal-card" style="max-width:440px;">
+    <div class="modal-title" id="campaign-form-title">Buat Campaign</div>
+    <div class="modal-sub">Lead yang ditandain campaign ini bakal kehitung di KPI campaign, tapi tetap masuk laporan keseluruhan seperti biasa.</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin:4px 0 14px;">
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Nama campaign</label>
+        <input type="text" id="cf-name" placeholder="Misal: Promo Agustus" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+      </div>
+      <div class="row2">
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Tanggal mulai</label>
+          <input type="date" id="cf-start" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Tanggal selesai</label>
+          <input type="date" id="cf-end" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Status</label>
+        <select id="cf-status" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+          <option value="aktif">Aktif</option>
+          <option value="selesai">Selesai</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Super Admin yang ditunjuk ngawasin <span class="opt-pill">Opsional</span></label>
+        <div id="cf-assigned-checklist" style="display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px 10px;"></div>
+        <div class="footnote">Kosongin semua kalau cuma Master Admin doang yang perlu bisa liat campaign ini.</div>
+      </div>
+      <div id="cf-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitCampaignForm()">Simpan campaign</button>
+      <button onclick="closeCampaignFormModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="password-reset-modal">
+  <div class="modal-card">
+    <div class="modal-title">Ganti password</div>
+    <div class="modal-sub" id="pr-user-label" style="margin-bottom:10px;"></div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin:4px 0 14px;">
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Password baru (min. 6 karakter)</label>
+        <input type="text" id="pr-password" placeholder="Password login baru" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        <div class="footnote" style="margin-top:6px;">Password langsung aktif begitu disimpan. Kabarin ke orangnya sendiri secara langsung (bukan lewat email otomatis) -- sama kayak alur tambah user baru.</div>
+      </div>
+      <div id="pr-error" style="display:none; font-size:11.5px; color:var(--hot);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitPasswordReset()">Simpan password baru</button>
+      <button onclick="closePasswordResetModal()">Batal</button>
     </div>
   </div>
 </div>
@@ -696,6 +914,21 @@
     <div class="modal-actions">
       <button class="primary" onclick="confirmApproveWithPassword()">Buat akun</button>
       <button onclick="closeApprovePasswordModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="quota-request-modal">
+  <div class="modal-card">
+    <div class="modal-title">Kirim request tambahan limit</div>
+    <div class="modal-sub" id="quota-request-message"></div>
+    <div style="margin:14px 0;">
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Catatan (opsional)</label>
+      <textarea id="quota-request-note" placeholder="Misal: lagi rame closing akhir bulan" style="width:100%; min-height:60px; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="submitQuotaRequest()">Kirim Request</button>
+      <button onclick="closeQuotaRequestModal()">Batal</button>
     </div>
   </div>
 </div>
@@ -773,6 +1006,10 @@
           <select id="ql-admin" onchange="handleQuickAdminSelectChange(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
         </div>
       </div>
+      <div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Campaign <span class="opt-pill">Opsional</span></label>
+        <select id="ql-campaign" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
+      </div>
       <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
         <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">Produk &amp; penawaran <span class="opt-pill">Opsional</span></div>
         <div class="row2">
@@ -785,7 +1022,7 @@
           </div>
           <div>
             <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Harga penawaran (Rp)</label>
-            <input type="number" id="ql-product-penawaran" min="0" step="100000" placeholder="0" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <input type="text" inputmode="numeric" id="ql-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
           </div>
         </div>
       </div>
@@ -847,7 +1084,7 @@
   </button>
   <div class="mobile-topbar-title" id="mobile-topbar-title">Dashboard</div>
   <div class="mobile-fab-menu" id="mobile-fab-menu">
-    <div class="mobile-fab-item accent" onclick="openQuickLeadModal(); closeMobileFab();">+ Tambah lead</div>
+    <div class="mobile-fab-item accent" id="mobile-fab-tambah-lead" onclick="openQuickLeadModal(); closeMobileFab();">+ Tambah lead</div>
     <div class="mobile-fab-item" onclick="switchView('dashboard'); closeMobileFab();">Dashboard</div>
     <div class="mobile-fab-item" onclick="switchView('overview'); closeMobileFab();">Overview</div>
     <div class="mobile-fab-item" onclick="switchView('followup'); closeMobileFab();">Rencana Follow Up</div>
@@ -857,7 +1094,7 @@
     <div class="mobile-fab-item" onclick="goToFilter('warm'); closeMobileFab();"><span class="fdot" style="background:var(--warm)"></span>Warm</div>
     <div class="mobile-fab-item" onclick="goToFilter('hot'); closeMobileFab();"><span class="fdot" style="background:var(--hot)"></span>Hot</div>
     <div class="mobile-fab-sep"></div>
-    <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah DP</div>
+    <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah Closing</div>
     <div class="mobile-fab-item" onclick="goToFilter('overdue'); closeMobileFab();">Follow up telat</div>
     <div class="mobile-fab-item" onclick="goToFilter('no-interaction'); closeMobileFab();">Belum ada interaksi</div>
     <div class="mobile-fab-item" onclick="goToFilter('no-followup-date'); closeMobileFab();">Tanggal follow up kosong</div>
@@ -890,7 +1127,7 @@
 
 <script>
 let leadsLoadedFromSupabase = false;
-function dbRowToLead(row){
+function dbRowToLead(row, followUpHistory){
   return {
     id: row.id,
     company: row.company || '',
@@ -905,10 +1142,29 @@ function dbRowToLead(row){
     source: row.source || '',
     followUp: row.follow_up || '',
     admin: row.admin || '',
+    campaignId: row.campaign_id || null,
     entryDate: row.entry_date || '',
     chatLog: row.chat_log || '',
-    products: row.products || [],
-    history: row.history || [],
+    products: (row.products || []).map(p=>({
+      id: p.id,
+      type: p.type,
+      hargaPenawaran: p.hargaPenawaran || 0,
+      // Data lama masih nyimpen "hargaDeal" -- kalau realisasiOmzet belum ada,
+      // ambil dari situ biar angka lama gak ilang pas dibuka ulang.
+      realisasiOmzet: (p.realisasiOmzet !== undefined ? (p.realisasiOmzet || 0) : (p.hargaDeal || 0))
+    })),
+    // Item modul "Scale Up Project" (uji coba, lihat SCALE_UP_ENABLED) --
+    // polanya sama kayak products, cuma name-nya bebas diketik manual.
+    scaleUp: (row.scale_up || []).map(s=>({
+      id: s.id, name: s.name || '',
+      hargaPenawaran: s.hargaPenawaran || 0,
+      realisasiOmzet: s.realisasiOmzet || 0
+    })),
+    // Riwayat follow-up sekarang datang dari tabel follow_ups sendiri
+    // (di-fetch terpisah, lihat fetchFollowUpsByLeadMap), bukan dari
+    // kolom leads.history lagi -- kolom itu dibiarin apa adanya di
+    // database sebagai arsip data lama, cuma udah gak dibaca/ditulis.
+    history: followUpHistory || [],
     activityLog: [],
     createdAt: row.created_at || '',
     firstViewedAt: row.first_viewed_at || null
@@ -928,10 +1184,13 @@ function leadToDbRow(data){
     source: data.source || null,
     follow_up: data.followUp ? data.followUp : null,
     admin: data.admin || null,
+    campaign_id: data.campaignId || null,
     entry_date: data.entryDate ? data.entryDate : null,
     chat_log: data.chatLog || null,
     products: data.products || [],
-    history: data.history || []
+    scale_up: data.scaleUp || []
+    // history sengaja gak ada di sini lagi -- catatan follow-up sekarang
+    // ditulis ke tabel follow_ups sendiri lewat insertFollowUpNote().
   };
 }
 function persistLeadFields(l, fields){
@@ -940,15 +1199,57 @@ function persistLeadFields(l, fields){
   });
 }
 
+// Tarik SEMUA catatan follow-up sekaligus (data kecil, aman di-fetch penuh
+// kayak leads/userAccounts), dikelompokin per lead_id, biar isNoInteraction/
+// lastNote/followUpCountToday dkk yang jalan sinkron di banyak lead sekaligus
+// tetap kepake tanpa perlu fetch satu-satu per lead.
+async function fetchFollowUpsByLeadMap(){
+  const { data, error } = await supabaseClient.from('follow_ups').select('*').order('created_at', {ascending:true});
+  if(error){
+    console.warn('Gagal memuat riwayat follow-up dari server:', error.message);
+    return {};
+  }
+  const map = {};
+  (data||[]).forEach(row=>{
+    const parts = localDateTimeParts(row.created_at);
+    if(!map[row.lead_id]) map[row.lead_id] = [];
+    map[row.lead_id].push({ id: row.id, date: parts.date, time: parts.time, channel: row.channel, note: row.note });
+  });
+  return map;
+}
+
+// Nyimpen satu catatan follow-up baru -- date/time-nya SELALU dari created_at
+// yang dibalikin server (bukan dari input manual), jadi gak ada celah buat
+// nge-backdate atau ngatur jam sendiri. Dipakai bareng di addFollowUpLog(),
+// saveQuickLead(), dan saveLeadDataOnly().
+async function insertFollowUpNote(leadId, channel, note){
+  const { data, error } = await supabaseClient.from('follow_ups').insert({
+    lead_id: leadId, channel: channel, note: note
+  }).select().single();
+  if(error){
+    showToast('Gagal simpan catatan follow-up ke server: '+error.message);
+    return null;
+  }
+  const parts = localDateTimeParts(data.created_at);
+  return { id: data.id, date: parts.date, time: parts.time, channel: data.channel, note: data.note };
+}
+
 async function fetchLeadsFromSupabase(){
-  const { data, error } = await supabaseClient.from('leads').select('*').order('id', {ascending:true});
+  const [leadsResult, followUpsMap] = await Promise.all([
+    supabaseClient.from('leads').select('*').order('id', {ascending:true}),
+    fetchFollowUpsByLeadMap()
+  ]);
+  const { data, error } = leadsResult;
   if(error){
     showToast('Gagal memuat data lead dari server: '+error.message);
     leads = [];
     leadsLoadedFromSupabase = false;
     return;
   }
-  leads = (data||[]).map(dbRowToLead);
+  // Perhatikan: bukan .map(dbRowToLead) langsung -- .map ngirim (item, index)
+  // ke callback-nya, dan index itu bakal kesasar jadi argumen followUpHistory
+  // kalau gak dibungkus arrow function eksplisit kayak gini.
+  leads = (data||[]).map(row => dbRowToLead(row, followUpsMap[row.id]||[]));
   leadsLoadedFromSupabase = true;
 }
 
@@ -962,6 +1263,17 @@ let lastActionWasAdd = false;
 let originView = "leads";
 let toastTimer = null;
 let editingProductId = null;
+
+// ============================================================
+// SAKELAR MODUL "SCALE UP PROJECT" -- masih tahap uji coba.
+// Ganti jadi `false` buat matiin fitur ini sepenuhnya (menu Develop,
+// panel Scale Up di form lead, halaman Scale Up) tanpa perlu hapus
+// kode apa-apa -- upload ulang index.html abis ganti nilai ini aja
+// cukup. Balikin ke `true` buat nyalain lagi kapan pun.
+// ============================================================
+const SCALE_UP_ENABLED = true;
+let editingScaleUpId = null;
+
 let formDirty = false;
 let pendingLeaveAction = null;
 let calendarYear = new Date().getFullYear();
@@ -987,6 +1299,21 @@ function initials(name){
   return (parts[0][0]+(parts[1]?parts[1][0]:'')).toUpperCase();
 }
 function todayIsoStr(){ return new Date().toISOString().slice(0,10); }
+
+// Ubah timestamp SERVER (created_at, timestamptz dari Postgres -- selalu
+// akurat, gak peduli jam device siapapun) jadi tanggal+jam lokal buat
+// ditampilin. Dipakai di Log Aktivitas supaya jam yang kelihatan gak lagi
+// ikut jam laptop/HP user yang kadang salah setel, tapi tetap ikut zona
+// waktu device-nya (itu beda hal -- zona waktu jarang salah, jamnya yang
+// suka ngaco).
+function localDateTimeParts(isoTimestamp){
+  const d = new Date(isoTimestamp);
+  const pad = n => String(n).padStart(2,'0');
+  return {
+    date: d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
+    time: pad(d.getHours())+':'+pad(d.getMinutes())
+  };
+}
 function fmtDate(iso){
   if(!iso) return "-";
   const d = new Date(iso+"T00:00:00");
@@ -1002,6 +1329,19 @@ function fmtTime(iso){
 function formatRupiah(num){
   const n = Number(num)||0;
   return 'Rp ' + n.toLocaleString('id-ID');
+}
+function formatNumberInputValue(num){
+  const n = Math.round(Number(num)||0);
+  return n ? n.toLocaleString('id-ID') : '';
+}
+function unformatNumberInput(str){
+  if(!str) return 0;
+  const digits = String(str).replace(/[^0-9]/g,'');
+  return digits ? parseInt(digits, 10) : 0;
+}
+function handleRupiahInputFormat(el){
+  const raw = unformatNumberInput(el.value);
+  el.value = raw ? raw.toLocaleString('id-ID') : '';
 }
 function isOverdue(iso){
   if(!iso) return false;
@@ -1026,13 +1366,13 @@ function hasProduct(l){
   return !!(l.products && l.products.length);
 }
 function hasDealProduct(l){
-  return !!(l.products && l.products.some(p=>p.hargaDeal>0));
+  return !!(l.products && l.products.some(p=>p.realisasiOmzet>0));
 }
 function isDpLead(l){
   return hasDealProduct(l);
 }
 function isLunasLead(l){
-  return !!(l.products && l.products.some(p=>p.lunas));
+  return !!(l.products && l.products.some(p=> p.hargaPenawaran>0 && (p.realisasiOmzet||0) >= p.hargaPenawaran));
 }
 function isNoInteraction(l){
   return !(l.history && l.history.length);
@@ -1041,7 +1381,7 @@ function isTrulyOverdue(l){
   if(!l.followUp) return false;
   return isOverdue(l.followUp);
 }
-const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah DP', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Tanggal follow up kosong', 'has-product':'Rencana omzet', 'has-deal':'Omzet deal', lunas:'Sudah Lunas'};
+const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah Closing', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Tanggal follow up kosong', 'has-product':'Rencana omzet', 'has-deal':'Realisasi Omzet', lunas:'Sudah Lunas'};
 function matchesFilter(l, key){
   switch(key){
     case 'all': return true;
@@ -1064,9 +1404,10 @@ function joinNatural(arr){
   return arr.slice(0,-1).join(', ')+', dan '+arr[arr.length-1];
 }
 function productStatusPhrase(l){
-  const parts = (l.products||[]).filter(p=>p.hargaDeal>0).map(p=>{
+  const parts = (l.products||[]).filter(p=>p.realisasiOmzet>0).map(p=>{
     const label = PRODUCT_LABELS[p.type]||p.type;
-    return (p.lunas ? 'sudah lunas '+label : 'masih DP '+label);
+    const piutang = Math.max(0, (p.hargaPenawaran||0) - (p.realisasiOmzet||0));
+    return (piutang<=0 ? 'sudah lunas '+label : 'masih ada sisa realisasi '+label);
   });
   return joinNatural(parts);
 }
@@ -1081,6 +1422,9 @@ function productTypesLabel(l){
   const types = [...new Set((l.products||[]).map(p=>PRODUCT_LABELS[p.type]||p.type))];
   return types.length ? types.join(', ') : '-';
 }
+function leadTotalPenawaran(l){
+  return (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0);
+}
 
 function leadOwnerLabel(l){
   if(!l.admin) return 'Belum ada admin';
@@ -1088,7 +1432,17 @@ function leadOwnerLabel(l){
   return owner ? (l.admin+' ('+roleLabelOf(owner.role)+')') : l.admin;
 }
 
-function leadRowHTML(l, showNote, selectable, idx){
+// Badge kecil nama campaign di samping nama perusahaan -- cuma nongol kalau
+// lead ini ditandain campaign, biar keliatan langsung di daftar Leads tanpa
+// harus buka detail lead-nya satu-satu.
+function leadCampaignBadgeHTML(l){
+  if(!l.campaignId) return '';
+  const c = campaigns.find(x=>x.id===l.campaignId);
+  if(!c) return '';
+  return '<span class="campaign-tag" title="Campaign">'+c.name+'</span>';
+}
+
+function leadRowHTML(l, showNote, selectable, idx, clickFn){
   const sub = [l.city, l.phone].filter(Boolean).join(' &middot; ') || 'Belum ada lokasi';
   const isJust = l.id === lastViewedId;
   const isJustAdd = isJust && lastActionWasAdd;
@@ -1099,15 +1453,18 @@ function leadRowHTML(l, showNote, selectable, idx){
   const newDotTitle = l.firstViewedAt ? 'Sudah pernah dibuka' : 'Lead baru, belum pernah dibuka';
   const entryTime = fmtTime(l.createdAt);
   const justTagText = isJustAdd ? 'Baru ditambah' : 'Baru dibuka';
-  return `<div class="lead-row${selectable ? ' selectable' : ''}${isJustView ? ' just-viewed' : ''}${isJustAdd ? ' just-added' : ''}" id="lead-row-${l.id}" onclick="openLeadForm(${l.id})">
+  const entryColHTML = currentFilter==='has-product'
+    ? '<span class="lead-omzet-value">'+formatRupiah(leadTotalPenawaran(l))+'</span>'
+    : fmtDate(l.entryDate)+(entryTime ? '<br><span class="lead-entrytime">'+entryTime+'</span>' : '');
+  return `<div class="lead-row${selectable ? ' selectable' : ''}${isJustView ? ' just-viewed' : ''}${isJustAdd ? ' just-added' : ''}" id="lead-row-${l.id}" onclick="${clickFn||'openLeadForm'}(${l.id})">
     ${selectCell}
     <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
     <div class="lead-info">
-      <div class="lead-name"><span class="new-lead-dot ${newDotClass}" title="${newDotTitle}"></span>${l.company}<span class="just-tag">${justTagText}</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span></div>
+      <div class="lead-name"><span class="new-lead-dot ${newDotClass}" title="${newDotTitle}"></span>${l.company}<span class="just-tag">${justTagText}</span><span class="owner-tag" title="Admin/penanggung jawab lead ini">${leadOwnerLabel(l)}</span>${leadCampaignBadgeHTML(l)}</div>
       <div class="lead-sub">${sub}</div>
       ${showNote ? '<div class="lead-note">'+lastNote(l)+'</div>' : ''}
     </div>
-    <div class="lead-entrydate">${fmtDate(l.entryDate)}${entryTime ? '<br><span class="lead-entrytime">'+entryTime+'</span>' : ''}</div>
+    <div class="lead-entrydate">${entryColHTML}</div>
     <span class="source-pill">${productTypesLabel(l)}</span>
     ${badge(l.status)}
     <div class="lead-followup">${followUpChip(l)}</div>
@@ -1159,7 +1516,7 @@ function unsavedModalStay(){
 }
 
 function initDirtyTracking(){
-  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note'];
+  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note','f-product-type','f-product-penawaran','f-product-realisasi'];
   fieldIds.forEach(id=>{
     const el = document.getElementById(id);
     if(el){
@@ -1180,7 +1537,7 @@ const MOBILE_VIEW_TITLES = {
   overview:'Overview', dashboard:'Dashboard', leads:'Daftar Leads', followup:'Rencana Follow Up',
   activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
   monitoring:'Monitoring User', structure:'Struktur Organisasi', 'request-admin':'Ajukan Admin Baru',
-  'admin-approval':'Approval Admin Baru'
+  'admin-approval':'Approval Admin Baru', scaleup:'Scale Up', campaign:'Campaign'
 };
 
 function switchView(view, force){
@@ -1210,6 +1567,9 @@ function switchView(view, force){
   if(view==='structure') renderStructureView();
   if(view==='request-admin') renderRequestAdminView();
   if(view==='admin-approval') renderAdminApprovalView();
+  if(view==='quota-approval') renderQuotaApprovalView();
+  if(view==='scaleup') renderScaleUpView();
+  if(view==='campaign') renderCampaignListView();
   sendHeartbeat(false);
 }
 
@@ -1220,9 +1580,13 @@ function logGlobalActivity(text, company){
   const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const changedBy = currentUser ? currentUser.name : '-';
   globalActivityLog.push({leadId: null, company: company||'-', status: null, date: todayIsoStr(), time: timeStr, text, changedBy});
+  // log_date/log_time sengaja gak dikirim -- biarin log_date kepakein default
+  // CURRENT_DATE dari database (akurat, server-side), dan log_time gak usah
+  // dipercaya sama sekali. Yang ditampilin ke user diambil dari created_at
+  // (lihat getAllActivityEntries), bukan dari kolom ini.
   supabaseClient.from('activity_log').insert({
     lead_id: null, company: company||'-', status: null,
-    log_date: todayIsoStr(), log_time: timeStr, note: text, changed_by: changedBy
+    note: text, changed_by: changedBy
   }).then(({error})=>{ if(error) console.warn('Gagal simpan log ke server:', error.message); });
 }
 
@@ -1232,10 +1596,16 @@ async function getAllActivityEntries(){
     console.warn('Gagal memuat log aktivitas dari server:', error.message);
     return [];
   }
-  return (data||[]).map(a=>({
-    leadId: a.lead_id, company: a.company || '-', status: a.status,
-    date: a.log_date, time: a.log_time, text: a.note, changedBy: a.changed_by || '-'
-  }));
+  return (data||[]).map(a=>{
+    // created_at (timestamptz server) yang jadi acuan tampilan, bukan
+    // log_date/log_time (itu hasil hitungan jam device pas disimpen --
+    // gak bisa dipercaya kalau jam laptop/HP user-nya salah setel).
+    const parts = a.created_at ? localDateTimeParts(a.created_at) : {date:a.log_date, time:a.log_time};
+    return {
+      leadId: a.lead_id, company: a.company || '-', status: a.status,
+      date: parts.date, time: parts.time, text: a.note, changedBy: a.changed_by || '-'
+    };
+  });
 }
 
 async function renderActivityLogView(){
@@ -1461,6 +1831,15 @@ function exitSplitMode(){
   const fuList = document.getElementById('followup-list-panel');
   if(fuWrap) fuWrap.style.display = 'none';
   if(fuList) fuList.style.display = 'block';
+  const suWrap = document.getElementById('scaleup-split-wrap');
+  const suList = document.getElementById('scaleup-fulllist-wrap');
+  if(suWrap) suWrap.style.display = 'none';
+  if(suList) suList.style.display = 'block';
+  placeScaleUpPanel('home');
+  const cWrap = document.getElementById('campaign-split-wrap');
+  const cList = document.getElementById('campaign-fulllist-wrap');
+  if(cWrap) cWrap.style.display = 'none';
+  if(cList) cList.style.display = 'block';
 }
 
 function refreshLeadsListing(){
@@ -1601,7 +1980,7 @@ function computeOmzetSeries(key, sourceLeads){
       if(!l.entryDate) return sum;
       const d = new Date(l.entryDate+"T00:00:00");
       if(d<b.start || d>=b.end) return sum;
-      return sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0);
+      return sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0);
     },0);
   });
   return {labels:buckets.map(b=>b.label), values};
@@ -1612,7 +1991,7 @@ function computeProductMix(sourceLeads){
   let smk3=0, iso=0;
   src.forEach(l=>{
     (l.products||[]).forEach(p=>{
-      if(p.hargaDeal>0){
+      if(p.realisasiOmzet>0){
         if(p.type==='smk3') smk3++;
         else if(p.type==='iso') iso++;
       }
@@ -1627,8 +2006,9 @@ function computeAdminPerformance(sourceLeads){
   return names.map(name=>{
     const own = src.filter(l=>l.admin===name);
     const dpCount = own.filter(isDpLead).length;
-    const omzet = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
-    return {name, leadCount:own.length, dpCount, omzet};
+    const omzet = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+    const omzetPenawaran = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+    return {name, leadCount:own.length, dpCount, omzet, omzetPenawaran};
   }).sort((a,b)=> b.omzet - a.omzet);
 }
 
@@ -1702,11 +2082,12 @@ async function renderComparisonResult(){
       + '<div class="compare-stats-grid">'
         + '<div class="compare-stat"><div class="cs-label">Total lead</div><div class="cs-value">'+p.leadCount+'</div></div>'
         + '<div class="compare-stat"><div class="cs-label">Closing rate</div><div class="cs-value">'+closingRate+'%</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Cold</div><div class="cs-value">'+cold+'</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Warm</div><div class="cs-value">'+warm+'</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Hot</div><div class="cs-value">'+hot+'</div></div>'
-        + '<div class="compare-stat"><div class="cs-label">Sudah DP</div><div class="cs-value">'+p.dpCount+'</div></div>'
-        + '<div class="compare-stat" style="grid-column:1 / -1;"><div class="cs-label">Omzet closed</div><div class="cs-value">'+formatRupiah(p.omzet)+'</div></div>'
+        + '<div class="compare-stat cold"><div class="cs-label">Cold</div><div class="cs-value">'+cold+'</div></div>'
+        + '<div class="compare-stat warm"><div class="cs-label">Warm</div><div class="cs-value">'+warm+'</div></div>'
+        + '<div class="compare-stat hot"><div class="cs-label">Hot</div><div class="cs-value">'+hot+'</div></div>'
+        + '<div class="compare-stat dp"><div class="cs-label">Sudah Closing</div><div class="cs-value">'+p.dpCount+'</div></div>'
+        + '<div class="compare-stat penawaran"><div class="cs-label">Rencana omzet</div><div class="cs-value">'+formatRupiah(p.omzetPenawaran)+'</div></div>'
+        + '<div class="compare-stat closed"><div class="cs-label">Realisasi Omzet</div><div class="cs-value">'+formatRupiah(p.omzet)+'</div></div>'
       + '</div>'
     + '</div>';
   }).join('') + '</div>';
@@ -1716,6 +2097,14 @@ function structNodeHTML(u, tag){
   return '<div class="struct-node '+u.role+'">'
     + '<div class="struct-name">'+u.name+(tag?' <span class="struct-tag">'+tag+'</span>':'')+'</div>'
     + '<div class="struct-role">'+roleLabelOf(u.role)+'</div>'
+  + '</div>';
+}
+
+function structSupervisorGroupHTML(sp, salesUsers){
+  const teamMembers = salesUsers.filter(s=> (sp.team||[]).includes(s.name));
+  const branchTag = (sp.branch && BRANCH_DEFINITIONS[sp.branch]) ? ('Kepala '+BRANCH_DEFINITIONS[sp.branch].label) : '';
+  return '<div class="struct-group">'+structNodeHTML(sp, branchTag)
+    + (teamMembers.length ? '<div class="struct-team">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>' : '<div class="struct-team-empty">Belum ada anggota tim</div>')
   + '</div>';
 }
 
@@ -1737,42 +2126,63 @@ function renderStructureView(){
     if(role==='master_admin' && master){
       html += '<div class="struct-tier">'+structNodeHTML(master)+'</div><div class="struct-connector"></div>';
     }
+
+    const assignedSupervisorNames = new Set();
+    superAdmins.forEach(sa=> (sa.team||[]).forEach(n=>{ if(supervisors.some(sp=>sp.name===n)) assignedSupervisorNames.add(n); }));
+    const assignedSalesNames = new Set();
+    supervisors.forEach(sp=> (sp.team||[]).forEach(n=>assignedSalesNames.add(n)));
+    superAdmins.forEach(sa=> (sa.team||[]).forEach(n=>{ if(salesUsers.some(s=>s.name===n)) assignedSalesNames.add(n); }));
+
     if(superAdmins.length){
-      html += '<div class="struct-tier">'+superAdmins.map(u=>structNodeHTML(u)).join('')+'</div><div class="struct-connector"></div>';
+      html += '<div class="struct-groups" style="align-items:flex-start;">' + superAdmins.map(sa=>{
+        const mySupervisors = supervisors.filter(sp=> (sa.team||[]).includes(sp.name));
+        const directSales = salesUsers.filter(s=> (sa.team||[]).includes(s.name));
+        let inner = '<div class="struct-groups" style="margin-top:12px;">' + mySupervisors.map(sp=>structSupervisorGroupHTML(sp, salesUsers)).join('');
+        if(directSales.length){
+          inner += '<div class="struct-group"><div class="struct-team-label">Lapor langsung ke '+sa.name+'</div><div class="struct-team" style="margin-top:0; padding-top:0; border-top:none;">'+directSales.map(s=>structNodeHTML(s)).join('')+'</div></div>';
+        }
+        if(!mySupervisors.length && !directSales.length){
+          inner += '<div class="struct-team-empty" style="border-top:none;">Belum ada SPV/Sales di bawah Super Admin ini</div>';
+        }
+        inner += '</div>';
+        return '<div style="border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--surface);">'+structNodeHTML(sa)+inner+'</div>';
+      }).join('') + '</div>';
     }
-    const assignedNames = new Set();
-    supervisors.forEach(sp=> (sp.team||[]).forEach(n=>assignedNames.add(n)));
-    const orphanSales = salesUsers.filter(s=>!assignedNames.has(s.name));
-    html += '<div class="struct-groups">';
-    supervisors.forEach(sp=>{
-      const teamMembers = salesUsers.filter(s=> (sp.team||[]).includes(s.name));
-      const branchTag = (sp.branch && BRANCH_DEFINITIONS[sp.branch]) ? ('Kepala '+BRANCH_DEFINITIONS[sp.branch].label) : '';
-      html += '<div class="struct-group">'+structNodeHTML(sp, branchTag)
-        + (teamMembers.length ? '<div class="struct-team">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>' : '<div class="struct-team-empty">Belum ada anggota tim</div>')
-      + '</div>';
-    });
-    if(orphanSales.length){
-      html += '<div class="struct-group"><div class="struct-team-label">Belum ada SPV</div><div class="struct-team" style="margin-top:0; padding-top:0; border-top:none;">'+orphanSales.map(s=>structNodeHTML(s)).join('')+'</div></div>';
+
+    const orphanSupervisors = supervisors.filter(sp=>!assignedSupervisorNames.has(sp.name));
+    const orphanSales = salesUsers.filter(s=>!assignedSalesNames.has(s.name));
+    if(orphanSupervisors.length || orphanSales.length){
+      html += '<div style="margin-top:18px;"><div class="struct-team-label" style="text-align:center; margin-bottom:10px;">Belum ditugaskan ke Super Admin manapun</div><div class="struct-groups">';
+      html += orphanSupervisors.map(sp=>structSupervisorGroupHTML(sp, salesUsers)).join('');
+      if(orphanSales.length){
+        html += '<div class="struct-group"><div class="struct-team-label">Belum ada SPV</div><div class="struct-team" style="margin-top:0; padding-top:0; border-top:none;">'+orphanSales.map(s=>structNodeHTML(s)).join('')+'</div></div>';
+      }
+      html += '</div></div>';
     }
-    html += '</div>';
-    if(!supervisors.length && !orphanSales.length) html += '<div class="empty-note" style="margin-top:14px;">Belum ada Supervisor atau Sales terdaftar.</div>';
+    if(!superAdmins.length && !orphanSupervisors.length && !orphanSales.length) html += '<div class="empty-note" style="margin-top:14px;">Belum ada Super Admin, Supervisor, atau Sales terdaftar.</div>';
   } else if(role==='supervisor'){
     subtitle = 'Kamu cuma bisa lihat dirimu dan anggota tim kamu sendiri.';
     const me = userAccounts.find(u=>u.name===currentUser.name && u.role==='supervisor');
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : ((me && me.team) ? me.team : []);
     const teamMembers = salesUsers.filter(s=> team.includes(s.name));
+    const myAtasan = me ? findAtasanOf(me.name) : null;
+    if(myAtasan){
+      const holder = userAccounts.find(u=>u.name===myAtasan.name);
+      html += '<div class="struct-tier">'+(holder?structNodeHTML(holder):'')+'</div><div class="struct-connector"></div>';
+    }
     html += '<div class="struct-tier">'+(me ? structNodeHTML(me,'Kamu') : '')+'</div>';
     html += '<div class="struct-connector"></div>';
     html += teamMembers.length
       ? '<div class="struct-team" style="margin:0 auto; border-top:none; padding-top:0;">'+teamMembers.map(s=>structNodeHTML(s)).join('')+'</div>'
       : '<div class="struct-team-empty" style="border-top:none;">Belum ada anggota tim</div>';
   } else if(role==='sales'){
-    subtitle = 'Kamu cuma tau siapa Supervisor kamu.';
-    const mySupervisor = supervisors.find(sp=> (sp.team||[]).includes(currentUser.name));
-    if(mySupervisor){
-      html += '<div class="struct-tier">'+structNodeHTML(mySupervisor)+'</div><div class="struct-connector"></div>';
+    subtitle = 'Kamu cuma tau siapa atasan kamu.';
+    const myAtasan = findAtasanOf(currentUser.name);
+    const atasanHolder = myAtasan ? userAccounts.find(u=>u.name===myAtasan.name) : null;
+    if(atasanHolder){
+      html += '<div class="struct-tier">'+structNodeHTML(atasanHolder)+'</div><div class="struct-connector"></div>';
     } else {
-      html += '<div class="empty-note" style="margin-bottom:14px;">Belum ada Supervisor yang ditugaskan buat kamu.</div>';
+      html += '<div class="empty-note" style="margin-bottom:14px;">Belum ada atasan yang ditugaskan buat kamu.</div>';
     }
     const meUser = salesUsers.find(s=>s.name===currentUser.name) || {name:currentUser.name, role:'sales'};
     html += '<div class="struct-tier">'+structNodeHTML(meUser,'Kamu')+'</div>';
@@ -2235,7 +2645,8 @@ function renderDashboardView(){
   const overdueCount = mine.filter(l=>matchesFilter(l,'overdue')).length;
   const noInteraction = mine.filter(isNoInteraction);
   const totalPenawaran = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
-  const totalDeal = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+  const totalRealisasi = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  const totalPiutang = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+Math.max(0,(p.hargaPenawaran||0)-(p.realisasiOmzet||0)),0), 0);
   const cold = mine.filter(l=>l.status==='cold');
   const warm = mine.filter(l=>l.status==='warm');
   const hot = mine.filter(l=>l.status==='hot');
@@ -2259,7 +2670,7 @@ function renderDashboardView(){
     </div>
     <div class="card" onclick="goToFilterMine('dp')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconCheck}</div>
-      <div class="label">Sudah DP</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
+      <div class="label">Sudah Closing</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
     </div>
     <div class="card" onclick="goToFilterMine('overdue')">
       <div class="card-icon" style="background:var(--hot-bg); color:var(--hot);">${iconClock}</div>
@@ -2275,7 +2686,11 @@ function renderDashboardView(){
     </div>
     <div class="card" onclick="goToFilterMine('has-deal')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconTrend}</div>
-      <div class="label">Omzet deal</div><div class="value" style="font-size:18px;">${formatRupiah(totalDeal)}</div><div class="foot" style="color:var(--success)">realisasi closing</div>
+      <div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(totalRealisasi)}</div><div class="foot" style="color:var(--success)">udah closing</div>
+    </div>
+    <div class="card" onclick="goToFilterMine('has-deal')">
+      <div class="card-icon" style="background:var(--warm-bg); color:var(--warm);">${iconClock}</div>
+      <div class="label">Sisa Realisasi</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
     </div>
   `;
 
@@ -2311,7 +2726,7 @@ function renderDashboardView(){
 
 function renderOverview(){
   const scoped = getOverviewScopedLeads();
-  const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterAdmin!=='all' || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
+  const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterAdmin!=='all' || !!quickFilterDateFrom || !!quickFilterDateTo || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
   const total = scoped.length;
   const hot = scoped.filter(l=>l.status==='hot');
   const warm = scoped.filter(l=>l.status==='warm');
@@ -2321,7 +2736,8 @@ function renderOverview(){
   const overdueCount = scoped.filter(l=>matchesFilter(l,'overdue')).length;
   const noInteraction = scoped.filter(isNoInteraction);
   const totalPenawaran = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
-  const totalDeal = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaDeal||0),0), 0);
+  const totalRealisasi = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  const totalPiutang = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+Math.max(0,(p.hargaPenawaran||0)-(p.realisasiOmzet||0)),0), 0);
 
   document.getElementById('nav-leads-count').textContent = leads.length;
   document.getElementById('overview-date').textContent = (isScoped ? 'Terfilter - ' : 'Data live, terhitung otomatis - ') + 'hari ini '+fmtDate(todayIsoStr());
@@ -2340,7 +2756,7 @@ function renderOverview(){
     </div>
     <div class="card" onclick="goToFilter('dp')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconCheck}</div>
-      <div class="label">Sudah DP</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
+      <div class="label">Sudah Closing</div><div class="value">${dp.length}</div><div class="foot" style="color:var(--success)">siap dijadwalkan</div>
     </div>
     <div class="card" onclick="goToFilter('overdue')">
       <div class="card-icon" style="background:var(--hot-bg); color:var(--hot);">${iconClock}</div>
@@ -2356,7 +2772,11 @@ function renderOverview(){
     </div>
     <div class="card" onclick="goToFilter('has-deal')">
       <div class="card-icon" style="background:var(--success-bg); color:var(--success);">${iconTrend}</div>
-      <div class="label">Omzet deal</div><div class="value" style="font-size:18px;">${formatRupiah(totalDeal)}</div><div class="foot" style="color:var(--success)">realisasi closing</div>
+      <div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(totalRealisasi)}</div><div class="foot" style="color:var(--success)">udah closing</div>
+    </div>
+    <div class="card" onclick="goToFilter('has-deal')">
+      <div class="card-icon" style="background:var(--warm-bg); color:var(--warm);">${iconClock}</div>
+      <div class="label">Sisa Realisasi</div><div class="value" style="font-size:18px;">${formatRupiah(totalPiutang)}</div><div class="foot" style="color:var(--warm)">sisa yang belum masuk</div>
     </div>
   `;
 
@@ -2427,15 +2847,78 @@ function filterChipLabel(key, list){
     return 'Rencana omzet &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
   }
   if(key==='has-deal'){
-    const sum = list.reduce((s,l)=> s+(l.products||[]).reduce((a,p)=>a+(p.hargaDeal||0),0),0);
-    return 'Omzet deal &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
+    const sum = list.reduce((s,l)=> s+(l.products||[]).reduce((a,p)=>a+(p.realisasiOmzet||0),0),0);
+    return 'Realisasi Omzet &middot; '+list.length+' lead &middot; total '+formatRupiah(sum);
   }
   return (FILTER_LABELS[key]||key) + ' &middot; '+list.length+' lead';
 }
 
 function getQuickFilteredLeads(){
   const term = document.getElementById('search-input').value.toLowerCase();
-  return leads.filter(l=> matchesSearchTerm(l, term) && matchesQuickFilters(l));
+  return leads.filter(l=> matchesSearchTerm(l, term) && matchesQuickFilters(l) && matchesQuickFilterCampaign(l));
+}
+
+// Filter Campaign sengaja DIPISAH dari matchesQuickFilters() -- itu dipakai
+// bareng sama Overview, dan filter Campaign ini KHUSUS Leads doang.
+function matchesQuickFilterCampaign(l){
+  return quickFilterCampaign==='all' || l.campaignId===quickFilterCampaign;
+}
+
+// Ringkasan "filter aktif" di atas tabel Leads -- pengingat kalem biar gak
+// lupa lagi nyaring apa doang (gampang lupa soalnya filter-nya kesebar di
+// beberapa dropdown/toggle beda-beda). Cuma nongol kalau emang ada yang aktif.
+function renderActiveFiltersBanner(){
+  const banner = document.getElementById('active-filters-banner');
+  if(!banner) return;
+  const parts = [];
+  const term = (document.getElementById('search-input')?.value || '').trim();
+  if(term) parts.push('cari "'+term+'"');
+  if(currentFilter && currentFilter!=='all') parts.push('status: <b>'+(FILTER_LABELS[currentFilter]||currentFilter)+'</b>');
+  if(quickFilterPic && quickFilterPic!=='all') parts.push('PIC: <b>'+quickFilterPic+'</b>');
+  if(quickFilterLocation && quickFilterLocation!=='all') parts.push('lokasi: <b>'+quickFilterLocation+'</b>');
+  if(quickFilterCampaign && quickFilterCampaign!=='all'){
+    const c = campaigns.find(x=>x.id===quickFilterCampaign);
+    parts.push('campaign: <b>'+(c ? c.name : '(gak ketemu)')+'</b>');
+  }
+  if(quickFilterDateFrom || quickFilterDateTo){
+    const fieldLabel = quickFilterDateField==='followUp' ? 'tgl follow-up' : 'tgl input';
+    parts.push(fieldLabel+': <b>'+(quickFilterDateFrom||'...')+' s/d '+(quickFilterDateTo||'...')+'</b>');
+  }
+  if(masterFocusFilter && masterFocusFilter.length){
+    parts.push('fokus: <b>'+masterFocusFilter.join(', ')+'</b>');
+  } else if(currentUser && currentUser.role==='master_admin' && quickFilterAdmin && quickFilterAdmin!=='all' && !Array.isArray(quickFilterAdmin)){
+    // Admin dipilih manual dari dropdown (bukan lewat Fokus) -- gak ada
+    // badge lain yang nunjukkin ini, jadi wajib disebut di sini.
+    parts.push('admin: <b>'+quickFilterAdmin+'</b>');
+  }
+  if(groupByAdminEnabled) parts.push('dikelompokkan per admin');
+  if(!parts.length){
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+    return;
+  }
+  banner.className = 'active-filters-banner';
+  banner.style.display = 'flex';
+  banner.innerHTML = '<span class="afb-dot"></span><span>Filter aktif -- '+parts.join(' &middot; ')+'</span><button type="button" class="afb-reset" onclick="resetAllLeadsFilters()">Reset semua</button>';
+}
+
+// Reset semua filter Leads sekaligus (kecuali Fokus tampilan -- itu preferensi
+// lintas-menu punya Master, reset-nya udah ada sendiri lewat badge Fokus).
+function resetAllLeadsFilters(){
+  const searchEl = document.getElementById('search-input');
+  if(searchEl) searchEl.value = '';
+  quickFilterPic = 'all';
+  quickFilterLocation = 'all';
+  quickFilterCampaign = 'all';
+  quickFilterDateFrom = '';
+  quickFilterDateTo = '';
+  if(currentUser && currentUser.role==='master_admin' && !Array.isArray(quickFilterAdmin)){
+    quickFilterAdmin = 'all';
+  }
+  setFilter('all');
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
 }
 
 function leadSortTimestamp(l){
@@ -2461,6 +2944,18 @@ function matchesSearchTerm(l, term){
 let quickFilterPic = 'all';
 let quickFilterLocation = 'all';
 let quickFilterAdmin = 'all';
+
+// Filter rentang tanggal ala Airtable (Where [field] is on/after X and
+// is on/before Y) tapi disederhanain jadi satu date-range picker.
+// Field-nya bisa pilih tanggal input lead atau tanggal follow-up.
+let quickFilterDateField = 'entryDate'; // 'entryDate' | 'followUp'
+let quickFilterDateFrom = '';
+let quickFilterDateTo = '';
+
+// Filter "Campaign" -- KHUSUS menu Leads (gak ngaruh ke Overview/Dashboard/
+// laporan lain, itu sengaja -- campaign cuma "lensa" tampilan di Leads).
+// Default 'all' = nampilin semua lead kayak biasa.
+let quickFilterCampaign = 'all';
 
 // Fokus tampilan -- KHUSUS Master Admin. Kalau diisi (1+ nama), seluruh
 // sistem (Overview, Leads, Follow-up, tabel performa) otomatis nyempit
@@ -2488,7 +2983,7 @@ let nextUserId = 5;
 let ADMIN_LIST = [];
 
 function syncAdminListFromUsers(){
-  ADMIN_LIST = userAccounts.filter(u=>u.role==='sales' && u.status==='active').map(u=>u.name);
+  ADMIN_LIST = userAccounts.filter(u=>u.status==='active').map(u=>u.name);
 }
 syncAdminListFromUsers();
 
@@ -2519,9 +3014,193 @@ async function fetchUserAccountsFromSupabase(){
   syncAdminListFromUsers();
 }
 
+// ============================================================
+// LIMIT & REQUEST TAMBAHAN (produk/follow-up/jumlah lead)
+// ============================================================
+let quotaRequests = [];
+
+async function fetchQuotaRequests(){
+  const { data, error } = await supabaseClient.from('quota_requests').select('*').order('created_at', {ascending:false});
+  if(error){
+    console.warn('Gagal memuat quota_requests:', error.message);
+    return;
+  }
+  quotaRequests = data || [];
+}
+
+// ============================================================
+// CAMPAIGN -- lead yang ditandain campaign tertentu tetap "satu universe"
+// sama lead lain (kehitung normal di semua laporan keseluruhan), cuma
+// dikasih tanda tambahan biar performanya bisa dipantau sendiri di sini.
+// ============================================================
+let campaigns = [];
+
+async function fetchCampaignsFromSupabase(){
+  const { data, error } = await supabaseClient.from('campaigns').select('*').order('start_date', {ascending:false});
+  if(error){
+    console.warn('Gagal memuat campaigns:', error.message);
+    return;
+  }
+  campaigns = (data||[]).map(c=>({
+    id: c.id, name: c.name, startDate: c.start_date, endDate: c.end_date,
+    status: c.status, assignedSuperAdmins: c.assigned_super_admins || [], createdBy: c.created_by
+  }));
+}
+
+function canViewCampaign(c){
+  if(!currentUser) return false;
+  if(currentUser.role==='master_admin') return true;
+  if(currentUser.role==='super_admin') return c.assignedSuperAdmins.includes(currentUser.name);
+  return false;
+}
+
+function myVisibleCampaigns(){
+  return campaigns.filter(canViewCampaign);
+}
+
+function followUpApprovedExtraToday(leadId){
+  const today = todayIsoStr();
+  return quotaRequests.filter(r=> r.type==='follow_up' && r.lead_id===leadId && r.status==='approved' && r.reviewed_at && r.reviewed_at.slice(0,10)===today)
+    .reduce((s,r)=> s + (r.approved_extra||0), 0);
+}
+function followUpLimitToday(leadId){ return 10 + followUpApprovedExtraToday(leadId); }
+function followUpCountToday(l){
+  const today = todayIsoStr();
+  return (l.history||[]).filter(h=> h.date===today).length;
+}
+function leadCountApprovedExtra(adminName){
+  return quotaRequests.filter(r=> r.type==='lead_count' && r.target_admin===adminName && r.status==='approved')
+    .reduce((s,r)=> s + (r.approved_extra||0), 0);
+}
+function leadCountLimit(adminName){ return 15 + leadCountApprovedExtra(adminName); }
+function leadCountCurrent(adminName, excludeLeadId){
+  return leads.filter(l=> l.admin===adminName && l.id!==excludeLeadId).length;
+}
+
+let pendingQuotaRequest = null;
+
+function openQuotaRequestModal(type, opts){
+  pendingQuotaRequest = Object.assign({type}, opts);
+  document.getElementById('quota-request-message').textContent = opts.message;
+  document.getElementById('quota-request-note').value = '';
+  document.getElementById('quota-request-modal').style.display = 'flex';
+}
+
+function closeQuotaRequestModal(){
+  document.getElementById('quota-request-modal').style.display = 'none';
+  pendingQuotaRequest = null;
+}
+
+async function submitQuotaRequest(){
+  if(!pendingQuotaRequest || !currentUser) return;
+  const note = document.getElementById('quota-request-note').value.trim();
+  const row = {
+    type: pendingQuotaRequest.type,
+    requester: currentUser.name,
+    target_admin: pendingQuotaRequest.targetAdmin || null,
+    lead_id: pendingQuotaRequest.leadId || null,
+    lead_company: pendingQuotaRequest.leadCompany || null,
+    current_limit: pendingQuotaRequest.currentLimit,
+    note: note || null
+  };
+  const { error } = await supabaseClient.from('quota_requests').insert(row);
+  if(error){
+    showToast('Gagal kirim request: '+error.message);
+    return;
+  }
+  closeQuotaRequestModal();
+  showToast('Request terkirim, tunggu di-approve Master/Super Admin');
+  await fetchQuotaRequests();
+  refreshQuotaApprovalCount();
+}
+
+function quotaTypeLabel(t){ return t==='follow_up' ? 'Tambahan follow-up harian' : 'Tambahan jumlah lead'; }
+
+async function refreshQuotaApprovalCount(){
+  const badge = document.getElementById('nav-quota-approval-count');
+  if(!badge || !currentUser) return;
+  if(!(currentUser.role==='master_admin' || currentUser.role==='super_admin')) return;
+  const count = quotaRequests.filter(r=>r.status==='pending').length;
+  badge.textContent = count ? count : '';
+}
+
+function renderQuotaApprovalView(){
+  const wrap = document.getElementById('quota-approval-list');
+  if(!wrap || !currentUser) return;
+  const view = document.getElementById('view-quota-approval');
+  if(!view || !view.classList.contains('active')) return;
+  if(!quotaRequests.length){
+    wrap.innerHTML = '<div class="panel" style="color:var(--muted); font-size:12.5px;">Belum ada request.</div>';
+    refreshQuotaApprovalCount();
+    return;
+  }
+  const rank = s => s==='pending' ? 0 : 1;
+  const sorted = quotaRequests.slice().sort((a,b)=> rank(a.status)-rank(b.status) || (new Date(b.created_at)-new Date(a.created_at)));
+  wrap.innerHTML = '<div class="panel">' + sorted.map(r=>{
+    const target = r.type==='follow_up' ? ('Lead: '+(r.lead_company||'-')) : ('Admin tujuan: '+(r.target_admin||'-'));
+    let actions;
+    if(r.status==='pending'){
+      actions = '<div style="display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;">'
+        + '<input type="number" min="1" max="10" placeholder="+jumlah" id="quota-extra-input-'+r.id+'" style="width:80px; padding:6px 8px; font-size:12.5px; border:1px solid var(--border); border-radius:8px;">'
+        + '<button class="primary" style="padding:6px 14px; font-size:12.5px;" onclick="approveQuotaRequest('+r.id+')">Setujui</button>'
+        + '<button style="padding:6px 14px; font-size:12.5px;" onclick="rejectQuotaRequest('+r.id+')">Tolak</button>'
+        + '</div>';
+    } else {
+      const extra = r.status==='approved' ? ('<div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Tambahan diberikan: +'+r.approved_extra+'</div>') : (r.reject_reason ? ('<div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Alasan: '+r.reject_reason+'</div>') : '');
+      actions = '<div style="font-size:11.5px; color:var(--muted); margin-top:4px;">Direview oleh '+(r.reviewed_by||'-')+'</div>' + extra;
+    }
+    return '<div style="padding:12px 0; border-bottom:1px solid var(--border-soft);">'
+      + '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">'
+      + '<div><b>'+quotaTypeLabel(r.type)+'</b> <span style="color:var(--muted); font-size:12px;">('+target+')</span>'
+      + '<div style="font-size:11.5px; color:var(--muted);">Diajukan oleh '+r.requester+' - limit saat ini: '+r.current_limit+(r.note ? ' - catatan: '+r.note : '')+'</div></div>'
+      + adminRequestStatusBadgeHTML(r.status)
+      + '</div>' + actions + '</div>';
+  }).join('') + '</div>';
+  refreshQuotaApprovalCount();
+}
+
+async function approveQuotaRequest(id){
+  const input = document.getElementById('quota-extra-input-'+id);
+  const extra = input ? parseInt(input.value, 10) : NaN;
+  if(!extra || extra < 1 || extra > 10){
+    showToast('Isi tambahan 1-10 dulu.');
+    return;
+  }
+  const { error } = await supabaseClient.from('quota_requests').update({
+    status: 'approved', approved_extra: extra, reviewed_by: currentUser.name, reviewed_at: new Date().toISOString()
+  }).eq('id', id);
+  if(error){
+    showToast('Gagal approve: '+error.message);
+    return;
+  }
+  showToast('Request disetujui, tambahan +'+extra);
+  await fetchQuotaRequests();
+  const req = quotaRequests.find(r=>r.id===id);
+  if(req && req.type==='follow_up' && req.lead_id){
+    const l = leads.find(x=>x.id===req.lead_id);
+    if(l) logActivity(l, 'Limit follow-up harian ditambah +'+extra+' oleh '+currentUser.name);
+  }
+  renderQuotaApprovalView();
+}
+
+async function rejectQuotaRequest(id){
+  const reason = prompt('Alasan reject (opsional, boleh dikosongin):') || null;
+  const { error } = await supabaseClient.from('quota_requests').update({
+    status: 'rejected', reviewed_by: currentUser.name, reviewed_at: new Date().toISOString(), reject_reason: reason
+  }).eq('id', id);
+  if(error){
+    showToast('Gagal reject: '+error.message);
+    return;
+  }
+  showToast('Request ditolak');
+  await fetchQuotaRequests();
+  renderQuotaApprovalView();
+}
+
 let currentUser = null;
 let currentUserProfile = null;
 let editingUserId = null;
+let resettingPasswordUserId = null;
 
 const SUPABASE_URL = 'https://hnwgpwkkpqdblrofjrvh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_T_gwqYbB-v1mlP_IIlKTfw_gwohJH6L';
@@ -2573,7 +3252,11 @@ async function loadProfileAndEnter(userId){
   if(profile.role==='sales'){
     quickFilterAdmin = profile.name;
   } else if(profile.role==='supervisor'){
-    quickFilterAdmin = (profile.team && profile.team.length) ? profile.team.slice() : [];
+    // Scope Supervisor = dirinya SENDIRI + anggota tim -- sebelumnya cuma
+    // masukin tim doang, jadi lead yang dia pegang atas namanya sendiri
+    // ilang dari tampilan Leads/Overview/Dashboard (padahal datanya aman,
+    // cuma kefilter doang).
+    quickFilterAdmin = (profile.team && profile.team.length) ? [...profile.team, profile.name] : [profile.name];
   } else if(profile.role==='master_admin'){
     loadMasterFocusFilterFromStorage();
     applyMasterFocusFilterToQuickFilter();
@@ -2581,6 +3264,8 @@ async function loadProfileAndEnter(userId){
     quickFilterAdmin = 'all';
   }
   await fetchUserAccountsFromSupabase();
+  await fetchQuotaRequests();
+  await fetchCampaignsFromSupabase();
   applyRoleRestrictions();
   document.getElementById('leads-rowlist').innerHTML = '<div class="empty-note" style="text-align:center; padding:30px;">Memuat data lead dari server...</div>';
   await fetchLeadsFromSupabase();
@@ -2590,6 +3275,7 @@ async function loadProfileAndEnter(userId){
   renderFollowupList();
   renderUserChip();
   startHeartbeatLoop();
+  startActivityRealtimeSub();
   switchView('dashboard', true);
 }
 
@@ -2604,6 +3290,7 @@ async function logoutUser(){
   if(idleLogoutTimer){ clearTimeout(idleLogoutTimer); idleLogoutTimer = null; }
   stopHeartbeatLoop();
   stopMonitoringPoll();
+  stopActivityRealtimeSub();
   if(currentUserProfile){
     try{
       await supabaseClient.from('profiles').update({last_seen_at:null, last_interaction_at:null, current_view:null}).eq('id', currentUserProfile.id);
@@ -2650,7 +3337,7 @@ function initIdleAutoLogout(){
 const VIEW_LABELS = {
   overview:'Overview', leads:'Leads', followup:'Rencana follow up',
   activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
-  monitoring:'Monitoring User', structure:'Struktur Organisasi'
+  monitoring:'Monitoring User', structure:'Struktur Organisasi', scaleup:'Scale Up', campaign:'Campaign'
 };
 function getCurrentViewLabel(){
   const activeEl = document.querySelector('.view.active');
@@ -2724,6 +3411,102 @@ function startMonitoringPoll(){
 }
 function stopMonitoringPoll(){
   if(monitoringPollInterval){ clearInterval(monitoringPollInterval); monitoringPollInterval = null; }
+}
+
+// ============================================================
+// NOTIFIKASI LIVE (Realtime) -- pop-up bertingkat waktu ada
+// user lain nambah/ubah data lead, sesuai posisi role:
+// - Sales: cuma kalau Master/Super/SPV yang ubah lead MILIKNYA sendiri.
+// - Supervisor: cuma kalau anak buahnya (Sales di timnya) yang nambah/ubah.
+// - Super Admin: cuma kalau Master Admin ubah lead milik SPV/Sales
+//   (bukan lead miliknya Master/Super sendiri).
+// - Master Admin: sengaja gak dikasih pop-up (dia udah bisa lihat semua).
+// Cuma aktif kalau lagi buka aplikasi ini (in-app), bukan push notification
+// OS/browser -- jadi gak perlu minta izin apa-apa ke user.
+// ============================================================
+let activityRealtimeChannel = null;
+
+function startActivityRealtimeSub(){
+  stopActivityRealtimeSub();
+  activityRealtimeChannel = supabaseClient
+    .channel('activity-log-live')
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'activity_log'}, payload=>{
+      handleIncomingActivityEvent(payload.new);
+    })
+    .subscribe();
+}
+
+function stopActivityRealtimeSub(){
+  if(activityRealtimeChannel){ supabaseClient.removeChannel(activityRealtimeChannel); activityRealtimeChannel = null; }
+}
+
+// Browser (terutama Edge/Chrome) suka nge-freeze tab ke "back-forward cache"
+// pas user pindah halaman/tab terus balik lagi -- koneksi WebSocket realtime
+// otomatis diputus paksa waktu itu terjadi (ini normal, bukan error jaringan).
+// Tanpa langganan ulang, notifikasi live bakal diam2 berhenti kerja sampai
+// halaman di-refresh manual. pageshow dengan persisted=true nandain kondisi
+// itu, jadi kita sambungin ulang begitu halaman aktif lagi.
+window.addEventListener('pageshow', function(e){
+  if(e.persisted && currentUser){
+    startActivityRealtimeSub();
+  }
+});
+
+async function handleIncomingActivityEvent(row){
+  if(!currentUser || !row || row.lead_id===null || row.lead_id===undefined) return;
+  if(row.changed_by === currentUser.name) return;
+  const actor = userAccounts.find(u=>u.name===row.changed_by);
+  const actorRole = actor ? actor.role : null;
+  if(!actorRole) return;
+  let l = leads.find(x=>x.id===row.lead_id);
+  if(!l){
+    const { data } = await supabaseClient.from('leads').select('*').eq('id', row.lead_id).single();
+    if(!data) return;
+    // cek ulang setelah await -- kalau ada beberapa activity_log event nyaris
+    // bebarengan (misal lead+catatan+produk ke-log 3x pas quick-add), event
+    // lain mungkin udah keburu nambahin lead yang sama duluan. Tanpa cek ini,
+    // lead yang sama bisa ke-push dobel/triple ke array leads lokal.
+    l = leads.find(x=>x.id===row.lead_id);
+    if(!l){
+      l = dbRowToLead(data);
+      leads.push(l);
+    }
+  }
+  const owner = userAccounts.find(u=>u.name===l.admin);
+  const ownerRole = owner ? owner.role : null;
+  const myRole = currentUser.role;
+  let relevant = false;
+  if(myRole==='sales'){
+    relevant = l.admin===currentUser.name && ['master_admin','super_admin','supervisor'].includes(actorRole);
+  } else if(myRole==='supervisor'){
+    const team = (currentUserProfile && currentUserProfile.team) || [];
+    relevant = actorRole==='sales' && team.includes(row.changed_by);
+  } else if(myRole==='super_admin'){
+    relevant = actorRole==='master_admin' && (ownerRole==='supervisor' || ownerRole==='sales');
+  }
+  if(!relevant) return;
+  showLiveUpdateToast(l, row);
+}
+
+let liveNotifyTimer = null;
+let pendingLiveNotifyLeadId = null;
+
+function showLiveUpdateToast(l, row){
+  pendingLiveNotifyLeadId = l.id;
+  const t = document.getElementById('live-notify-toast');
+  if(!t) return;
+  document.getElementById('live-notify-text').textContent = row.note ? (row.note+' - '+l.company) : ('Ada perubahan di lead '+l.company);
+  t.classList.add('show');
+  clearTimeout(liveNotifyTimer);
+  liveNotifyTimer = setTimeout(()=>{ t.classList.remove('show'); }, 6000);
+}
+
+function openLiveNotifyLead(){
+  const id = pendingLiveNotifyLeadId;
+  const t = document.getElementById('live-notify-toast');
+  if(t) t.classList.remove('show');
+  clearTimeout(liveNotifyTimer);
+  if(id!==null && id!==undefined) openLeadForm(id);
 }
 
 function getRecencyScore(p){
@@ -2815,6 +3598,7 @@ function applyRoleRestrictions(){
   const monitoringNav = document.getElementById('nav-monitoring-item');
   if(monitoringNav) monitoringNav.style.display = canManageUsers ? '' : 'none';
   if(!canManageUsers && document.getElementById('view-monitoring') && document.getElementById('view-monitoring').classList.contains('active')) switchView('overview', true);
+  if(!canManageUsers && document.getElementById('view-quota-approval') && document.getElementById('view-quota-approval').classList.contains('active')) switchView('overview', true);
   ['admin-locked-badge-leads','admin-locked-badge-overview'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
@@ -2840,6 +3624,27 @@ function applyRoleRestrictions(){
   if(!isSupervisor && document.getElementById('view-request-admin') && document.getElementById('view-request-admin').classList.contains('active')) switchView('overview', true);
   if(!canManageUsers && document.getElementById('view-admin-approval') && document.getElementById('view-admin-approval').classList.contains('active')) switchView('overview', true);
   if(canManageUsers) refreshAdminApprovalCount();
+  if(canManageUsers) refreshQuotaApprovalCount();
+
+  // Modul "Scale Up Project" (uji coba) -- menu "Develop" cuma boleh
+  // kelihatan buat Master Admin, dan cuma kalau SCALE_UP_ENABLED masih
+  // nyala. Kalau salah satu syarat gak kepenuhin, nendang balik ke
+  // Overview kalau kebetulan lagi buka halamannya.
+  const developSection = document.getElementById('nav-develop-section');
+  const showDevelop = isMaster && SCALE_UP_ENABLED;
+  if(developSection) developSection.style.display = showDevelop ? '' : 'none';
+  if(!showDevelop && document.getElementById('view-scaleup') && document.getElementById('view-scaleup').classList.contains('active')) switchView('overview', true);
+  const scaleUpPanel = document.getElementById('scaleup-panel-wrap');
+  if(scaleUpPanel) scaleUpPanel.style.display = SCALE_UP_ENABLED ? '' : 'none';
+
+  // Menu Campaign: Master Admin selalu liat, Super Admin cuma kalau dia
+  // ditunjuk di minimal satu campaign.
+  const canSeeCampaignMenu = isMaster || (currentUser && currentUser.role==='super_admin' && myVisibleCampaigns().length>0);
+  const campaignNav = document.getElementById('nav-campaign-item');
+  if(campaignNav) campaignNav.style.display = canSeeCampaignMenu ? '' : 'none';
+  const campaignNewBtn = document.getElementById('btn-campaign-new');
+  if(campaignNewBtn) campaignNewBtn.style.display = isMaster ? '' : 'none';
+  if(!canSeeCampaignMenu && document.getElementById('view-campaign') && document.getElementById('view-campaign').classList.contains('active')) switchView('overview', true);
 }
 
 function getFocusableUserList(){
@@ -2927,6 +3732,10 @@ function roleLabelOf(role){
   if(role==='super_admin') return 'Super Admin';
   if(role==='supervisor') return 'Supervisor';
   return 'Sales';
+}
+function adminOptionLabel(name){
+  const u = userAccounts.find(x=>x.name===name);
+  return u ? (name+' - '+roleLabelOf(u.role)) : name;
 }
 
 function personAvatarHTML(name, photoUrl, sizePx){
@@ -3083,6 +3892,12 @@ function matchesQuickFilters(l){
       if(!quickFilterAdmin.includes(l.admin)) return false;
     } else if(l.admin!==quickFilterAdmin) return false;
   }
+  if(quickFilterDateFrom || quickFilterDateTo){
+    const raw = quickFilterDateField==='followUp' ? l.followUp : l.entryDate;
+    if(!raw) return false;
+    if(quickFilterDateFrom && raw < quickFilterDateFrom) return false;
+    if(quickFilterDateTo && raw > quickFilterDateTo) return false;
+  }
   return true;
 }
 
@@ -3094,7 +3909,7 @@ function populateQuickFilterDropdowns(){
   let adminUsers = userAccounts.filter(u=>u.role!=='master_admin' && u.status==='active');
   if(currentUser && currentUser.role==='supervisor'){
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : [];
-    adminUsers = adminUsers.filter(u=>team.includes(u.name));
+    adminUsers = adminUsers.filter(u=>team.includes(u.name) || u.name===currentUser.name);
   } else if(currentUser && currentUser.role==='sales'){
     adminUsers = adminUsers.filter(u=>u.name===currentUser.name);
   }
@@ -3118,6 +3933,69 @@ function populateQuickFilterDropdowns(){
     const lockedName = !Array.isArray(quickFilterAdmin) ? quickFilterAdmin : null;
     el.value = (lockedName && adminUsers.some(u=>u.name===lockedName)) ? lockedName : 'all';
   });
+  ['date-field-select','overview-date-field-select'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = quickFilterDateField;
+  });
+  ['date-from-input','overview-date-from-input'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = quickFilterDateFrom;
+  });
+  ['date-to-input','overview-date-to-input'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = quickFilterDateTo;
+  });
+  const dateFilterActive = !!(quickFilterDateFrom || quickFilterDateTo);
+  ['date-filter-clear-leads','date-filter-clear-overview'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = dateFilterActive ? 'inline-flex' : 'none';
+  });
+  // Dropdown "Campaign" -- KHUSUS Leads, sengaja gak dimasukin loop di atas
+  // (yang itu semua dipakai bareng Overview juga). Cuma nongol kalau user
+  // ini emang punya campaign yang bisa diliat (Master Admin, atau Super
+  // Admin yang ditunjuk) -- Supervisor/Sales gak pernah punya campaign
+  // buat dipilih, jadi dropdown-nya disembunyiin daripada bingungin.
+  const campaignSel = document.getElementById('campaign-filter-select');
+  if(campaignSel){
+    const visibleCampaigns = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+    if(visibleCampaigns.length){
+      campaignSel.innerHTML = '<option value="all">Semua campaign</option>' + visibleCampaigns.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
+      campaignSel.value = visibleCampaigns.some(c=>c.id===quickFilterCampaign) ? String(quickFilterCampaign) : 'all';
+      campaignSel.style.display = '';
+    } else {
+      campaignSel.style.display = 'none';
+      quickFilterCampaign = 'all';
+    }
+  }
+}
+
+function setQuickFilterDateField(val){
+  quickFilterDateField = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function setQuickFilterDateFrom(val){
+  quickFilterDateFrom = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function setQuickFilterDateTo(val){
+  quickFilterDateTo = val;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
+}
+
+function clearQuickFilterDate(){
+  quickFilterDateFrom = '';
+  quickFilterDateTo = '';
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+  renderOverview();
 }
 
 function setQuickFilterPic(val){
@@ -3134,11 +4012,22 @@ function setQuickFilterLocation(val){
   renderOverview();
 }
 
+// KHUSUS Leads -- sengaja gak panggil renderOverview() (Campaign gak boleh
+// ngaruh ke angka Overview/Dashboard, itu tetap ngitung semua lead).
+function setQuickFilterCampaign(val){
+  quickFilterCampaign = val==='all' ? 'all' : Number(val);
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+}
+
 function setQuickFilterAdmin(val){
   if(val==='all' && currentUser && currentUser.role==='supervisor'){
     // Supervisor gak boleh "keluar" dari scope tim-nya lewat filter ini --
-    // pilih "Semua admin" dikembalikan ke daftar tim dia sendiri, bukan ke semua orang.
-    quickFilterAdmin = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
+    // pilih "Semua admin" dikembalikan ke tim dia + dirinya sendiri, bukan
+    // ke semua orang (dan bukan cuma tim doang -- itu bug lama yang bikin
+    // lead atas nama Supervisor sendiri ilang dari tampilan).
+    const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team : [];
+    quickFilterAdmin = [...team, currentUserProfile.name];
   } else if(val==='all' && currentUser && currentUser.role==='sales'){
     quickFilterAdmin = currentUser.name;
   } else {
@@ -3172,7 +4061,7 @@ function renderAdminSelectOptions(){
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
     let options = team.slice();
     if(currentUser.name && !options.includes(currentUser.name)) options.unshift(currentUser.name);
-    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('');
     if(options.includes(current)) sel.value = current;
     return;
   }
@@ -3182,7 +4071,7 @@ function renderAdminSelectOptions(){
   if(currentUser && currentUser.name && !options.includes(currentUser.name)){
     options.unshift(currentUser.name);
   }
-  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
+  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
   if(options.includes(current)) sel.value = current;
 }
 
@@ -3218,6 +4107,7 @@ function renderUsersView(){
     const isSelfRow = !!(currentUser && currentUser.name===u.name && currentUser.role===u.role);
     const canEdit = viewerIsMaster || (viewerIsSuperAdmin && (u.role==='sales' || u.role==='supervisor'));
     const canToggleDelete = canEdit && !isMaster && !isSelfRow;
+    const canResetPassword = canEdit && !isSelfRow;
     const roleLabel = roleLabelOf(u.role);
     const statusLabel = u.status==='active' ? 'Aktif' : 'Nonaktif';
     const toggleLabel = u.status==='active' ? 'Nonaktifkan' : 'Aktifkan';
@@ -3234,6 +4124,7 @@ function renderUsersView(){
       '<td><span class="status-badge-user '+(u.status==='active'?'active':'nonaktif')+'">'+statusLabel+'</span></td>'+
       '<td>'+
         '<span class="user-action-link '+(canEdit?'':'disabled')+'" onclick="openUserForm(\''+u.id+'\')">Edit</span>'+
+        '<span class="user-action-link '+(canResetPassword?'':'disabled')+'" onclick="openPasswordResetModal(\''+u.id+'\')">Ganti password</span>'+
         '<span class="user-action-link '+(canToggleDelete?'':'disabled')+'" onclick="toggleUserStatus(\''+u.id+'\')">'+toggleLabel+'</span>'+
         '<span class="user-action-link danger '+(canToggleDelete?'':'disabled')+'" onclick="deleteUserAccount(\''+u.id+'\')">Hapus</span>'+
       '</td>'+
@@ -3244,6 +4135,8 @@ function renderUsersView(){
 function onUserFormRoleChange(){
   const role = document.getElementById('uf-role').value;
   const wrap = document.getElementById('uf-team-wrap');
+  const atasanWrap = document.getElementById('uf-atasan-wrap');
+  const superTeamWrap = document.getElementById('uf-super-team-wrap');
   if(!wrap) return;
   if(role==='supervisor'){
     wrap.style.display = 'block';
@@ -3252,6 +4145,82 @@ function onUserFormRoleChange(){
   } else {
     wrap.style.display = 'none';
   }
+  if(role==='sales'){
+    if(atasanWrap) atasanWrap.style.display = 'block';
+    renderUserFormAtasanSelect();
+  } else {
+    if(atasanWrap) atasanWrap.style.display = 'none';
+  }
+  if(role==='super_admin'){
+    if(superTeamWrap) superTeamWrap.style.display = 'block';
+    renderUserFormSuperTeamChecklist();
+  } else {
+    if(superTeamWrap) superTeamWrap.style.display = 'none';
+  }
+  renderUserFormStructurePath();
+}
+
+function findAtasanOf(name){
+  const holder = userAccounts.find(u=> (u.role==='supervisor' || u.role==='super_admin') && u.team && u.team.includes(name));
+  return holder ? {name: holder.name, role: holder.role} : null;
+}
+
+function renderUserFormAtasanSelect(){
+  const sel = document.getElementById('uf-atasan');
+  if(!sel) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const supervisors = userAccounts.filter(u=>u.role==='supervisor' && u.status==='active');
+  const superAdmins = userAccounts.filter(u=>u.role==='super_admin' && u.status==='active' && (viewerIsMaster || u.name===currentUser.name));
+  let options = '<option value="">- belum ada atasan -</option>';
+  options += supervisors.map(u=>'<option value="'+u.name+'">'+u.name+' (Supervisor)</option>').join('');
+  options += superAdmins.map(u=>'<option value="'+u.name+'">'+u.name+' (Super Admin)</option>').join('');
+  sel.innerHTML = options;
+  const currentAtasan = editingUser ? findAtasanOf(editingUser.name) : null;
+  sel.value = currentAtasan ? currentAtasan.name : '';
+}
+
+function renderUserFormSuperTeamChecklist(){
+  const list = document.getElementById('uf-super-team-checklist');
+  if(!list) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  const currentTeam = (editingUser && editingUser.team) ? editingUser.team : [];
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const supervisors = userAccounts.filter(u=>u.role==='supervisor' && u.status==='active');
+  const disabledAttr = viewerIsMaster ? '' : 'disabled';
+  list.innerHTML = supervisors.length ? supervisors.map(u=>
+    '<label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2);">'+
+      '<input type="checkbox" value="'+u.name+'" '+(currentTeam.includes(u.name)?'checked':'')+' '+disabledAttr+' style="width:auto;">'+u.name+
+    '</label>'
+  ).join('') : '<div style="font-size:12px; color:var(--muted);">Belum ada SPV aktif.</div>';
+  if(!viewerIsMaster){
+    list.insertAdjacentHTML('beforeend', '<div style="font-size:11px; color:var(--muted); margin-top:4px;">Cuma Master Admin yang bisa ubah daftar ini.</div>');
+  }
+}
+
+function renderUserFormStructurePath(){
+  const wrap = document.getElementById('uf-structure-path-wrap');
+  const el = document.getElementById('uf-structure-path');
+  if(!wrap || !el) return;
+  const editingUser = editingUserId ? userAccounts.find(x=>x.id===editingUserId) : null;
+  if(!editingUser || editingUser.role==='master_admin'){
+    wrap.style.display = 'none';
+    return;
+  }
+  const chain = [editingUser.name+' ('+roleLabelOf(editingUser.role)+')'];
+  let cursor = editingUser.name;
+  let guard = 0;
+  while(guard < 6){
+    guard++;
+    const atasan = findAtasanOf(cursor);
+    if(!atasan) break;
+    chain.push(atasan.name+' ('+roleLabelOf(atasan.role)+')');
+    cursor = atasan.name;
+  }
+  const master = userAccounts.find(u=>u.role==='master_admin');
+  if(master) chain.push(master.name+' (Master Admin)');
+  wrap.style.display = 'block';
+  el.textContent = chain.join(' -> ');
 }
 
 function renderUserFormTeamChecklist(){
@@ -3326,6 +4295,8 @@ function openUserForm(id){
     document.getElementById('user-form-title').textContent = 'Edit user';
     document.getElementById('uf-name').value = u.name;
     document.getElementById('uf-email').value = u.email || '';
+    document.getElementById('uf-email').disabled = true;
+    document.getElementById('uf-email').title = 'Ganti email login belum didukung di sini -- cuma buat ditampilin.';
     if(u.role!=='master_admin') roleSelect.value = u.role;
     // Ganti password akun yang udah ada belum didukung di sini -- itu
     // tindakan terpisah (reset password), bukan bagian form edit ini.
@@ -3334,6 +4305,8 @@ function openUserForm(id){
     document.getElementById('user-form-title').textContent = 'Tambah user';
     document.getElementById('uf-name').value = '';
     document.getElementById('uf-email').value = '';
+    document.getElementById('uf-email').disabled = false;
+    document.getElementById('uf-email').title = '';
     roleSelect.value = 'sales';
     if(passwordWrap) passwordWrap.style.display = 'block';
   }
@@ -3373,8 +4346,6 @@ async function submitUserForm(){
   }
 
   if(editingUserId){
-    // Edit user yang udah ada -- masih simulasi lokal (belum ubah akun
-    // Supabase Auth beneran), reset kalau halaman di-refresh.
     const u = userAccounts.find(x=>x.id===editingUserId);
     if(!u) return;
     if(u.role==='master_admin' && !viewerIsMaster){
@@ -3392,17 +4363,80 @@ async function submitUserForm(){
       errorEl.style.display = 'block';
       return;
     }
-    u.name = name;
-    u.email = email;
-    if(u.role!=='master_admin') u.role = role;
-    if(role==='supervisor'){ u.branch = branch; u.team = team; } else { delete u.branch; delete u.team; }
-    if(role==='supervisor' && team.length){
-      userAccounts.forEach(other=>{
-        if(other.role==='supervisor' && other.id!==editingUserId && other.team){
-          other.team = other.team.filter(n=>!team.includes(n));
-        }
-      });
+    const oldRole = u.role;
+    const oldName = u.name;
+    const oldAtasan = findAtasanOf(oldName);
+    let newAtasanName = '';
+    if(role==='sales'){
+      newAtasanName = document.getElementById('uf-atasan').value;
     }
+    let superTeam = null;
+    if(role==='super_admin'){
+      if(!viewerIsMaster){
+        errorEl.textContent = 'Cuma Master Admin yang bisa ubah tim Super Admin.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      const checks = document.querySelectorAll('#uf-super-team-checklist input[type=checkbox]:checked');
+      superTeam = Array.from(checks).map(c=>c.value);
+    }
+
+    const submitBtn = document.querySelector('#user-form-modal .modal-actions .primary');
+    if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+
+    const updatePayload = { name: name, role: (u.role!=='master_admin' ? role : u.role) };
+    if(role==='supervisor'){ updatePayload.branch = branch; updatePayload.team = team; }
+    else if(role==='super_admin'){ updatePayload.branch = null; updatePayload.team = superTeam; }
+    else { updatePayload.branch = null; updatePayload.team = null; }
+
+    const { error: updErr } = await supabaseClient.from('profiles').update(updatePayload).eq('id', editingUserId);
+    if(updErr){
+      if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
+      errorEl.textContent = 'Gagal simpan ke server: '+updErr.message;
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // Dedup: kalau jadi Supervisor dan nyolong anggota dari SPV lain
+    if(role==='supervisor' && team.length){
+      const others = userAccounts.filter(other=> other.role==='supervisor' && other.id!==editingUserId && other.team && other.team.some(n=>team.includes(n)));
+      for(const other of others){
+        const newTeam = other.team.filter(n=>!team.includes(n));
+        const { error: eDedup } = await supabaseClient.from('profiles').update({team:newTeam}).eq('id', other.id);
+        if(!eDedup) other.team = newTeam;
+      }
+    }
+
+    // Lepas dari atasan lama kalau sebelumnya berstatus sales (baik masih sales
+    // dengan atasan baru/beda, maupun udah naik jadi Supervisor/Super Admin).
+    if(oldRole==='sales' && oldAtasan){
+      const oldHolder = userAccounts.find(x=>x.name===oldAtasan.name);
+      if(oldHolder){
+        const newTeam = (oldHolder.team||[]).filter(n=>n!==oldName);
+        const { error: eDetach } = await supabaseClient.from('profiles').update({team:newTeam}).eq('id', oldHolder.id);
+        if(!eDetach) oldHolder.team = newTeam;
+        else showToast('Gak bisa lepas dari atasan lama: '+eDetach.message);
+      }
+    }
+    // Pasang ke atasan baru kalau masih/jadi Sales dan atasan dipilih.
+    if(role==='sales' && newAtasanName){
+      const newHolder = userAccounts.find(x=>x.name===newAtasanName);
+      if(newHolder){
+        const nt = Array.from(new Set([...(newHolder.team||[]).filter(n=>n!==oldName), name]));
+        const { error: eAttach } = await supabaseClient.from('profiles').update({team:nt}).eq('id', newHolder.id);
+        if(!eAttach) newHolder.team = nt;
+        else showToast('Gak bisa masukin ke atasan baru: '+eAttach.message);
+      }
+    }
+
+    // Update cache lokal biar tampilan langsung konsisten
+    u.name = name;
+    if(u.role!=='master_admin') u.role = role;
+    if(role==='supervisor'){ u.branch = branch; u.team = team; }
+    else if(role==='super_admin'){ u.team = superTeam; delete u.branch; }
+    else { delete u.branch; delete u.team; }
+
+    if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
     syncAdminListFromUsers();
     populateQuickFilterDropdowns();
     renderAdminSelectOptions();
@@ -3454,7 +4488,58 @@ async function submitUserForm(){
   showToast('User ditambahkan, akun login sudah aktif');
 }
 
-function toggleUserStatus(id){
+function openPasswordResetModal(id){
+  const u = userAccounts.find(x=>x.id===id);
+  if(!u) return;
+  const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
+  const viewerIsSuperAdmin = !!(currentUser && currentUser.role==='super_admin');
+  const canEdit = viewerIsMaster || (viewerIsSuperAdmin && (u.role==='sales' || u.role==='supervisor'));
+  if(!canEdit){ showToast('Gak punya akses buat ganti password user ini'); return; }
+  resettingPasswordUserId = id;
+  document.getElementById('pr-user-label').textContent = 'Buat akun: '+u.name+' ('+(u.email||'-')+')';
+  document.getElementById('pr-password').value = '';
+  const errorEl = document.getElementById('pr-error');
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+  document.getElementById('password-reset-modal').style.display = 'flex';
+}
+
+function closePasswordResetModal(){
+  document.getElementById('password-reset-modal').style.display = 'none';
+  resettingPasswordUserId = null;
+}
+
+async function submitPasswordReset(){
+  const errorEl = document.getElementById('pr-error');
+  errorEl.style.display = 'none';
+  const u = userAccounts.find(x=>x.id===resettingPasswordUserId);
+  if(!u){ closePasswordResetModal(); return; }
+  const password = document.getElementById('pr-password').value;
+  if(!password || password.length < 6){
+    errorEl.textContent = 'Password wajib diisi, minimal 6 karakter.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  const submitBtn = document.querySelector('#password-reset-modal .modal-actions .primary');
+  if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+
+  const { data, error } = await supabaseClient.functions.invoke('reset-user-password', {
+    body: { userId: u.id, newPassword: password }
+  });
+
+  if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan password baru'; }
+
+  if(error || !data || data.error){
+    errorEl.textContent = 'Gagal ganti password: ' + (error ? error.message : (data && data.error));
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  closePasswordResetModal();
+  showToast('Password '+u.name+' udah diganti');
+}
+
+async function toggleUserStatus(id){
   const u = userAccounts.find(x=>x.id===id);
   if(!u) return;
   const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
@@ -3464,15 +4549,19 @@ function toggleUserStatus(id){
     showToast('Tidak bisa menonaktifkan diri sendiri');
     return;
   }
-  u.status = u.status==='active' ? 'nonaktif' : 'active';
+  const newStatus = u.status==='active' ? 'nonaktif' : 'active';
+  const { error } = await supabaseClient.from('profiles').update({status: newStatus}).eq('id', id);
+  if(error){ showToast('Gagal ubah status: '+error.message); return; }
+  u.status = newStatus;
   syncAdminListFromUsers();
   populateQuickFilterDropdowns();
   renderAdminSelectOptions();
   renderLoginOptions();
   renderUsersView();
+  showToast(newStatus==='active' ? u.name+' diaktifkan lagi' : u.name+' dinonaktifkan -- gak bisa login/akses data lagi');
 }
 
-function deleteUserAccount(id){
+async function deleteUserAccount(id){
   const u = userAccounts.find(x=>x.id===id);
   if(!u) return;
   const viewerIsMaster = !!(currentUser && currentUser.role==='master_admin');
@@ -3482,14 +4571,19 @@ function deleteUserAccount(id){
     showToast('Tidak bisa menghapus diri sendiri');
     return;
   }
-  if(!confirm('Hapus user "'+u.name+'"? Lead yang sudah ditugaskan ke dia tidak ikut terhapus.')) return;
+  if(!confirm('Hapus user "'+u.name+'"? Akun login-nya PERMANEN gak bisa dipake lagi (gak bisa dibatalkan). Lead yang sudah ditugaskan ke dia tidak ikut terhapus.')) return;
+  const { data, error } = await supabaseClient.functions.invoke('delete-user-account', { body: { userId: id } });
+  if(error || !data || data.error){
+    showToast('Gagal hapus user: ' + (error ? error.message : (data && data.error)));
+    return;
+  }
   userAccounts = userAccounts.filter(x=>x.id!==id);
   syncAdminListFromUsers();
   populateQuickFilterDropdowns();
   renderAdminSelectOptions();
   renderLoginOptions();
   renderUsersView();
-  showToast('User dihapus');
+  showToast('User dihapus permanen');
 }
 
 function renderLeadsList(){
@@ -3516,11 +4610,15 @@ function renderLeadsList(){
   const pillFilters = ['all','cold','warm','hot','overdue','no-interaction'];
   if(!pillFilters.includes(currentFilter)){
     chipWrap.style.display = 'flex';
-    chipWrap.innerHTML = '<span class="active-filter-chip">'+filterChipLabel(currentFilter, filtered)+'<button onclick="setFilter(\'all\')" aria-label="Reset filter">&times;</button></span>';
+    const closeBtn = currentFilter==='has-product' ? '' : '<button onclick="setFilter(\'all\')" aria-label="Reset filter">&times;</button>';
+    chipWrap.innerHTML = '<span class="active-filter-chip">'+filterChipLabel(currentFilter, filtered)+closeBtn+'</span>';
   } else {
     chipWrap.style.display = 'none';
     chipWrap.innerHTML = '';
   }
+  const colHeaderEntrydate = document.getElementById('col-header-entrydate');
+  if(colHeaderEntrydate) colHeaderEntrydate.textContent = currentFilter==='has-product' ? 'Nilai omzet' : 'Tanggal input';
+  renderActiveFiltersBanner();
 
   document.getElementById('leads-rowlist').innerHTML = filtered.length
     ? (groupByAdminEnabled ? buildGroupedLeadRowsHTML(filtered) : filtered.map((l,i)=>leadRowHTML(l,false,true,i+1)).join(''))
@@ -3625,9 +4723,10 @@ function logActivity(l, text){
   const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const changedBy = currentUser ? currentUser.name : '-';
   l.activityLog.push({date: todayIsoStr(), time: timeStr, text, changedBy});
+  // log_date/log_time sengaja gak dikirim, lihat catatan di logGlobalActivity().
   supabaseClient.from('activity_log').insert({
     lead_id: l.id, company: l.company, status: l.status,
-    log_date: todayIsoStr(), log_time: timeStr, note: text, changed_by: changedBy
+    note: text, changed_by: changedBy
   }).then(({error})=>{ if(error) console.warn('Gagal simpan log ke server:', error.message); });
 }
 
@@ -3640,7 +4739,7 @@ function setChatLogHeight(size){
   document.querySelector('.height-pill[data-size="'+size+'"]').classList.add('active');
 }
 
-function addFollowUpLog(){
+async function addFollowUpLog(){
   if(currentEditId===null){
     alert('Lead ini belum tersimpan. Kalau mau nambah catatan pertama, isi field di atas terus klik "Simpan lead" -- otomatis ikut kesimpan. Tombol ini buat nambah catatan susulan setelah lead-nya ada.');
     return;
@@ -3650,18 +4749,27 @@ function addFollowUpLog(){
     alert('Isi laporan follow up dulu.');
     return;
   }
-  const noteDate = document.getElementById('f-note-date').value || todayIsoStr();
   const noteChannel = document.getElementById('f-note-channel').value;
-  const now = new Date();
-  const timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const l = leads.find(x=>x.id===currentEditId);
   if(!l){
     alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Silakan kembali ke daftar dan buka ulang.');
     return;
   }
-  l.history.push({date:noteDate, time:timeStr, channel:noteChannel, note});
+  const todayFollowUpCount = followUpCountToday(l);
+  const followUpLimit = followUpLimitToday(l.id);
+  if(todayFollowUpCount >= followUpLimit){
+    openQuotaRequestModal('follow_up', {
+      leadId: l.id,
+      leadCompany: l.company,
+      currentLimit: followUpLimit,
+      message: 'Riwayat follow-up buat "'+l.company+'" udah kena limit harian ('+followUpLimit+' entri hari ini). Catatan yang udah kamu tulis gak ilang -- kirim request tambahan ke Master/Super Admin, terus klik "Tambah catatan" lagi setelah di-approve.'
+    });
+    return;
+  }
+  const entry = await insertFollowUpNote(l.id, noteChannel, note);
+  if(!entry) return; // toast error udah dimunculin di insertFollowUpNote
+  l.history.push(entry);
   l.history.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
-  persistLeadFields(l, {history: l.history});
   logActivity(l, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
   document.getElementById('f-new-note').value = '';
   renderHistory(l);
@@ -3671,13 +4779,19 @@ function addFollowUpLog(){
 function renderProductList(l){
   const items = l.products || [];
   document.getElementById('product-list').innerHTML = items.length ? items.map(p=>{
-    const dealVal = p.hargaDeal ? '<span class="val deal">'+formatRupiah(p.hargaDeal)+'</span>' : '<span class="val empty">Belum deal</span>';
-    const lunasBadge = p.lunas ? ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>' : '';
+    const realisasiVal = p.realisasiOmzet ? '<span class="val deal">'+formatRupiah(p.realisasiOmzet)+'</span>' : '<span class="val empty">Belum ada realisasi</span>';
+    const piutang = Math.max(0, (p.hargaPenawaran||0) - (p.realisasiOmzet||0));
+    let statusBadge = '';
+    if(p.realisasiOmzet>0 && piutang<=0){
+      statusBadge = ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>';
+    } else if(piutang>0 && p.realisasiOmzet>0){
+      statusBadge = ' <span style="background:var(--warm-bg); color:var(--warm); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">Sisa realisasi '+formatRupiah(piutang)+'</span>';
+    }
     return `<div class="product-item">
       <span class="product-badge ${p.type}">${PRODUCT_LABELS[p.type]||p.type}</span>
       <div class="product-info">
         <span class="product-price"><span class="lbl">Penawaran</span><span class="val">${formatRupiah(p.hargaPenawaran)}</span></span>
-        <span class="product-price"><span class="lbl">Deal</span>${dealVal}${lunasBadge}</span>
+        <span class="product-price"><span class="lbl">Realisasi</span>${realisasiVal}${statusBadge}</span>
       </div>
       <button class="product-edit" onclick="editProductLine(${p.id})" aria-label="Edit produk">&#9998;</button>
       <button class="product-remove" onclick="removeProductLine(${p.id})" aria-label="Hapus produk">&times;</button>
@@ -3695,19 +4809,27 @@ function cancelEditProduct(){
   resetProductSubmitButton();
   document.getElementById('f-product-type').value = 'smk3';
   document.getElementById('f-product-penawaran').value = '';
-  document.getElementById('f-product-deal').value = '';
-  toggleLunasCheckboxVisibility();
+  document.getElementById('f-product-realisasi').value = '';
+  updateSisaRealisasiDisplay();
   document.getElementById('product-form-row3').classList.remove('editing-active');
 }
 
-function toggleLunasCheckboxVisibility(){
-  const dealVal = parseFloat(document.getElementById('f-product-deal').value) || 0;
-  const wrap = document.getElementById('product-lunas-wrap');
-  if(dealVal > 0){
-    wrap.style.display = 'flex';
+function updateSisaRealisasiDisplay(){
+  const el = document.getElementById('product-piutang-display');
+  if(!el) return;
+  const penawaranEl = document.getElementById('f-product-penawaran');
+  const realisasiEl = document.getElementById('f-product-realisasi');
+  if(!penawaranEl || !realisasiEl) return;
+  const penawaran = unformatNumberInput(penawaranEl.value);
+  const realisasi = unformatNumberInput(realisasiEl.value);
+  if(!realisasi){ el.textContent = ''; return; }
+  const piutang = Math.max(0, penawaran - realisasi);
+  if(piutang>0){
+    el.textContent = 'Sisa realisasi: '+formatRupiah(piutang);
+    el.style.color = 'var(--warm)';
   } else {
-    wrap.style.display = 'none';
-    document.getElementById('f-product-lunas').checked = false;
+    el.textContent = 'Lunas (sisa realisasi Rp0)';
+    el.style.color = 'var(--success)';
   }
 }
 
@@ -3717,10 +4839,9 @@ function editProductLine(productId){
   const p = (l.products||[]).find(x=>x.id===productId);
   if(!p) return;
   document.getElementById('f-product-type').value = p.type;
-  document.getElementById('f-product-penawaran').value = p.hargaPenawaran;
-  document.getElementById('f-product-deal').value = p.hargaDeal || '';
-  toggleLunasCheckboxVisibility();
-  document.getElementById('f-product-lunas').checked = !!p.lunas;
+  document.getElementById('f-product-penawaran').value = formatNumberInputValue(p.hargaPenawaran);
+  document.getElementById('f-product-realisasi').value = formatNumberInputValue(p.realisasiOmzet);
+  updateSisaRealisasiDisplay();
   editingProductId = productId;
   document.getElementById('btn-product-submit').textContent = 'Update produk';
   document.getElementById('btn-product-cancel').style.display = 'inline-block';
@@ -3733,9 +4854,8 @@ function addProductLine(){
     return;
   }
   const type = document.getElementById('f-product-type').value;
-  const penawaran = parseFloat(document.getElementById('f-product-penawaran').value) || 0;
-  const deal = parseFloat(document.getElementById('f-product-deal').value) || 0;
-  const lunas = document.getElementById('f-product-lunas').checked;
+  const penawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
+  const realisasi = unformatNumberInput(document.getElementById('f-product-realisasi').value);
   if(!penawaran){
     alert('Isi harga penawaran dulu.');
     return;
@@ -3746,34 +4866,37 @@ function addProductLine(){
     return;
   }
   if(!l.products) l.products = [];
+  if(editingProductId===null && l.products.length >= 2){
+    showToast('Maksimal 2 produk per lead. Hapus salah satu dulu kalau mau ganti.');
+    return;
+  }
   if(editingProductId !== null){
     const p = l.products.find(x=>x.id===editingProductId);
-    const wasLunas = p ? !!p.lunas : false;
+    const wasClosing = p ? (p.realisasiOmzet>0) : false;
     if(p){
       p.type = type;
       p.hargaPenawaran = penawaran;
-      p.hargaDeal = deal;
-      p.lunas = lunas;
+      p.realisasiOmzet = realisasi;
     }
     editingProductId = null;
     resetProductSubmitButton();
     document.getElementById('product-form-row3').classList.remove('editing-active');
-    if(lunas && !wasLunas){
-      logActivity(l, 'Produk '+(PRODUCT_LABELS[type]||type)+' ditandai sudah lunas');
-    } else if(!lunas && wasLunas){
-      logActivity(l, 'Tanda lunas produk '+(PRODUCT_LABELS[type]||type)+' dibatalkan');
+    if(realisasi>0 && !wasClosing){
+      logActivity(l, 'Produk '+(PRODUCT_LABELS[type]||type)+' closing -- realisasi omzet '+formatRupiah(realisasi)+' dicatat');
+    } else if(realisasi>0){
+      logActivity(l, 'Update produk '+(PRODUCT_LABELS[type]||type)+' - realisasi omzet diperbarui jadi '+formatRupiah(realisasi));
     } else {
-      logActivity(l, 'Update produk '+(PRODUCT_LABELS[type]||type)+(deal>0 ? ' - harga deal '+formatRupiah(deal)+' dicatat' : ' - harga penawaran diperbarui'));
+      logActivity(l, 'Update produk '+(PRODUCT_LABELS[type]||type)+' - harga penawaran diperbarui');
     }
     showToast('Produk diupdate');
   } else {
-    l.products.push({id: Date.now(), type, hargaPenawaran: penawaran, hargaDeal: deal, lunas});
-    logActivity(l, 'Menambahkan produk '+(PRODUCT_LABELS[type]||type)+' - penawaran '+formatRupiah(penawaran)+(lunas ? ' (langsung lunas)' : ''));
+    l.products.push({id: Date.now(), type, hargaPenawaran: penawaran, realisasiOmzet: realisasi});
+    logActivity(l, 'Menambahkan produk '+(PRODUCT_LABELS[type]||type)+' - penawaran '+formatRupiah(penawaran)+(realisasi>0 ? ' (langsung closing, realisasi '+formatRupiah(realisasi)+')' : ''));
     showToast('Produk ditambahkan');
   }
   document.getElementById('f-product-penawaran').value = '';
-  document.getElementById('f-product-deal').value = '';
-  toggleLunasCheckboxVisibility();
+  document.getElementById('f-product-realisasi').value = '';
+  updateSisaRealisasiDisplay();
   persistLeadFields(l, {products: l.products});
   renderProductList(l);
 }
@@ -3781,12 +4904,463 @@ function addProductLine(){
 function removeProductLine(productId){
   const l = leads.find(x=>x.id===currentEditId);
   if(!l) return;
+  if(!confirm('Anda mau hapus penawaran ini?')) return;
   const removed = (l.products||[]).find(p=>p.id===productId);
   l.products = (l.products||[]).filter(p=>p.id!==productId);
   if(editingProductId === productId) cancelEditProduct();
   if(removed) logActivity(l, 'Menghapus produk '+(PRODUCT_LABELS[removed.type]||removed.type));
   persistLeadFields(l, {products: l.products});
   renderProductList(l);
+}
+
+// ============================================================
+// MODUL "SCALE UP PROJECT" (uji coba) -- polanya sengaja dibikin
+// mirip persis fungsi produk di atas, cuma nama itemnya bebas
+// diketik manual (bukan dropdown tetap) dan capnya 5 bukan 2.
+// Semua fungsi ini aman dipanggil biarpun SCALE_UP_ENABLED=false --
+// yang beneran nyembunyiin fitur ini dari user itu applyRoleRestrictions()
+// (nav Develop) dan initScaleUpFeatureFlag() (panel di form lead).
+// ============================================================
+function renderScaleUpList(l){
+  const items = l.scaleUp || [];
+  const listEl = document.getElementById('scaleup-list');
+  if(!listEl) return;
+  listEl.innerHTML = items.length ? items.map(p=>{
+    const realisasiVal = p.realisasiOmzet ? '<span class="val deal">'+formatRupiah(p.realisasiOmzet)+'</span>' : '<span class="val empty">Belum ada realisasi</span>';
+    const piutang = Math.max(0, (p.hargaPenawaran||0) - (p.realisasiOmzet||0));
+    let statusBadge = '';
+    if(p.realisasiOmzet>0 && piutang<=0){
+      statusBadge = ' <span style="background:var(--success-bg); color:var(--success); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">&#10003; Lunas</span>';
+    } else if(piutang>0 && p.realisasiOmzet>0){
+      statusBadge = ' <span style="background:var(--warm-bg); color:var(--warm); font-weight:700; font-size:10px; padding:2px 9px; border-radius:20px; margin-left:6px; white-space:nowrap;">Sisa realisasi '+formatRupiah(piutang)+'</span>';
+    }
+    return `<div class="product-item">
+      <span class="product-badge" style="background:var(--accent-soft); color:var(--accent-text);">${p.name||'-'}</span>
+      <div class="product-info">
+        <span class="product-price"><span class="lbl">Penawaran</span><span class="val">${formatRupiah(p.hargaPenawaran)}</span></span>
+        <span class="product-price"><span class="lbl">Realisasi</span>${realisasiVal}${statusBadge}</span>
+      </div>
+      <button class="product-edit" onclick="editScaleUpLine(${p.id})" aria-label="Edit item Scale Up">&#9998;</button>
+      <button class="product-remove" onclick="removeScaleUpLine(${p.id})" aria-label="Hapus item Scale Up">&times;</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Belum ada item Scale Up ditambahkan.</div>';
+}
+
+function resetScaleUpSubmitButton(){
+  const btn = document.getElementById('btn-scaleup-submit');
+  const cancelBtn = document.getElementById('btn-scaleup-cancel');
+  if(btn) btn.textContent = '+ Tambah Scale Up';
+  if(cancelBtn) cancelBtn.style.display = 'none';
+}
+
+function cancelEditScaleUp(){
+  editingScaleUpId = null;
+  resetScaleUpSubmitButton();
+  const nameEl = document.getElementById('f-scaleup-name');
+  const penawaranEl = document.getElementById('f-scaleup-penawaran');
+  const realisasiEl = document.getElementById('f-scaleup-realisasi');
+  if(nameEl) nameEl.value = '';
+  if(penawaranEl) penawaranEl.value = '';
+  if(realisasiEl) realisasiEl.value = '';
+  updateScaleUpSisaDisplay();
+  const row3 = document.getElementById('scaleup-form-row3');
+  if(row3) row3.classList.remove('editing-active');
+}
+
+function updateScaleUpSisaDisplay(){
+  const el = document.getElementById('scaleup-piutang-display');
+  if(!el) return;
+  const penawaranEl = document.getElementById('f-scaleup-penawaran');
+  const realisasiEl = document.getElementById('f-scaleup-realisasi');
+  if(!penawaranEl || !realisasiEl) return;
+  const penawaran = unformatNumberInput(penawaranEl.value);
+  const realisasi = unformatNumberInput(realisasiEl.value);
+  if(!realisasi){ el.textContent = ''; return; }
+  const piutang = Math.max(0, penawaran - realisasi);
+  if(piutang>0){
+    el.textContent = 'Sisa realisasi: '+formatRupiah(piutang);
+    el.style.color = 'var(--warm)';
+  } else {
+    el.textContent = 'Lunas (sisa realisasi Rp0)';
+    el.style.color = 'var(--success)';
+  }
+}
+
+function editScaleUpLine(itemId){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  const p = (l.scaleUp||[]).find(x=>x.id===itemId);
+  if(!p) return;
+  document.getElementById('f-scaleup-name').value = p.name;
+  document.getElementById('f-scaleup-penawaran').value = formatNumberInputValue(p.hargaPenawaran);
+  document.getElementById('f-scaleup-realisasi').value = formatNumberInputValue(p.realisasiOmzet);
+  updateScaleUpSisaDisplay();
+  editingScaleUpId = itemId;
+  document.getElementById('btn-scaleup-submit').textContent = 'Update Scale Up';
+  document.getElementById('btn-scaleup-cancel').style.display = 'inline-block';
+  document.getElementById('scaleup-form-row3').classList.add('editing-active');
+}
+
+function addScaleUpLine(){
+  if(currentEditId===null){
+    alert('Lead ini belum tersimpan. Simpan lead dulu, baru bisa nambah item Scale Up.');
+    return;
+  }
+  const name = document.getElementById('f-scaleup-name').value.trim();
+  const penawaran = unformatNumberInput(document.getElementById('f-scaleup-penawaran').value);
+  const realisasi = unformatNumberInput(document.getElementById('f-scaleup-realisasi').value);
+  if(!name){
+    alert('Isi nama item Scale Up dulu.');
+    return;
+  }
+  if(!penawaran){
+    alert('Isi harga penawaran dulu.');
+    return;
+  }
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l){
+    alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Silakan kembali ke daftar dan buka ulang.');
+    return;
+  }
+  if(!l.scaleUp) l.scaleUp = [];
+  if(editingScaleUpId===null && l.scaleUp.length >= 5){
+    showToast('Maksimal 5 item Scale Up per lead. Hapus salah satu dulu kalau mau ganti.');
+    return;
+  }
+  if(editingScaleUpId !== null){
+    const p = l.scaleUp.find(x=>x.id===editingScaleUpId);
+    if(p){
+      p.name = name;
+      p.hargaPenawaran = penawaran;
+      p.realisasiOmzet = realisasi;
+    }
+    editingScaleUpId = null;
+    resetScaleUpSubmitButton();
+    document.getElementById('scaleup-form-row3').classList.remove('editing-active');
+    logActivity(l, 'Update item Scale Up "'+name+'"');
+    showToast('Item Scale Up diupdate');
+  } else {
+    l.scaleUp.push({id: Date.now(), name, hargaPenawaran: penawaran, realisasiOmzet: realisasi});
+    logActivity(l, 'Menambahkan item Scale Up "'+name+'" - penawaran '+formatRupiah(penawaran));
+    showToast('Item Scale Up ditambahkan');
+  }
+  document.getElementById('f-scaleup-name').value = '';
+  document.getElementById('f-scaleup-penawaran').value = '';
+  document.getElementById('f-scaleup-realisasi').value = '';
+  updateScaleUpSisaDisplay();
+  persistLeadFields(l, {scale_up: l.scaleUp});
+  renderScaleUpList(l);
+}
+
+function removeScaleUpLine(itemId){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  if(!confirm('Anda mau hapus item Scale Up ini?')) return;
+  const removed = (l.scaleUp||[]).find(p=>p.id===itemId);
+  l.scaleUp = (l.scaleUp||[]).filter(p=>p.id!==itemId);
+  if(editingScaleUpId === itemId) cancelEditScaleUp();
+  if(removed) logActivity(l, 'Menghapus item Scale Up "'+removed.name+'"');
+  persistLeadFields(l, {scale_up: l.scaleUp});
+  renderScaleUpList(l);
+}
+
+function renderScaleUpView(){
+  const scoped = leads.filter(l => (l.scaleUp||[]).length > 0);
+  const totalPenawaran = scoped.reduce((sum,l)=> sum + l.scaleUp.reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+  const totalRealisasi = scoped.reduce((sum,l)=> sum + l.scaleUp.reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  const hotCount = scoped.filter(l=>l.status==='hot').length;
+  const kpiRow = document.getElementById('scaleup-kpi-row');
+  if(kpiRow){
+    kpiRow.innerHTML = `
+      <div class="card">
+        <div class="label">Rencana omzet Scale Up</div><div class="value" style="font-size:18px;">${formatRupiah(totalPenawaran)}</div>
+      </div>
+      <div class="card">
+        <div class="label">Jumlah lead Scale Up</div><div class="value">${scoped.length}</div>
+      </div>
+      <div class="card">
+        <div class="label">Hot lead Scale Up</div><div class="value">${hotCount}</div>
+      </div>
+      <div class="card">
+        <div class="label">Realisasi Omzet Scale Up</div><div class="value" style="font-size:18px;">${formatRupiah(totalRealisasi)}</div>
+      </div>
+    `;
+  }
+  const sorted = scoped.slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
+  const rowlist = document.getElementById('scaleup-rowlist');
+  if(rowlist){
+    rowlist.innerHTML = sorted.length ? sorted.map(l=>leadRowHTML(l,true,false,undefined,'openScaleUpDetail')).join('') : '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada lead yang diisi item Scale Up.</div>';
+  }
+  const splitWrap = document.getElementById('scaleup-split-wrap');
+  if(splitWrap && splitWrap.style.display !== 'none') renderScaleUpSplitNameList();
+}
+
+// Pindahin panel #scaleup-panel-wrap antara "rumah" aslinya (di dalam form
+// lengkap edit lead) dan slot di split-view Scale Up -- node DOM-nya sama
+// persis, cuma dipindah-pindah posisinya (bukan diduplikat), biar fungsi
+// tambah/edit/hapus item Scale Up yang udah ada (addScaleUpLine dkk, yang
+// baca elemen lewat id tetap kayak f-scaleup-name) tetap jalan di mana pun
+// panel ini lagi ditaro.
+function placeScaleUpPanel(targetId){
+  const panel = document.getElementById('scaleup-panel-wrap');
+  if(!panel) return;
+  if(targetId==='home'){
+    const anchor = document.getElementById('scaleup-panel-home-anchor');
+    if(anchor) anchor.insertAdjacentElement('afterend', panel);
+    return;
+  }
+  const target = document.getElementById(targetId);
+  if(target) target.appendChild(panel);
+}
+
+// Daftar lead yang muncul di kolom kiri split-view Scale Up -- sama kayak
+// daftar utamanya (cuma yang udah ada item Scale Up), diurut sama.
+function renderScaleUpSplitNameList(){
+  const scoped = leads.filter(l => (l.scaleUp||[]).length > 0).slice().sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
+  document.getElementById('scaleup-split-namelist').innerHTML = scoped.length ? scoped.map(l=>{
+    const isActive = l.id === currentEditId;
+    return `<div class="split-name-item${isActive?' active':''}" onclick="openScaleUpDetail(${l.id})">
+      <div class="avatar" style="background:${avatarColor(l.company)}">${initials(l.company)}</div>
+      <span class="sn-name">${l.company}</span>
+      <span class="split-status-dot" style="background:var(--${l.status})"></span>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="padding:10px;">Belum ada lead Scale Up</div>';
+}
+
+function enterScaleUpSplitMode(){
+  document.getElementById('scaleup-fulllist-wrap').style.display = 'none';
+  document.getElementById('scaleup-split-wrap').style.display = 'grid';
+  placeScaleUpPanel('scaleup-split-form-col');
+}
+
+// Buka detail KHUSUS Scale Up satu lead -- TETAP di menu Scale Up (gak
+// pindah ke menu Leads kayak openLeadForm biasa), dan cuma nampilin data
+// yang relevan buat Scale Up (nama perusahaan, PIC, status, item Scale
+// Up-nya) -- bukan seluruh form lead (produk, chat log, dst).
+function openScaleUpDetail(id){
+  const l = leads.find(x=>x.id===id);
+  if(!l) return;
+  currentEditId = id;
+  document.getElementById('scaleup-detail-avatar').style.background = avatarColor(l.company);
+  document.getElementById('scaleup-detail-avatar').textContent = initials(l.company);
+  document.getElementById('scaleup-detail-company').textContent = l.company || '-';
+  document.getElementById('scaleup-detail-pic').textContent = l.pic ? ('PIC: '+l.pic) : 'Belum ada PIC';
+  document.getElementById('scaleup-detail-status-wrap').innerHTML = badge(l.status);
+  cancelEditScaleUp();
+  renderScaleUpList(l);
+  enterScaleUpSplitMode();
+  renderScaleUpSplitNameList();
+}
+
+// Balik dari detail ke daftar Scale Up (tetap di menu Scale Up).
+function exitScaleUpDetail(){
+  document.getElementById('scaleup-split-wrap').style.display = 'none';
+  document.getElementById('scaleup-fulllist-wrap').style.display = 'block';
+  placeScaleUpPanel('home');
+  renderScaleUpView();
+}
+
+// ============================================================
+// CAMPAIGN -- daftar campaign + detail per-campaign (KPI + lead yang
+// ditandain). Lead-nya sendiri TETAP kehitung normal di semua laporan
+// keseluruhan (Overview/Dashboard/performa admin) -- di sini cuma dilihat
+// dari sudut pandang campaign-nya doang.
+// ============================================================
+let currentCampaignId = null;
+
+function campaignStatusBadgeHTML(status){
+  const isAktif = status==='aktif';
+  return '<span style="display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; background:'+(isAktif?'var(--success-bg)':'var(--border-soft)')+'; color:'+(isAktif?'var(--success)':'var(--muted)')+';">'+(isAktif?'Aktif':'Selesai')+'</span>';
+}
+
+function campaignLeadsOf(campaignId){
+  return leads.filter(l=>l.campaignId===campaignId);
+}
+
+function campaignKPI(campaignId){
+  const scoped = campaignLeadsOf(campaignId);
+  const total = scoped.length;
+  const cold = scoped.filter(l=>l.status==='cold').length;
+  const warm = scoped.filter(l=>l.status==='warm').length;
+  const hot = scoped.filter(l=>l.status==='hot').length;
+  const closingCount = scoped.filter(hasDealProduct).length;
+  const closingRate = total ? Math.round((closingCount/total)*100) : 0;
+  const omzet = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
+  return {total, cold, warm, hot, closingCount, closingRate, omzet};
+}
+
+function renderCampaignListView(){
+  // Tombol "+ Buat Campaign" biasanya di-toggle sekali doang lewat
+  // applyRoleRestrictions() pas login -- di-ulang lagi di sini (dijalankan
+  // tiap kali menu Campaign dibuka) biar gak gampang ketinggalan/hilang
+  // kalau ada race condition pas load pertama.
+  const newBtn = document.getElementById('btn-campaign-new');
+  if(newBtn) newBtn.style.display = (currentUser && currentUser.role==='master_admin') ? '' : 'none';
+  const wrap = document.getElementById('campaign-list-wrap');
+  if(!wrap) return;
+  const visible = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+  if(!visible.length){
+    wrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada campaign'+(currentUser && currentUser.role==='super_admin' ? ' yang ditunjuk ke kamu' : '')+'.</div>';
+    return;
+  }
+  wrap.innerHTML = visible.map(c=>{
+    const k = campaignKPI(c.id);
+    return `<div class="card" style="cursor:pointer; margin-bottom:10px;" onclick="openCampaignDetail(${c.id})">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14.5px; font-weight:700; color:var(--text);">${c.name}</div>
+          <div class="footnote" style="margin-top:2px;">${fmtDate(c.startDate)} - ${fmtDate(c.endDate)}</div>
+        </div>
+        ${campaignStatusBadgeHTML(c.status)}
+      </div>
+      <div style="display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--text-2);">
+        <span><b style="color:var(--text);">${k.total}</b> lead</span>
+        <span><b style="color:var(--text);">${k.closingRate}%</b> closing rate</span>
+        <span><b style="color:var(--accent-text);">${formatRupiah(k.omzet)}</b> omzet</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCampaignSplitNameList(){
+  const visible = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+  document.getElementById('campaign-split-namelist').innerHTML = visible.length ? visible.map(c=>{
+    const isActive = c.id === currentCampaignId;
+    return `<div class="split-name-item${isActive?' active':''}" onclick="openCampaignDetail(${c.id})">
+      <span class="sn-name">${c.name}</span>
+      <span class="split-status-dot" style="background:${c.status==='aktif'?'var(--success)':'var(--muted)'}"></span>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="padding:10px;">Belum ada campaign</div>';
+}
+
+function openCampaignDetail(id){
+  const c = campaigns.find(x=>x.id===id);
+  if(!c || !canViewCampaign(c)) return;
+  currentCampaignId = id;
+  document.getElementById('campaign-detail-name').textContent = c.name;
+  document.getElementById('campaign-detail-period').textContent = fmtDate(c.startDate)+' - '+fmtDate(c.endDate);
+  document.getElementById('campaign-detail-status-wrap').innerHTML = campaignStatusBadgeHTML(c.status);
+  document.getElementById('campaign-detail-assigned').textContent = c.assignedSuperAdmins.length ? ('Super Admin ditunjuk: '+c.assignedSuperAdmins.join(', ')) : 'Belum ada Super Admin yang ditunjuk -- cuma Master Admin yang bisa liat ini.';
+  const isMaster = !!(currentUser && currentUser.role==='master_admin');
+  const editBtn = document.getElementById('btn-campaign-edit');
+  if(editBtn) editBtn.style.display = isMaster ? '' : 'none';
+  const k = campaignKPI(id);
+  document.getElementById('campaign-detail-kpis').innerHTML = `
+    <div class="card"><div class="label">Total lead</div><div class="value">${k.total}</div></div>
+    <div class="card"><div class="label">Cold / Warm / Hot</div><div class="value" style="font-size:16px;">${k.cold} / ${k.warm} / ${k.hot}</div></div>
+    <div class="card"><div class="label">Closing rate</div><div class="value">${k.closingRate}%</div></div>
+    <div class="card"><div class="label">Realisasi Omzet</div><div class="value" style="font-size:18px;">${formatRupiah(k.omzet)}</div></div>
+  `;
+  document.getElementById('campaign-fulllist-wrap').style.display = 'none';
+  document.getElementById('campaign-split-wrap').style.display = 'grid';
+  renderCampaignSplitNameList();
+}
+
+function exitCampaignDetail(){
+  document.getElementById('campaign-split-wrap').style.display = 'none';
+  document.getElementById('campaign-fulllist-wrap').style.display = 'block';
+  renderCampaignListView();
+}
+
+// Pintasan dari halaman Campaign ke menu Leads dengan filter "Campaign"
+// langsung ke-set ke campaign ini -- daftar PT-nya beneran dilihat di Leads,
+// bukan di halaman Campaign (Campaign cuma buat kelola + lihat angka ringkasan).
+function goToLeadsFilteredByCampaign(campaignId){
+  if(!campaignId) return;
+  switchView('leads', true);
+  quickFilterCampaign = campaignId;
+  populateQuickFilterDropdowns();
+  refreshLeadsListing();
+}
+
+// ---- Modal buat/edit campaign (Master Admin doang) ----
+function renderCampaignAssignedChecklist(currentAssigned){
+  const list = document.getElementById('cf-assigned-checklist');
+  if(!list) return;
+  const superAdmins = userAccounts.filter(u=>u.role==='super_admin' && u.status==='active');
+  const assigned = currentAssigned || [];
+  list.innerHTML = superAdmins.length ? superAdmins.map(u=>
+    '<label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2);">'+
+      '<input type="checkbox" value="'+u.name+'" '+(assigned.includes(u.name)?'checked':'')+' style="width:auto;">'+u.name+
+    '</label>'
+  ).join('') : '<div style="font-size:12px; color:var(--muted);">Belum ada Super Admin aktif.</div>';
+}
+
+function openCampaignFormModal(editId){
+  const isMaster = !!(currentUser && currentUser.role==='master_admin');
+  if(!isMaster) return;
+  const editing = editId ? campaigns.find(c=>c.id===editId) : null;
+  document.getElementById('campaign-form-title').textContent = editing ? 'Edit Campaign' : 'Buat Campaign';
+  document.getElementById('cf-name').value = editing ? editing.name : '';
+  document.getElementById('cf-start').value = editing ? editing.startDate : '';
+  document.getElementById('cf-end').value = editing ? editing.endDate : '';
+  document.getElementById('cf-status').value = editing ? editing.status : 'aktif';
+  document.getElementById('cf-error').style.display = 'none';
+  renderCampaignAssignedChecklist(editing ? editing.assignedSuperAdmins : []);
+  document.getElementById('campaign-form-modal').dataset.editId = editId || '';
+  document.getElementById('campaign-form-modal').style.display = 'flex';
+}
+
+function closeCampaignFormModal(){
+  document.getElementById('campaign-form-modal').style.display = 'none';
+}
+
+async function submitCampaignForm(){
+  const errEl = document.getElementById('cf-error');
+  errEl.style.display = 'none';
+  const name = document.getElementById('cf-name').value.trim();
+  const start = document.getElementById('cf-start').value;
+  const end = document.getElementById('cf-end').value;
+  const status = document.getElementById('cf-status').value;
+  const assigned = Array.from(document.querySelectorAll('#cf-assigned-checklist input[type=checkbox]:checked')).map(el=>el.value);
+  if(!name){ errEl.textContent = 'Nama campaign wajib diisi.'; errEl.style.display = 'block'; return; }
+  if(!start || !end){ errEl.textContent = 'Tanggal mulai dan selesai wajib diisi.'; errEl.style.display = 'block'; return; }
+  if(end < start){ errEl.textContent = 'Tanggal selesai gak boleh sebelum tanggal mulai.'; errEl.style.display = 'block'; return; }
+  const editId = document.getElementById('campaign-form-modal').dataset.editId;
+  const payload = {name, start_date: start, end_date: end, status, assigned_super_admins: assigned};
+  if(editId){
+    const { error } = await supabaseClient.from('campaigns').update(payload).eq('id', Number(editId));
+    if(error){ errEl.textContent = 'Gagal simpan: '+error.message; errEl.style.display = 'block'; return; }
+  } else {
+    payload.created_by = currentUser ? currentUser.name : null;
+    const { error } = await supabaseClient.from('campaigns').insert(payload);
+    if(error){ errEl.textContent = 'Gagal simpan: '+error.message; errEl.style.display = 'block'; return; }
+  }
+  await fetchCampaignsFromSupabase();
+  closeCampaignFormModal();
+  applyRoleRestrictions();
+  renderLeadCampaignSelectOptions(document.getElementById('f-campaign') ? document.getElementById('f-campaign').value : null);
+  if(document.getElementById('view-campaign').classList.contains('active')){
+    if(editId && currentCampaignId===Number(editId)) openCampaignDetail(Number(editId));
+    else renderCampaignListView();
+  }
+  showToast(editId ? 'Campaign diupdate' : 'Campaign dibuat');
+}
+
+// Dropdown "Campaign" di form lead -- isinya campaign yang lagi "aktif",
+// DITAMBAH campaign lama yang udah "selesai" kalau lead ini emang lagi
+// ditandain ke situ (biar gak ilang/kereset pas dibuka ulang).
+function renderLeadCampaignSelectOptions(currentCampaignIdOnLead){
+  const sel = document.getElementById('f-campaign');
+  if(!sel) return;
+  const pool = campaigns.filter(c=> c.status==='aktif' || c.id===currentCampaignIdOnLead);
+  let options = '<option value="">Tidak ada / lead reguler</option>';
+  options += pool.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
+  sel.innerHTML = options;
+  sel.value = currentCampaignIdOnLead ? String(currentCampaignIdOnLead) : '';
+}
+
+// Dropdown Campaign di popup "Tambah lead baru" (quick-lead-modal) -- cuma
+// nampilin campaign yang lagi "aktif" (wajar, lead baru gak mungkin
+// ditempel ke campaign yang udah "selesai").
+function renderQuickCampaignSelectOptions(){
+  const sel = document.getElementById('ql-campaign');
+  if(!sel) return;
+  const pool = campaigns.filter(c=> c.status==='aktif');
+  let options = '<option value="">Tidak ada / lead reguler</option>';
+  options += pool.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
+  sel.innerHTML = options;
+  sel.value = '';
 }
 
 function openLeadForm(id, force){
@@ -3823,9 +5397,9 @@ function openLeadForm(id, force){
   renderAdminSelectOptions();
   document.getElementById('f-admin').value = l.admin || ADMIN_LIST[0];
   updateAdminFieldVisibility();
+  renderLeadCampaignSelectOptions(l.campaignId);
   autoExpandLengkapiNantiIfFilled(l);
   document.getElementById('f-company-hint').style.display = 'none';
-  document.getElementById('f-note-date').value = todayIsoStr();
   document.getElementById('f-note-channel').value = 'wa';
   document.getElementById('f-new-note').value = '';
   document.getElementById('f-chatlog').value = l.chatLog || '';
@@ -3835,12 +5409,14 @@ function openLeadForm(id, force){
   resetProductSubmitButton();
   document.getElementById('f-product-type').value = 'smk3';
   document.getElementById('f-product-penawaran').value = '';
-  document.getElementById('f-product-deal').value = '';
-  toggleLunasCheckboxVisibility();
+  document.getElementById('f-product-realisasi').value = '';
+  updateSisaRealisasiDisplay();
   document.getElementById('product-form-row3').classList.remove('editing-active');
+  cancelEditScaleUp();
 
   renderHistory(l);
   renderProductList(l);
+  renderScaleUpList(l);
   formDirty = false;
 
   if(originView === 'followup'){
@@ -3872,7 +5448,7 @@ function renderQuickAdminSelectOptions(){
     const team = (currentUserProfile && currentUserProfile.team) ? currentUserProfile.team.slice() : [];
     let options = team.slice();
     if(currentUser.name && !options.includes(currentUser.name)) options.unshift(currentUser.name);
-    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+    sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('');
     if(options.includes(current)) sel.value = current;
     return;
   }
@@ -3880,7 +5456,7 @@ function renderQuickAdminSelectOptions(){
   if(currentUser && currentUser.name && !options.includes(currentUser.name)){
     options.unshift(currentUser.name);
   }
-  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+a+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
+  sel.innerHTML = options.map(a=>'<option value="'+a+'">'+adminOptionLabel(a)+'</option>').join('') + '<option value="__add_new__">+ Tambah admin baru...</option>';
   if(options.includes(current)) sel.value = current;
 }
 
@@ -3942,6 +5518,7 @@ function openQuickLeadModal(){
   document.getElementById('ql-error').style.display = 'none';
   toggleQuickLengkapiNanti(false);
   renderQuickAdminSelectOptions();
+  renderQuickCampaignSelectOptions();
   document.getElementById('ql-admin').value = (currentUser && currentUser.name) ? currentUser.name : (ADMIN_LIST[0] || '');
   const adminWrap = document.getElementById('ql-admin-wrap');
   if(adminWrap) adminWrap.style.display = (currentUser && currentUser.role==='sales') ? 'none' : '';
@@ -3972,15 +5549,23 @@ async function saveQuickLead(){
     document.getElementById('ql-note').focus();
     return;
   }
-  const now = new Date();
-  const noteTime = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  const quickPenawaran = parseFloat(document.getElementById('ql-product-penawaran').value) || 0;
+  const quickTargetAdmin = document.getElementById('ql-admin').value;
+  const quickAdminLimit = leadCountLimit(quickTargetAdmin);
+  const quickAdminCount = leadCountCurrent(quickTargetAdmin, null);
+  if(quickAdminCount >= quickAdminLimit){
+    openQuotaRequestModal('lead_count', {
+      targetAdmin: quickTargetAdmin,
+      currentLimit: quickAdminLimit,
+      message: 'Admin "'+quickTargetAdmin+'" udah pegang lead maksimal ('+quickAdminLimit+'). Kirim request tambahan slot ke Master/Super Admin dulu sebelum bisa nambahin lead baru buat '+quickTargetAdmin+'.'
+    });
+    return;
+  }
+  const quickPenawaran = unformatNumberInput(document.getElementById('ql-product-penawaran').value);
   const quickProduct = quickPenawaran > 0 ? {
     id: Date.now(),
     type: document.getElementById('ql-product-type').value,
     hargaPenawaran: quickPenawaran,
-    hargaDeal: 0,
-    lunas: false
+    realisasiOmzet: 0
   } : null;
   const data = {
     company: company,
@@ -3997,7 +5582,7 @@ async function saveQuickLead(){
     followUp: '',
     admin: document.getElementById('ql-admin').value,
     chatLog: '',
-    history: noteText ? [{date:todayIsoStr(), time:noteTime, channel:'wa', note:noteText}] : [],
+    campaignId: document.getElementById('ql-campaign').value ? Number(document.getElementById('ql-campaign').value) : null,
     products: quickProduct ? [quickProduct] : []
   };
   const { data: inserted, error } = await supabaseClient.from('leads').insert(leadToDbRow(data)).select().single();
@@ -4011,7 +5596,16 @@ async function saveQuickLead(){
   lastViewedId = newLead.id;
   lastActionWasAdd = true;
   logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
-  if(noteText) logActivity(newLead, 'Menambahkan catatan follow-up (WhatsApp)');
+  // Catatan follow-up awal sengaja gak ditunggu (fire-and-forget) biar popup
+  // "tambah lead cepat" gak kerasa lambat -- begitu selesai, history-nya
+  // ditempel ke lead yang udah ada di memori dan tampilan disegarkan lagi.
+  insertFollowUpNote(newLead.id, 'wa', noteText).then(entry=>{
+    if(!entry) return;
+    newLead.history.push(entry);
+    if(currentEditId===newLead.id) renderHistory(newLead);
+    if(document.getElementById('view-leads')?.classList.contains('active')) refreshLeadsListing();
+  });
+  logActivity(newLead, 'Menambahkan catatan follow-up (WhatsApp)');
   if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
   closeQuickLeadModal();
   showToast('Lead baru ditambahkan');
@@ -4040,25 +5634,31 @@ async function saveLeadDataOnly(){
     entryDate: document.getElementById('f-entrydate').value || todayIsoStr(),
     followUp: document.getElementById('f-followup').value,
     admin: document.getElementById('f-admin').value,
+    campaignId: document.getElementById('f-campaign').value ? Number(document.getElementById('f-campaign').value) : null,
     chatLog: document.getElementById('f-chatlog').value
   };
   const newNote = document.getElementById('f-new-note').value.trim();
-  const noteDate = document.getElementById('f-note-date').value || todayIsoStr();
   const noteChannel = document.getElementById('f-note-channel').value;
-  const nowT = new Date();
-  const noteTime = String(nowT.getHours()).padStart(2,'0')+':'+String(nowT.getMinutes()).padStart(2,'0');
 
   if(currentEditId===null){
-    data.history = newNote ? [{date:noteDate, time:noteTime, channel:noteChannel, note:newNote}] : [];
-    const quickPenawaran = parseFloat(document.getElementById('f-product-penawaran').value) || 0;
+    const newLeadLimit = leadCountLimit(data.admin);
+    const newLeadCount = leadCountCurrent(data.admin, null);
+    if(newLeadCount >= newLeadLimit){
+      openQuotaRequestModal('lead_count', {
+        targetAdmin: data.admin,
+        currentLimit: newLeadLimit,
+        message: 'Admin "'+data.admin+'" udah pegang lead maksimal ('+newLeadLimit+'). Kirim request tambahan slot ke Master/Super Admin dulu sebelum bisa nyimpen lead baru ini.'
+      });
+      return false;
+    }
+    const quickPenawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
     let quickProduct = null;
     if(quickPenawaran > 0){
       quickProduct = {
         id: Date.now(),
         type: document.getElementById('f-product-type').value,
         hargaPenawaran: quickPenawaran,
-        hargaDeal: parseFloat(document.getElementById('f-product-deal').value) || 0,
-        lunas: document.getElementById('f-product-lunas').checked
+        realisasiOmzet: unformatNumberInput(document.getElementById('f-product-realisasi').value)
       };
     }
     data.products = quickProduct ? [quickProduct] : [];
@@ -4073,7 +5673,11 @@ async function saveLeadDataOnly(){
     lastActionWasAdd = true;
     currentEditId = newLead.id;
     logActivity(newLead, 'Lead dibuat dengan status '+newLead.status.charAt(0).toUpperCase()+newLead.status.slice(1));
-    if(newNote) logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+    if(newNote){
+      const entry = await insertFollowUpNote(newLead.id, noteChannel, newNote);
+      if(entry) newLead.history.push(entry);
+      logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+    }
     if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
   } else {
     const l = leads.find(x=>x.id===currentEditId);
@@ -4081,21 +5685,36 @@ async function saveLeadDataOnly(){
       alert('Lead ini tidak ditemukan lagi (mungkin sudah dihapus). Perubahan tidak tersimpan, silakan kembali ke daftar.');
       return false;
     }
+    if(data.admin !== l.admin){
+      const reassignLimit = leadCountLimit(data.admin);
+      const reassignCount = leadCountCurrent(data.admin, l.id);
+      if(reassignCount >= reassignLimit){
+        openQuotaRequestModal('lead_count', {
+          targetAdmin: data.admin,
+          currentLimit: reassignLimit,
+          message: 'Admin "'+data.admin+'" udah pegang lead maksimal ('+reassignLimit+'). Kirim request tambahan slot ke Master/Super Admin dulu sebelum bisa mindahin lead ini ke '+data.admin+'.'
+        });
+        return false;
+      }
+    }
     const prevStatus = l.status;
     const prevFollowUp = l.followUp;
     const prevSnapshot = {};
     Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{ prevSnapshot[f] = l[f]; });
-    const updatedHistory = (l.history || []).slice();
-    if(newNote) updatedHistory.push({date:noteDate, time:noteTime, channel:noteChannel, note:newNote});
-    updatedHistory.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
-    const dbRow = leadToDbRow(Object.assign({}, data, {history: updatedHistory, products: l.products||[]}));
+    const dbRow = leadToDbRow(Object.assign({}, data, {products: l.products||[]}));
     const { error } = await supabaseClient.from('leads').update(dbRow).eq('id', currentEditId);
     if(error){
       alert('Gagal menyimpan perubahan ke server: '+error.message);
       return false;
     }
     Object.assign(l, data);
-    l.history = updatedHistory;
+    if(newNote){
+      const entry = await insertFollowUpNote(l.id, noteChannel, newNote);
+      if(entry){
+        l.history.push(entry);
+        l.history.sort((a,b)=> new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
+      }
+    }
     Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{
       let before = (prevSnapshot[f]||'').toString().trim();
       let after = (l[f]||'').toString().trim();
@@ -4397,12 +6016,14 @@ const ASSISTANT_KB = [
     ]
   },
   {
-    keywords: ['produk','omzet','harga penawaran','dp','lunas','deal'],
+    keywords: ['produk','omzet','harga penawaran','dp','lunas','deal','realisasi','piutang'],
     steps: [
-      'Buka lead-nya, cari bagian "Produk" di form edit.',
-      'Klik "+ Tambah produk", isi jenis produk dan harga penawaran.',
-      'Update status pembayaran (DP/Lunas) di baris produk itu kalau udah ada progress.',
-      'Ringkasan omzet per status (rencana, deal, DP, lunas) bisa dilihat di Overview dan menu Omzet di sidebar.'
+      'Buka lead-nya, cari bagian "Produk & penawaran" di form edit.',
+      'Klik "+ Tambah produk", isi jenis produk dan harga penawaran. Maksimal 2 produk per lead.',
+      'Kalau klien nego harga, tinggal ubah langsung angka "Harga penawaran"-nya -- gak ada field harga deal terpisah lagi.',
+      'Begitu ada uang masuk (DP atau lunas), isi kolom "Realisasi omzet" sebesar yang udah diterima. Sisa realisasinya (penawaran dikurangi realisasi) otomatis kehitung dan ditampilin.',
+      'Lead otomatis kehitung "Sudah Closing" begitu realisasi omzet-nya lebih dari 0 -- gak perlu tandain manual lagi.',
+      'Ringkasan omzet (rencana, realisasi, sisa realisasi) bisa dilihat di Overview dan menu Omzet di sidebar.'
     ]
   },
   {

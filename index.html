@@ -5190,6 +5190,12 @@ function campaignKPI(campaignId){
 }
 
 function renderCampaignListView(){
+  // Tombol "+ Buat Campaign" biasanya di-toggle sekali doang lewat
+  // applyRoleRestrictions() pas login -- di-ulang lagi di sini (dijalankan
+  // tiap kali menu Campaign dibuka) biar gak gampang ketinggalan/hilang
+  // kalau ada race condition pas load pertama.
+  const newBtn = document.getElementById('btn-campaign-new');
+  if(newBtn) newBtn.style.display = (currentUser && currentUser.role==='master_admin') ? '' : 'none';
   const wrap = document.getElementById('campaign-list-wrap');
   if(!wrap) return;
   const visible = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
