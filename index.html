@@ -358,6 +358,12 @@
                     <option value="warm">Warm</option>
                     <option value="hot">Hot</option>
                   </select>
+                  <div class="score-field-row">
+                    <input type="number" id="f-score" min="0" max="100" placeholder="Skor" oninput="handleScoreInputChange('f')">
+                    <div class="score-meter"><div class="score-meter-fill" id="f-score-fill"></div></div>
+                    <span class="score-value-label" id="f-score-label"></span>
+                  </div>
+                  <div class="footnote">Skor 0-100 <span class="opt-pill">Opsional</span> -- isi buat otomatis nentuin suhu (0-50 Cold, 51-75 Warm, 76-100 Hot). Suhu di atas tetap bisa diubah manual belakangan.</div>
                 </div>
                 <div class="field" id="f-admin-wrap"><label>Admin sales <span class="opt-pill">Otomatis</span></label>
                   <select id="f-admin" onchange="handleAdminSelectChange(this)"></select>
@@ -1000,6 +1006,12 @@
             <option value="warm">Warm</option>
             <option value="hot">Hot</option>
           </select>
+          <div class="score-field-row">
+            <input type="number" id="ql-score" min="0" max="100" placeholder="Skor" oninput="handleScoreInputChange('ql')" style="padding:7px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <div class="score-meter"><div class="score-meter-fill" id="ql-score-fill"></div></div>
+            <span class="score-value-label" id="ql-score-label"></span>
+          </div>
+          <div class="footnote" style="margin-top:4px;">Skor 0-100 <span class="opt-pill">Opsional</span> -- 0-50 Cold, 51-75 Warm, 76-100 Hot.</div>
         </div>
         <div id="ql-admin-wrap">
           <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Admin sales <span class="opt-pill">Otomatis</span></label>
@@ -1139,6 +1151,7 @@ function dbRowToLead(row, followUpHistory){
     phone: row.phone || '',
     email: row.email || '',
     status: row.status || 'cold',
+    score: (row.score===null || row.score===undefined) ? null : row.score,
     source: row.source || '',
     followUp: row.follow_up || '',
     admin: row.admin || '',
@@ -1181,6 +1194,7 @@ function leadToDbRow(data){
     phone: data.phone || null,
     email: data.email || null,
     status: data.status || 'cold',
+    score: (data.score===null || data.score===undefined || data.score==='') ? null : Number(data.score),
     source: data.source || null,
     follow_up: data.followUp ? data.followUp : null,
     admin: data.admin || null,
@@ -1285,7 +1299,7 @@ const AVATAR_COLORS = ["#7c5cff","#0d9488","#2563eb","#f0653b","#d6336c","#16a34
 const CHANNEL_LABELS = {wa:"WhatsApp", website:"Website", call:"Telepon", lainnya:"Lainnya"};
 const SOURCE_LABELS = {website:"Website", sosmed:"Sosial media", wa:"WhatsApp", langsung:"Kontak langsung"};
 const PRODUCT_LABELS = {smk3:"SMK3", iso:"ISO"};
-const FIELD_CHANGE_LABELS = {company:'Nama perusahaan', address:'Alamat', city:'Kota', province:'Provinsi', pic:'PIC', picSource:'Tipe PIC', phone:'No. telepon', email:'Email', source:'Sumber lead', admin:'Admin sales'};
+const FIELD_CHANGE_LABELS = {company:'Nama perusahaan', address:'Alamat', city:'Kota', province:'Provinsi', pic:'PIC', picSource:'Tipe PIC', phone:'No. telepon', email:'Email', source:'Sumber lead', admin:'Admin sales', score:'Skor lead'};
 const PIC_SOURCE_LABELS = {internal:'Internal', broker:'Jaringan luar (broker/calo)'};
 
 function avatarColor(str){
@@ -1357,6 +1371,56 @@ function daysOverdue(iso){
 function badge(status){
   const label = status.charAt(0).toUpperCase()+status.slice(1);
   return '<span class="badge '+status+'">'+label+'</span>';
+}
+// Chip kecil skor lead (0-100) di baris tabel -- warnanya ngikut suhu lead
+// YANG LAGI AKTIF (l.status), bukan dihitung ulang dari skor, soalnya suhu
+// bisa aja di-override manual dan itu yang harus dianggap "bener" buat tampilan.
+function scoreChipHTML(l){
+  if(l.score===null || l.score===undefined || l.score==='') return '';
+  return '<span class="score-chip '+l.status+'" title="Skor lead">'+l.score+'%</span>';
+}
+// Suhu lead otomatis dari skor 0-100: 0-50 Cold, 51-75 Warm, 76-100 Hot.
+function statusFromScore(score){
+  if(score===null || score===undefined || score==='' || isNaN(score)) return null;
+  const n = Number(score);
+  if(n<=50) return 'cold';
+  if(n<=75) return 'warm';
+  return 'hot';
+}
+// Update tampilan meteran (bar + angka) doang, TANPA nyentuh dropdown suhu --
+// dipakai pas buka form buat nampilin skor yang udah tersimpan tanpa maksa
+// override suhu yang mungkin udah di-set manual beda dari skornya.
+function renderScoreMeter(prefix, score){
+  const fillEl = document.getElementById(prefix+'-score-fill');
+  const labelEl = document.getElementById(prefix+'-score-label');
+  if(score===null || score===undefined || score===''){
+    if(fillEl){ fillEl.style.width='0%'; fillEl.style.background='var(--border)'; }
+    if(labelEl) labelEl.textContent = '';
+    return;
+  }
+  const n = Math.max(0, Math.min(100, Number(score)));
+  const st = statusFromScore(n);
+  if(fillEl){ fillEl.style.width = n+'%'; fillEl.style.background = 'var(--'+st+')'; }
+  if(labelEl) labelEl.textContent = n+'%';
+}
+// Dipanggil pas user NGETIK di field skor -- selain update meteran, ini juga
+// otomatis nge-set dropdown suhu sesuai rentang skornya. User tetap bisa ubah
+// suhu manual belakangan (gak dikunci), skor cuma jadi cara CEPAT nentuin.
+function handleScoreInputChange(prefix){
+  const scoreEl = document.getElementById(prefix+'-score');
+  const statusEl = document.getElementById(prefix+'-status');
+  if(!scoreEl) return;
+  let raw = scoreEl.value;
+  if(raw===''){
+    renderScoreMeter(prefix, null);
+    return;
+  }
+  let n = Math.max(0, Math.min(100, Math.round(Number(raw))));
+  if(String(n)!==raw) scoreEl.value = n;
+  const st = statusFromScore(n);
+  if(statusEl && st) statusEl.value = st;
+  renderScoreMeter(prefix, n);
+  markFormDirty();
 }
 function lastNote(lead){
   if(!lead.history.length) return '<span style="color:var(--muted)">Belum ada catatan</span>';
@@ -1466,7 +1530,7 @@ function leadRowHTML(l, showNote, selectable, idx, clickFn){
     </div>
     <div class="lead-entrydate">${entryColHTML}</div>
     <span class="source-pill">${productTypesLabel(l)}</span>
-    ${badge(l.status)}
+    ${badge(l.status)}${scoreChipHTML(l)}
     <div class="lead-followup">${followUpChip(l)}</div>
     <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
   </div>`;
@@ -1516,7 +1580,7 @@ function unsavedModalStay(){
 }
 
 function initDirtyTracking(){
-  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-status','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note','f-product-type','f-product-penawaran','f-product-realisasi'];
+  const fieldIds = ['f-company','f-address','f-city','f-province','f-pic','f-pic-source','f-phone','f-email','f-status','f-score','f-source','f-entrydate','f-followup','f-admin','f-chatlog','f-new-note','f-product-type','f-product-penawaran','f-product-realisasi'];
   fieldIds.forEach(id=>{
     const el = document.getElementById(id);
     if(el){
@@ -2861,9 +2925,10 @@ function getQuickFilteredLeads(){
 // Filter Campaign sengaja DIPISAH dari matchesQuickFilters() -- itu dipakai
 // bareng sama Overview, dan filter Campaign ini KHUSUS Leads doang.
 function matchesQuickFilterCampaign(l){
-  if(quickFilterCampaign==='all') return true;
-  if(quickFilterCampaign==='none') return !l.campaignId;
-  return l.campaignId===quickFilterCampaign;
+  if(quickFilterCampaign==='all') return true; // Semua lead -- bener-bener tanpa filter
+  if(quickFilterCampaign==='none') return !l.campaignId; // Tanpa campaign
+  if(quickFilterCampaign==='anycampaign') return !!l.campaignId; // Semua campaign -- leads bertanda campaign apa aja (gabungan semua campaign)
+  return l.campaignId===quickFilterCampaign; // campaign tertentu
 }
 
 // Ringkasan "filter aktif" di atas tabel Leads -- pengingat kalem biar gak
@@ -2880,10 +2945,12 @@ function renderActiveFiltersBanner(){
   if(quickFilterLocation && quickFilterLocation!=='all') parts.push('lokasi: <b>'+quickFilterLocation+'</b>');
   // 'none' (Tanpa campaign) itu DEFAULT tampilan sekarang -- sengaja gak
   // disebut di banner ini (bukan penyimpangan dari normal). Yang disebut
-  // cuma kalau dilebarin ('all', nampilin campaign juga) atau dipersempit
-  // ke satu campaign tertentu.
+  // cuma kalau dilebarin ('all'/'anycampaign') atau dipersempit ke satu
+  // campaign tertentu.
   if(quickFilterCampaign==='all'){
-    parts.push('campaign: <b>semua (termasuk yang campaign)</b>');
+    parts.push('campaign: <b>semua lead (tanpa filter)</b>');
+  } else if(quickFilterCampaign==='anycampaign'){
+    parts.push('campaign: <b>semua campaign (gabungan semua campaign)</b>');
   } else if(quickFilterCampaign!=='none'){
     const c = campaigns.find(x=>x.id===quickFilterCampaign);
     parts.push('campaign: <b>'+(c ? c.name : '(gak ketemu)')+'</b>');
@@ -3968,8 +4035,8 @@ function populateQuickFilterDropdowns(){
   if(campaignSel){
     const visibleCampaigns = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
     if(visibleCampaigns.length){
-      campaignSel.innerHTML = '<option value="none">Tanpa campaign</option><option value="all">Semua campaign</option>' + visibleCampaigns.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
-      campaignSel.value = visibleCampaigns.some(c=>c.id===quickFilterCampaign) ? String(quickFilterCampaign) : (quickFilterCampaign==='all' ? 'all' : 'none');
+      campaignSel.innerHTML = '<option value="none">Tanpa campaign</option><option value="anycampaign">Semua campaign</option><option value="all">Semua lead</option>' + visibleCampaigns.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
+      campaignSel.value = visibleCampaigns.some(c=>c.id===quickFilterCampaign) ? String(quickFilterCampaign) : (['all','anycampaign'].includes(quickFilterCampaign) ? quickFilterCampaign : 'none');
       campaignSel.style.display = '';
     } else {
       campaignSel.style.display = 'none';
@@ -4024,7 +4091,7 @@ function setQuickFilterLocation(val){
 // KHUSUS Leads -- sengaja gak panggil renderOverview() (Campaign gak boleh
 // ngaruh ke angka Overview/Dashboard, itu tetap ngitung semua lead).
 function setQuickFilterCampaign(val){
-  quickFilterCampaign = (val==='all' || val==='none') ? val : Number(val);
+  quickFilterCampaign = (val==='all' || val==='none' || val==='anycampaign') ? val : Number(val);
   populateQuickFilterDropdowns();
   refreshLeadsListing();
 }
@@ -5400,6 +5467,8 @@ function openLeadForm(id, force){
   document.getElementById('f-phone').value = l.phone;
   document.getElementById('f-email').value = l.email;
   document.getElementById('f-status').value = l.status;
+  document.getElementById('f-score').value = (l.score===null || l.score===undefined) ? '' : l.score;
+  renderScoreMeter('f', l.score);
   document.getElementById('f-source').value = l.source || 'wa';
   document.getElementById('f-entrydate').value = l.entryDate || todayIsoStr();
   document.getElementById('f-followup').value = l.followUp;
@@ -5520,6 +5589,8 @@ function openQuickLeadModal(){
   ['ql-company','ql-pic','ql-phone','ql-address','ql-city','ql-province','ql-email','ql-note'].forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('ql-pic-source').value = 'internal';
   document.getElementById('ql-status').value = 'cold';
+  document.getElementById('ql-score').value = '';
+  renderScoreMeter('ql', null);
   document.getElementById('ql-source').value = 'website';
   document.getElementById('ql-product-type').value = 'smk3';
   document.getElementById('ql-product-penawaran').value = '';
@@ -5586,6 +5657,7 @@ async function saveQuickLead(){
     phone: phone,
     email: document.getElementById('ql-email').value.trim(),
     status: document.getElementById('ql-status').value,
+    score: document.getElementById('ql-score').value===''? null : Number(document.getElementById('ql-score').value),
     source: document.getElementById('ql-source').value,
     entryDate: todayIsoStr(),
     followUp: '',
@@ -5639,6 +5711,7 @@ async function saveLeadDataOnly(){
     phone: document.getElementById('f-phone').value.trim(),
     email: document.getElementById('f-email').value.trim(),
     status: document.getElementById('f-status').value,
+    score: document.getElementById('f-score').value===''? null : Number(document.getElementById('f-score').value),
     source: document.getElementById('f-source').value,
     entryDate: document.getElementById('f-entrydate').value || todayIsoStr(),
     followUp: document.getElementById('f-followup').value,
