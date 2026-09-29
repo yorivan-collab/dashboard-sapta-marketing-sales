@@ -58,6 +58,7 @@
       <div class="navsub" data-filter="cold" onclick="goToFilter('cold')"><span class="navsub-dot" style="background:var(--cold)"></span>Cold</div>
       <div class="navsub" data-filter="warm" onclick="goToFilter('warm')"><span class="navsub-dot" style="background:var(--warm)"></span>Warm</div>
       <div class="navsub" data-filter="hot" onclick="goToFilter('hot')"><span class="navsub-dot" style="background:var(--hot)"></span>Hot</div>
+      <div class="navsub" data-filter="cancel" onclick="goToFilter('cancel')"><span class="navsub-dot" style="background:var(--muted)"></span>Cancel</div>
     </div>
 
     <div class="nav-label">Follow up</div>
@@ -87,6 +88,10 @@
     <div class="navitem" data-view="campaign" id="nav-campaign-item" onclick="switchView('campaign')" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
       Campaign
+    </div>
+    <div class="navitem" data-view="scoretrend" onclick="switchView('scoretrend')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+      Tren Skor
     </div>
     <div id="nav-users-section" style="display:none;">
       <div class="nav-label">Kelola Pengguna</div>
@@ -333,7 +338,7 @@
                   <div class="subtitle" id="form-subtitle"></div>
                 </div>
               </div>
-              <span class="badge" id="form-status-badge"></span>
+              <span id="form-status-badge-wrap"><span class="badge" id="form-status-badge"></span></span>
             </div>
 
             <div class="panel">
@@ -357,13 +362,15 @@
                     <option value="cold">Cold</option>
                     <option value="warm">Warm</option>
                     <option value="hot">Hot</option>
+                    <option value="cancel">Cancel</option>
                   </select>
                   <div class="score-field-row">
                     <input type="number" id="f-score" min="0" max="100" placeholder="Skor" oninput="handleScoreInputChange('f')">
                     <div class="score-meter"><div class="score-meter-fill" id="f-score-fill"></div></div>
                     <span class="score-value-label" id="f-score-label"></span>
+                    <span id="f-score-trend"></span>
                   </div>
-                  <div class="footnote">Skor 0-100 <span class="opt-pill">Opsional</span> -- isi buat otomatis nentuin suhu (0-50 Cold, 51-75 Warm, 76-100 Hot). Suhu di atas tetap bisa diubah manual belakangan.</div>
+                  <div class="footnote">Skor 0-100 <span class="opt-pill">Opsional</span> -- isi buat otomatis nentuin suhu (0-50 Cold, 51-75 Warm, 76-100 Hot). Suhu di atas tetap bisa diubah manual belakangan. <a href="javascript:void(0)" onclick="openScoreTrendForLead()" style="color:var(--accent); font-weight:600; text-decoration:underline;">Lihat grafik tren &rarr;</a></div>
                 </div>
                 <div class="field" id="f-admin-wrap"><label>Admin sales <span class="opt-pill">Otomatis</span></label>
                   <select id="f-admin" onchange="handleAdminSelectChange(this)"></select>
@@ -666,6 +673,24 @@
                info + lihat angka ringkasan. Daftar PT-nya dilihat dari menu
                Leads, pakai dropdown filter "Campaign" di toolbar situ. -->
           <div class="footnote" style="margin-top:14px;">Mau lihat daftar lead yang ditandain campaign ini? Buka menu <a href="javascript:void(0)" onclick="goToLeadsFilteredByCampaign(currentCampaignId)" style="color:var(--accent); font-weight:600; text-decoration:underline; cursor:pointer;">Leads (sudah kefilter)</a>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TREN SKOR -->
+    <div class="view" id="view-scoretrend">
+      <div class="topbar">
+        <div>
+          <div class="title">Tren Skor</div>
+          <div class="subtitle">Panah naik/turun & grafik histori skor tiap lead -- pantau perkembangannya dari waktu ke waktu.</div>
+        </div>
+      </div>
+      <div class="leads-split">
+        <div class="split-list-col">
+          <div class="split-namelist" id="scoretrend-split-namelist"></div>
+        </div>
+        <div class="split-form-col" id="scoretrend-split-form-col">
+          <div class="footnote">Pilih satu perusahaan di sebelah kiri buat lihat grafik histori skornya.</div>
         </div>
       </div>
     </div>
@@ -1005,6 +1030,7 @@
             <option value="cold">Cold</option>
             <option value="warm">Warm</option>
             <option value="hot">Hot</option>
+            <option value="cancel">Cancel</option>
           </select>
           <div class="score-field-row">
             <input type="number" id="ql-score" min="0" max="100" placeholder="Skor" oninput="handleScoreInputChange('ql')" style="padding:7px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
@@ -1105,6 +1131,7 @@
     <div class="mobile-fab-item" onclick="goToFilter('cold'); closeMobileFab();"><span class="fdot" style="background:var(--cold)"></span>Cold</div>
     <div class="mobile-fab-item" onclick="goToFilter('warm'); closeMobileFab();"><span class="fdot" style="background:var(--warm)"></span>Warm</div>
     <div class="mobile-fab-item" onclick="goToFilter('hot'); closeMobileFab();"><span class="fdot" style="background:var(--hot)"></span>Hot</div>
+    <div class="mobile-fab-item" onclick="goToFilter('cancel'); closeMobileFab();"><span class="fdot" style="background:var(--muted)"></span>Cancel</div>
     <div class="mobile-fab-sep"></div>
     <div class="mobile-fab-item" onclick="goToFilter('dp'); closeMobileFab();">Sudah Closing</div>
     <div class="mobile-fab-item" onclick="goToFilter('overdue'); closeMobileFab();">Follow up telat</div>
@@ -1139,7 +1166,7 @@
 
 <script>
 let leadsLoadedFromSupabase = false;
-function dbRowToLead(row, followUpHistory){
+function dbRowToLead(row, followUpHistory, scoreHistory){
   return {
     id: row.id,
     company: row.company || '',
@@ -1152,6 +1179,13 @@ function dbRowToLead(row, followUpHistory){
     email: row.email || '',
     status: row.status || 'cold',
     score: (row.score===null || row.score===undefined) ? null : row.score,
+    // Histori perubahan skor (buat panah naik/turun + grafik tren), dari
+    // tabel lead_score_history -- di-fetch terpisah (fetchLeadScoreHistoryByLeadMap),
+    // urutannya udah ascending (lama->baru) dari query-nya.
+    scoreHistory: scoreHistory || [],
+    // Flag "Cancel" -- TERPISAH dari status (cold/warm/hot), sengaja gak
+    // pernah ngetimpa nilai status. Lihat matchesFilter() case 'cancel'.
+    cancelled: !!row.cancelled,
     source: row.source || '',
     followUp: row.follow_up || '',
     admin: row.admin || '',
@@ -1195,6 +1229,7 @@ function leadToDbRow(data){
     email: data.email || null,
     status: data.status || 'cold',
     score: (data.score===null || data.score===undefined || data.score==='') ? null : Number(data.score),
+    cancelled: !!data.cancelled,
     source: data.source || null,
     follow_up: data.followUp ? data.followUp : null,
     admin: data.admin || null,
@@ -1248,10 +1283,43 @@ async function insertFollowUpNote(leadId, channel, note){
   return { id: data.id, date: parts.date, time: parts.time, channel: data.channel, note: data.note };
 }
 
+// Sama polanya kayak fetchFollowUpsByLeadMap() -- tarik SEMUA histori skor
+// sekaligus (tabelnya kecil), dikelompokin per lead_id, urutan ascending
+// (lama->baru) biar gampang ambil "2 titik terakhir" buat panah naik/turun.
+async function fetchLeadScoreHistoryByLeadMap(){
+  const { data, error } = await supabaseClient.from('lead_score_history').select('*').order('created_at', {ascending:true});
+  if(error){
+    console.warn('Gagal memuat riwayat skor dari server:', error.message);
+    return {};
+  }
+  const map = {};
+  (data||[]).forEach(row=>{
+    if(!map[row.lead_id]) map[row.lead_id] = [];
+    map[row.lead_id].push({ score: row.score, createdAt: row.created_at });
+  });
+  return map;
+}
+
+// Nyimpen satu titik histori skor baru -- dipanggil pas skor lead beneran
+// berubah nilainya (lihat saveLeadDataOnly/saveQuickLead). Fire-and-forget
+// di beberapa tempat pemanggilnya, sama kayak insertFollowUpNote.
+async function insertScoreHistoryPoint(leadId, score){
+  if(score===null || score===undefined) return null;
+  const { data, error } = await supabaseClient.from('lead_score_history').insert({
+    lead_id: leadId, score: score
+  }).select().single();
+  if(error){
+    console.warn('Gagal simpan histori skor ke server:', error.message);
+    return null;
+  }
+  return { score: data.score, createdAt: data.created_at };
+}
+
 async function fetchLeadsFromSupabase(){
-  const [leadsResult, followUpsMap] = await Promise.all([
+  const [leadsResult, followUpsMap, scoreHistoryMap] = await Promise.all([
     supabaseClient.from('leads').select('*').order('id', {ascending:true}),
-    fetchFollowUpsByLeadMap()
+    fetchFollowUpsByLeadMap(),
+    fetchLeadScoreHistoryByLeadMap()
   ]);
   const { data, error } = leadsResult;
   if(error){
@@ -1263,7 +1331,7 @@ async function fetchLeadsFromSupabase(){
   // Perhatikan: bukan .map(dbRowToLead) langsung -- .map ngirim (item, index)
   // ke callback-nya, dan index itu bakal kesasar jadi argumen followUpHistory
   // kalau gak dibungkus arrow function eksplisit kayak gini.
-  leads = (data||[]).map(row => dbRowToLead(row, followUpsMap[row.id]||[]));
+  leads = (data||[]).map(row => dbRowToLead(row, followUpsMap[row.id]||[], scoreHistoryMap[row.id]||[]));
   leadsLoadedFromSupabase = true;
 }
 
@@ -1372,6 +1440,13 @@ function badge(status){
   const label = status.charAt(0).toUpperCase()+status.slice(1);
   return '<span class="badge '+status+'">'+label+'</span>';
 }
+// Tag kecil "Dibatalkan" -- dipasang DI SAMPING badge suhu (bukan gantiin),
+// biar suhu aslinya (misal "Hot") tetap keliatan sebagai catatan track
+// record walau lead-nya udah di-Cancel.
+function cancelledTagHTML(l){
+  if(!l.cancelled) return '';
+  return '<span class="badge cancel" title="Lead ini di-Cancel">Dibatalkan</span>';
+}
 // Angka skor lead (0-100) di baris tabel -- ditaro DI BAWAH badge status
 // (satu cell grid yang sama, bukan kolom baru -- nambah grid item baru bikin
 // tabelnya geser/rusak karena .lead-row itu CSS grid kolom tetap). Warnanya
@@ -1381,6 +1456,19 @@ function scoreValueHTML(l){
   if(l.score===null || l.score===undefined || l.score==='') return '';
   return '<span class="score-value-inline '+l.status+'" title="Skor lead">'+l.score+'%</span>';
 }
+// Panah naik/turun ala saham -- bandingin skor SEKARANG sama skor SEBELUM
+// perubahan terakhir (2 titik paling akhir di scoreHistory). Kalau histori-nya
+// kurang dari 2 titik (lead baru/belum pernah ganti skor), gak ada panah --
+// belum ada apa-apa buat dibandingin.
+function scoreTrendArrowHTML(l){
+  const hist = l.scoreHistory || [];
+  if(hist.length < 2) return '';
+  const latest = hist[hist.length-1].score;
+  const prev = hist[hist.length-2].score;
+  if(latest > prev) return '<span class="score-trend-arrow up" title="Naik dari '+prev+'% ke '+latest+'%">&#9650;</span>';
+  if(latest < prev) return '<span class="score-trend-arrow down" title="Turun dari '+prev+'% ke '+latest+'%">&#9660;</span>';
+  return '<span class="score-trend-arrow flat" title="Gak berubah dari perubahan sebelumnya ('+prev+'%)">&#9679;</span>';
+}
 // Suhu lead otomatis dari skor 0-100: 0-50 Cold, 51-75 Warm, 76-100 Hot.
 function statusFromScore(score){
   if(score===null || score===undefined || score==='' || isNaN(score)) return null;
@@ -1388,6 +1476,17 @@ function statusFromScore(score){
   if(n<=50) return 'cold';
   if(n<=75) return 'warm';
   return 'hot';
+}
+// Dropdown "Suhu lead" (f-status/ql-status) punya opsi ke-4 "Cancel" yang
+// SECARA VISUAL kelihatan kayak pilihan suhu, tapi di data sebenarnya itu
+// flag terpisah (cancelled=true) -- suhu asli (cold/warm/hot) TETAP
+// dipertahankan apa adanya di baliknya, gak pernah ketimpa jadi "cancel".
+// Ini yang bikin track record suhu gak pernah ilang cuma gara-gara dibatalkan.
+function readStatusAndCancelled(rawValue, fallbackStatus){
+  if(rawValue==='cancel'){
+    return { status: fallbackStatus || 'cold', cancelled: true };
+  }
+  return { status: rawValue, cancelled: false };
 }
 // Update tampilan meteran (bar + angka) doang, TANPA nyentuh dropdown suhu --
 // dipakai pas buka form buat nampilin skor yang udah tersimpan tanpa maksa
@@ -1447,20 +1546,29 @@ function isTrulyOverdue(l){
   if(!l.followUp) return false;
   return isOverdue(l.followUp);
 }
-const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', dp:'Sudah Closing', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Tanggal follow up kosong', 'has-product':'Rencana omzet', 'has-deal':'Realisasi Omzet', lunas:'Sudah Lunas'};
+const FILTER_LABELS = {all:'Semua', cold:'Cold', warm:'Warm', hot:'Hot', cancel:'Cancel', dp:'Sudah Closing', overdue:'Follow up telat', 'no-interaction':'Belum ada interaksi', 'no-followup-date':'Tanggal follow up kosong', 'has-product':'Rencana omzet', 'has-deal':'Realisasi Omzet', lunas:'Sudah Lunas'};
 function matchesFilter(l, key){
   switch(key){
     case 'all': return true;
     case 'cold': return l.status==='cold';
     case 'warm': return l.status==='warm';
     case 'hot': return l.status==='hot';
-    case 'dp': return isDpLead(l);
-    case 'overdue': return (l.status==='hot'||l.status==='warm') && isTrulyOverdue(l);
-    case 'no-interaction': return isNoInteraction(l);
-    case 'no-followup-date': return !l.followUp;
-    case 'has-product': return hasProduct(l);
-    case 'has-deal': return hasDealProduct(l);
-    case 'lunas': return isLunasLead(l);
+    // Cancel itu flag terpisah dari suhu (l.status TETAP cold/warm/hot apa
+    // adanya, gak pernah ketimpa) -- jadi biar lead yang dibatalkan tetap
+    // kehitung normal di angka Cold/Warm/Hot Overview/Dashboard (itu emang
+    // sengaja), sementara di sini dia dapet "menu" sendiri.
+    case 'cancel': return !!l.cancelled;
+    // Ke-7 filter di bawah ini SEMUA khusus kelompok menu "Follow up" dan
+    // "Omzet" -- lead yang di-Cancel SENGAJA gak nongol lagi di sini biar
+    // "putus" dari dua kelompok itu (gak perlu di-follow-up/dihitung omzetnya
+    // lagi), walau suhu & jumlah lead totalnya tetep gak berubah di tempat lain.
+    case 'dp': return isDpLead(l) && !l.cancelled;
+    case 'overdue': return (l.status==='hot'||l.status==='warm') && isTrulyOverdue(l) && !l.cancelled;
+    case 'no-interaction': return isNoInteraction(l) && !l.cancelled;
+    case 'no-followup-date': return !l.followUp && !l.cancelled;
+    case 'has-product': return hasProduct(l) && !l.cancelled;
+    case 'has-deal': return hasDealProduct(l) && !l.cancelled;
+    case 'lunas': return isLunasLead(l) && !l.cancelled;
     default: return true;
   }
 }
@@ -1532,7 +1640,7 @@ function leadRowHTML(l, showNote, selectable, idx, clickFn){
     </div>
     <div class="lead-entrydate">${entryColHTML}</div>
     <span class="source-pill">${productTypesLabel(l)}</span>
-    <div class="lead-status-cell">${badge(l.status)}${scoreValueHTML(l)}</div>
+    <div class="lead-status-cell">${badge(l.status)}${cancelledTagHTML(l)}<span>${scoreValueHTML(l)}${scoreTrendArrowHTML(l)}</span></div>
     <div class="lead-followup">${followUpChip(l)}</div>
     <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
   </div>`;
@@ -1603,7 +1711,7 @@ const MOBILE_VIEW_TITLES = {
   overview:'Overview', dashboard:'Dashboard', leads:'Daftar Leads', followup:'Rencana Follow Up',
   activitylog:'Log Aktivitas', users:'Kelola Pengguna', comparison:'Perbandingan Kinerja',
   monitoring:'Monitoring User', structure:'Struktur Organisasi', 'request-admin':'Ajukan Admin Baru',
-  'admin-approval':'Approval Admin Baru', scaleup:'Scale Up', campaign:'Campaign'
+  'admin-approval':'Approval Admin Baru', scaleup:'Scale Up', campaign:'Campaign', scoretrend:'Tren Skor'
 };
 
 function switchView(view, force){
@@ -1636,6 +1744,7 @@ function switchView(view, force){
   if(view==='quota-approval') renderQuotaApprovalView();
   if(view==='scaleup') renderScaleUpView();
   if(view==='campaign') renderCampaignListView();
+  if(view==='scoretrend') renderScoreTrendView();
   sendHeartbeat(false);
 }
 
@@ -1747,7 +1856,9 @@ function selectCalendarDate(dateStr){
 
 function followupCountByDate(){
   const map = {};
-  leads.filter(matchesQuickFilters).forEach(l=>{
+  // Lead yang di-Cancel sengaja dikeluarin dari kalender Follow-up -- itu
+  // salah satu kelompok yang "diputus" pas dibatalkan.
+  leads.filter(l=>matchesQuickFilters(l) && !l.cancelled).forEach(l=>{
     if(l.followUp){
       map[l.followUp] = (map[l.followUp]||0) + 1;
     }
@@ -1804,7 +1915,8 @@ function renderCalendar(){
 }
 
 function getFollowupFilteredList(){
-  const scoped = leads.filter(matchesQuickFilters);
+  // Sama kayak followupCountByDate() -- lead ter-Cancel gak dihitung di sini.
+  const scoped = leads.filter(l=>matchesQuickFilters(l) && !l.cancelled);
   if(calendarSelectedDate){
     return scoped.filter(l=>l.followUp===calendarSelectedDate);
   }
@@ -4672,7 +4784,7 @@ function renderLeadsList(){
   const warm = scopedBase.filter(l=>l.status==='warm').length;
   const cold = scopedBase.filter(l=>l.status==='cold').length;
   const overdueCount = scopedBase.filter(l=>matchesFilter(l,'overdue')).length;
-  const noInteractionCount = scopedBase.filter(isNoInteraction).length;
+  const noInteractionCount = scopedBase.filter(l=>isNoInteraction(l) && !l.cancelled).length;
   document.getElementById('count-all').textContent = total;
   document.getElementById('count-cold').textContent = cold;
   document.getElementById('count-warm').textContent = warm;
@@ -5340,6 +5452,97 @@ function exitCampaignDetail(){
   renderCampaignListView();
 }
 
+// ===================== TREN SKOR =====================
+// Menu khusus buat lihat panah naik/turun + grafik histori skor tiap lead.
+// `leads` yang dipakai di sini udah otomatis kesaring per role lewat RLS
+// Postgres (sama kayak menu Leads) -- gak perlu filter tambahan di JS.
+let currentScoreTrendLeadId = null;
+let scoreTrendChartInstance = null;
+
+function renderScoreTrendView(){
+  renderScoreTrendNameList();
+  if(currentScoreTrendLeadId && leads.some(l=>l.id===currentScoreTrendLeadId)){
+    openScoreTrendDetail(currentScoreTrendLeadId);
+  }
+}
+
+function renderScoreTrendNameList(){
+  const withScore = leads.filter(l=> l.score!==null && l.score!==undefined).slice().sort((a,b)=> a.company.localeCompare(b.company));
+  const wrap = document.getElementById('scoretrend-split-namelist');
+  if(!wrap) return;
+  if(!withScore.length){
+    wrap.innerHTML = '<div class="empty-note" style="padding:10px;">Belum ada lead yang punya skor. Isi skor 0-100 di form edit lead dulu.</div>';
+    return;
+  }
+  wrap.innerHTML = withScore.map(l=>{
+    const isActive = l.id === currentScoreTrendLeadId;
+    return `<div class="split-name-item${isActive?' active':''}" onclick="openScoreTrendDetail(${l.id})">
+      <span class="sn-name">${l.company}</span>
+      <span style="display:flex; align-items:center; gap:4px;">${scoreValueHTML(l)}${scoreTrendArrowHTML(l)}</span>
+    </div>`;
+  }).join('');
+}
+
+function openScoreTrendDetail(id){
+  const l = leads.find(x=>x.id===id);
+  if(!l) return;
+  currentScoreTrendLeadId = id;
+  renderScoreTrendNameList();
+  const col = document.getElementById('scoretrend-split-form-col');
+  if(!col) return;
+  const hist = (l.scoreHistory||[]).slice();
+  const rangeNote = hist.length ? (' -- dari '+fmtDate(hist[0].createdAt.slice(0,10))+' sampai '+fmtDate(hist[hist.length-1].createdAt.slice(0,10))) : '';
+  col.innerHTML = `
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+      <div style="min-width:0; flex:1;">
+        <div class="title" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.company}</div>
+        <div class="subtitle">Skor sekarang: <b>${l.score===null||l.score===undefined ? '-' : l.score+'%'}</b> ${scoreTrendArrowHTML(l)} -- ${badge(l.status)}</div>
+      </div>
+      <button class="icon-btn" onclick="openLeadForm(${l.id})" title="Buka lead ini">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+      </button>
+    </div>
+    ${hist.length < 2
+      ? '<div class="footnote">Baru ada '+hist.length+' titik histori -- belum cukup buat digambar jadi grafik garis. Grafiknya bakal kebentuk begitu skornya diubah lagi.</div>'
+      : '<div style="position:relative; height:280px;"><canvas id="scoretrend-chart"></canvas></div><div class="footnote" style="margin-top:10px;">'+hist.length+' titik histori'+rangeNote+'.</div>'}
+  `;
+  if(hist.length >= 2) renderScoreTrendChart(hist);
+}
+
+function renderScoreTrendChart(hist){
+  const ctx = document.getElementById('scoretrend-chart');
+  if(!ctx) return;
+  if(scoreTrendChartInstance){ scoreTrendChartInstance.destroy(); scoreTrendChartInstance = null; }
+  const labels = hist.map(h=> fmtDate(h.createdAt.slice(0,10)));
+  const data = hist.map(h=> h.score);
+  scoreTrendChartInstance = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: labels,
+      datasets:[{
+        label:'Skor', data: data, borderColor:'#7c5cff', backgroundColor:'#7c5cff22',
+        tension:0.3, pointRadius:4, pointBackgroundColor:'#7c5cff', fill:true
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{min:0, max:100, grid:{color:'#eeecf5'}, ticks:{color:'#a3a0b3', font:{size:10.5}, stepSize:25, callback:v=>v+'%'}},
+        x:{grid:{display:false}, ticks:{color:'#a3a0b3', font:{size:10.5}}}
+      }
+    }
+  });
+}
+
+// Dipanggil dari link "Lihat grafik tren" di form edit lead -- loncat ke
+// menu Tren Skor langsung nampilin grafik lead yang lagi dibuka.
+function openScoreTrendForLead(){
+  if(currentEditId===null || currentEditId===undefined) return;
+  currentScoreTrendLeadId = currentEditId;
+  switchView('scoretrend', true);
+}
+
 // Pintasan dari halaman Campaign ke menu Leads dengan filter "Campaign"
 // langsung ke-set ke campaign ini -- daftar PT-nya beneran dilihat di Leads,
 // bukan di halaman Campaign (Campaign cuma buat kelola + lihat angka ringkasan).
@@ -5458,7 +5661,7 @@ function openLeadForm(id, force){
   document.getElementById('form-title').textContent = 'Update lead';
   document.getElementById('form-subtitle').textContent = 'Diisi oleh: '+(l.admin||'-')+' - admin sales'+(l.picSource==='broker' ? ' - PIC: jaringan luar (broker/calo)' : '');
   document.getElementById('mobile-client-header').innerHTML = '<button class="mch-back-btn" onclick="goBack()" aria-label="Kembali ke daftar lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px; height:18px;"><polyline points="15 18 9 12 15 6"></polyline></svg></button><div class="avatar" style="background:'+avatarColor(l.company)+'">'+initials(l.company)+'</div><span class="mch-name">'+l.company+'</span>';
-  document.getElementById('form-status-badge').outerHTML = '<span class="badge '+l.status+'" id="form-status-badge">'+l.status.charAt(0).toUpperCase()+l.status.slice(1)+'</span>';
+  document.getElementById('form-status-badge-wrap').innerHTML = '<span class="badge '+l.status+'" id="form-status-badge">'+l.status.charAt(0).toUpperCase()+l.status.slice(1)+'</span>'+cancelledTagHTML(l);
   populatePicDatalist();
   document.getElementById('f-company').value = l.company;
   document.getElementById('f-address').value = l.address;
@@ -5468,9 +5671,10 @@ function openLeadForm(id, force){
   document.getElementById('f-pic-source').value = l.picSource || 'internal';
   document.getElementById('f-phone').value = l.phone;
   document.getElementById('f-email').value = l.email;
-  document.getElementById('f-status').value = l.status;
+  document.getElementById('f-status').value = l.cancelled ? 'cancel' : l.status;
   document.getElementById('f-score').value = (l.score===null || l.score===undefined) ? '' : l.score;
   renderScoreMeter('f', l.score);
+  document.getElementById('f-score-trend').innerHTML = scoreTrendArrowHTML(l);
   document.getElementById('f-source').value = l.source || 'wa';
   document.getElementById('f-entrydate').value = l.entryDate || todayIsoStr();
   document.getElementById('f-followup').value = l.followUp;
@@ -5658,7 +5862,7 @@ async function saveQuickLead(){
     picSource: document.getElementById('ql-pic-source').value,
     phone: phone,
     email: document.getElementById('ql-email').value.trim(),
-    status: document.getElementById('ql-status').value,
+    ...readStatusAndCancelled(document.getElementById('ql-status').value, 'cold'),
     score: document.getElementById('ql-score').value===''? null : Number(document.getElementById('ql-score').value),
     source: document.getElementById('ql-source').value,
     entryDate: todayIsoStr(),
@@ -5690,6 +5894,12 @@ async function saveQuickLead(){
   });
   logActivity(newLead, 'Menambahkan catatan follow-up (WhatsApp)');
   if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
+  // Titik histori skor AWAL, fire-and-forget sama kayak catatan follow-up di atas.
+  if(newLead.score!==null && newLead.score!==undefined){
+    insertScoreHistoryPoint(newLead.id, newLead.score).then(point=>{
+      if(point) newLead.scoreHistory.push(point);
+    });
+  }
   closeQuickLeadModal();
   showToast('Lead baru ditambahkan');
   const activeView = document.querySelector('.view.active');
@@ -5703,6 +5913,10 @@ async function saveQuickLead(){
 async function saveLeadDataOnly(){
   const companyInput = document.getElementById('f-company').value.trim();
   const picInput = document.getElementById('f-pic').value.trim();
+  // Kalau lagi edit lead yang udah ada, fallback suhu pas pilih "Cancel" itu
+  // suhu lead itu SEKARANG (biar gak ketimpa) -- kalau lead baru, fallback-nya
+  // 'cold' (jarang kepake, tapi jaga-jaga kalau lead baru langsung di-Cancel).
+  const editingLeadForStatus = currentEditId!==null ? leads.find(x=>x.id===currentEditId) : null;
   const data = {
     company: companyInput || (picInput ? generatePicPlaceholderCompanyName(picInput) : '(tanpa nama)'),
     address: document.getElementById('f-address').value.trim(),
@@ -5712,7 +5926,7 @@ async function saveLeadDataOnly(){
     picSource: document.getElementById('f-pic-source').value,
     phone: document.getElementById('f-phone').value.trim(),
     email: document.getElementById('f-email').value.trim(),
-    status: document.getElementById('f-status').value,
+    ...readStatusAndCancelled(document.getElementById('f-status').value, editingLeadForStatus ? editingLeadForStatus.status : 'cold'),
     score: document.getElementById('f-score').value===''? null : Number(document.getElementById('f-score').value),
     source: document.getElementById('f-source').value,
     entryDate: document.getElementById('f-entrydate').value || todayIsoStr(),
@@ -5763,6 +5977,10 @@ async function saveLeadDataOnly(){
       logActivity(newLead, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
     }
     if(quickProduct) logActivity(newLead, 'Menambahkan produk '+(PRODUCT_LABELS[quickProduct.type]||quickProduct.type)+' - penawaran '+formatRupiah(quickProduct.hargaPenawaran));
+    if(newLead.score!==null && newLead.score!==undefined){
+      const point = await insertScoreHistoryPoint(newLead.id, newLead.score);
+      if(point) newLead.scoreHistory.push(point);
+    }
   } else {
     const l = leads.find(x=>x.id===currentEditId);
     if(!l){
@@ -5783,6 +6001,7 @@ async function saveLeadDataOnly(){
     }
     const prevStatus = l.status;
     const prevFollowUp = l.followUp;
+    const prevScore = l.score;
     const prevSnapshot = {};
     Object.keys(FIELD_CHANGE_LABELS).forEach(f=>{ prevSnapshot[f] = l[f]; });
     const dbRow = leadToDbRow(Object.assign({}, data, {products: l.products||[]}));
@@ -5814,6 +6033,12 @@ async function saveLeadDataOnly(){
       logActivity(l, 'Follow-up dijadwalkan ke '+fmtDate(l.followUp));
     }
     if(newNote) logActivity(l, 'Menambahkan catatan follow-up ('+(CHANNEL_LABELS[noteChannel]||'Lainnya')+')');
+    // Titik histori skor baru -- CUMA kalau skornya beneran ganti nilai
+    // (jangan nyatet histori tiap kali form disimpen kalau skornya sama aja).
+    if(l.score!==prevScore && l.score!==null && l.score!==undefined){
+      const point = await insertScoreHistoryPoint(l.id, l.score);
+      if(point) l.scoreHistory.push(point);
+    }
     lastViewedId = currentEditId;
     lastActionWasAdd = false;
   }

@@ -239,6 +239,7 @@
   .badge.cold{background:var(--cold-bg); color:var(--cold);}
   .badge.warm{background:var(--warm-bg); color:var(--warm);}
   .badge.hot{background:var(--hot-bg); color:var(--hot);}
+  .badge.cancel{background:var(--cold-soft); color:var(--muted); margin-left:5px;}
   .chan-tag{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:20px; background:var(--accent-soft); color:var(--accent-text); white-space:nowrap;}
 
   /* Skor lead (0-100) -- angka kecil di bawah badge status di daftar/tabel
@@ -249,6 +250,10 @@
   .score-value-inline.cold{color:var(--cold);}
   .score-value-inline.warm{color:var(--warm);}
   .score-value-inline.hot{color:var(--hot);}
+  .score-trend-arrow{font-size:8px; margin-left:2px; vertical-align:middle; display:inline-block;}
+  .score-trend-arrow.up{color:var(--success);}
+  .score-trend-arrow.down{color:var(--hot);}
+  .score-trend-arrow.flat{color:var(--muted); font-size:6px;}
   .score-field-row{display:flex; align-items:center; gap:8px; margin-top:6px;}
   .score-field-row input[type=number]{width:72px; padding:7px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;}
   .score-meter{flex:1; height:7px; border-radius:20px; background:var(--border); overflow:hidden;}
