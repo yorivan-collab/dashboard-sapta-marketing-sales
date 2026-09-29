@@ -1372,12 +1372,14 @@ function badge(status){
   const label = status.charAt(0).toUpperCase()+status.slice(1);
   return '<span class="badge '+status+'">'+label+'</span>';
 }
-// Chip kecil skor lead (0-100) di baris tabel -- warnanya ngikut suhu lead
-// YANG LAGI AKTIF (l.status), bukan dihitung ulang dari skor, soalnya suhu
-// bisa aja di-override manual dan itu yang harus dianggap "bener" buat tampilan.
-function scoreChipHTML(l){
+// Angka skor lead (0-100) di baris tabel -- ditaro DI BAWAH badge status
+// (satu cell grid yang sama, bukan kolom baru -- nambah grid item baru bikin
+// tabelnya geser/rusak karena .lead-row itu CSS grid kolom tetap). Warnanya
+// ngikut suhu lead YANG LAGI AKTIF (l.status), bukan dihitung ulang dari
+// skor, soalnya suhu bisa aja di-override manual dari skornya.
+function scoreValueHTML(l){
   if(l.score===null || l.score===undefined || l.score==='') return '';
-  return '<span class="score-chip '+l.status+'" title="Skor lead">'+l.score+'%</span>';
+  return '<span class="score-value-inline '+l.status+'" title="Skor lead">'+l.score+'%</span>';
 }
 // Suhu lead otomatis dari skor 0-100: 0-50 Cold, 51-75 Warm, 76-100 Hot.
 function statusFromScore(score){
@@ -1530,7 +1532,7 @@ function leadRowHTML(l, showNote, selectable, idx, clickFn){
     </div>
     <div class="lead-entrydate">${entryColHTML}</div>
     <span class="source-pill">${productTypesLabel(l)}</span>
-    ${badge(l.status)}${scoreChipHTML(l)}
+    <div class="lead-status-cell">${badge(l.status)}${scoreValueHTML(l)}</div>
     <div class="lead-followup">${followUpChip(l)}</div>
     <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
   </div>`;
