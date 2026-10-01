@@ -166,6 +166,9 @@
       <div id="section-kpi">
         <div class="kpis" id="kpi-row"></div>
       </div>
+      <div id="section-branch-omzet" style="display:none; margin-bottom:14px;">
+        <div class="kpis" id="branch-omzet-row"></div>
+      </div>
       <div id="section-temp">
         <div class="temps" id="temp-row"></div>
       </div>
@@ -418,10 +421,27 @@
                     <option value="iso">ISO</option>
                   </select>
                 </div>
-                <div class="field"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
-                <div class="field"><label>Realisasi omzet (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-realisasi" placeholder="Isi kalau udah ada uang masuk" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
+                <div class="field" id="f-product-penawaran-wrap"><label>Harga penawaran (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
+                <div class="field" id="f-product-realisasi-wrap"><label>Realisasi omzet (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-realisasi" placeholder="Isi kalau udah ada uang masuk" oninput="handleRupiahInputFormat(this); updateSisaRealisasiDisplay();"></div>
               </div>
               <div id="product-piutang-display" style="font-size:12.5px; margin-top:2px; min-height:16px;"></div>
+              <div id="product-cabang-panel" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);">
+                <div class="row2">
+                  <div class="field"><label>Jenis produk (cabang)</label>
+                    <select id="f-product-cabang-type">
+                      <option value="smk3">SMK3</option>
+                      <option value="iso">ISO</option>
+                    </select>
+                  </div>
+                  <div class="field" id="f-product-cabang-wrap"><label>Harga cabang (Rp) <span class="opt-pill">Opsional</span></label><input type="text" inputmode="numeric" id="f-product-cabang" placeholder="0" oninput="handleRupiahInputFormat(this);"></div>
+                </div>
+                <div id="product-cabang-selisih-display" style="font-size:12.5px; margin-top:2px; min-height:16px;"></div>
+                <div style="display:flex; justify-content:flex-end;">
+                  <button class="primary" id="btn-product-cabang-submit" onclick="saveCabangProductPrice()">Simpan harga cabang</button>
+                </div>
+                <div class="footnote" style="margin-top:6px;">Harga cabang itu catatan harga jual versi kamu sendiri -- TERPISAH dari harga resmi perusahaan, gak ikut kehitung di Omzet/Dashboard utama. Selisihnya (harga cabang dikurang harga resmi) baru keliatan di Overview kamu setelah Master/Super Admin ngisi harga resminya.</div>
+              </div>
+              <div class="product-list" id="product-cabang-list" style="margin-top:8px;"></div>
               <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:2px;">
                 <button id="btn-product-cancel" onclick="cancelEditProduct()" style="display:none;">Batal edit</button>
                 <button class="primary" id="btn-product-submit" onclick="addProductLine()">+ Tambah produk</button>
@@ -826,6 +846,11 @@
         <div id="uf-team-checklist" style="display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Kepala Cabang? (opsional, label doang - gak ngaruh ke akses data)</label>
         <select id="uf-branch" onchange="handleBranchSelectChange(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
+        <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text); margin-top:10px; cursor:pointer;">
+          <input type="checkbox" id="uf-is-branch-supervisor" style="width:auto; margin:0;">
+          Supervisor cabang (punya harga jual sendiri, terpisah dari harga resmi)
+        </label>
+        <div style="font-size:10.5px; color:var(--muted); margin-top:3px;">INI BEDA sama "Kepala Cabang" di atas -- ini ngaktifin fitur harga cabang: dia & tim sales-nya bisa isi harga jual versi mereka sendiri (gak masuk omzet resmi perusahaan sampai Master/Super Admin isi harga resminya manual).</div>
       </div>
       <div id="uf-atasan-wrap" style="display:none;">
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Atasan (Supervisor atau Super Admin)</label>
@@ -1048,7 +1073,7 @@
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Campaign <span class="opt-pill">Opsional</span></label>
         <select id="ql-campaign" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;"></select>
       </div>
-      <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
+      <div style="border-top:1px solid var(--border-soft); padding-top:10px;" id="ql-product-wrap">
         <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">Produk &amp; penawaran <span class="opt-pill">Opsional</span></div>
         <div class="row2">
           <div>
@@ -1063,6 +1088,9 @@
             <input type="text" inputmode="numeric" id="ql-product-penawaran" placeholder="0" oninput="handleRupiahInputFormat(this)" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box;">
           </div>
         </div>
+      </div>
+      <div style="border-top:1px solid var(--border-soft); padding-top:10px; display:none;" id="ql-product-cabang-hint">
+        <div style="font-size:11.5px; color:var(--muted);">Lead ini bakal di bawah SPV cabang -- harga penawaran resmi gak bisa diisi di sini. Simpan dulu lead-nya, nanti isi "Harga cabang" dari halaman detail lead.</div>
       </div>
       <div>
         <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Laporan follow up awal <span class="req-pill">Wajib</span></label>
@@ -1200,6 +1228,13 @@ function dbRowToLead(row, followUpHistory, scoreHistory){
       // ambil dari situ biar angka lama gak ilang pas dibuka ulang.
       realisasiOmzet: (p.realisasiOmzet !== undefined ? (p.realisasiOmzet || 0) : (p.hargaDeal || 0))
     })),
+    // Harga versi SPV cabang -- TERPISAH dari products di atas, diisi SPV
+    // cabang/tim sales-nya, gak pernah ikut kehitung di Omzet/Dashboard
+    // utama. Lihat SQL supabase-tambah-harga-cabang.sql.
+    cabangProducts: (row.cabang_products || []).map(p=>({
+      type: p.type,
+      hargaCabang: p.hargaCabang || 0
+    })),
     // Item modul "Scale Up Project" (uji coba, lihat SCALE_UP_ENABLED) --
     // polanya sama kayak products, cuma name-nya bebas diketik manual.
     scaleUp: (row.scale_up || []).map(s=>({
@@ -1237,6 +1272,7 @@ function leadToDbRow(data){
     entry_date: data.entryDate ? data.entryDate : null,
     chat_log: data.chatLog || null,
     products: data.products || [],
+    cabang_products: data.cabangProducts || [],
     scale_up: data.scaleUp || []
     // history sengaja gak ada di sini lagi -- catatan follow-up sekarang
     // ditulis ke tabel follow_ups sendiri lewat insertFollowUpNote().
@@ -2958,6 +2994,8 @@ function renderOverview(){
     </div>
   `;
 
+  renderBranchOmzetCards(scoped);
+
   const coldNoInteraction = cold.filter(isNoInteraction).length;
   const warmOverdue = warm.filter(isTrulyOverdue).length;
   const hotOverdue = hot.filter(isTrulyOverdue).length;
@@ -3201,7 +3239,11 @@ async function fetchUserAccountsFromSupabase(){
     status: p.status,
     branch: p.branch || undefined,
     team: p.team || undefined,
-    photo_url: p.photo_url || undefined
+    photo_url: p.photo_url || undefined,
+    // "Supervisor cabang" -- flag terpisah dari "branch" (yang itu cuma
+    // label "Kepala Cabang" doang). Ini yang beneran ngaktifin fitur
+    // harga cabang (lihat SQL supabase-tambah-harga-cabang.sql).
+    isBranchSupervisor: !!p.is_branch_supervisor
   }));
   syncAdminListFromUsers();
 }
@@ -4493,6 +4535,8 @@ function openUserForm(id){
     // Ganti password akun yang udah ada belum didukung di sini -- itu
     // tindakan terpisah (reset password), bukan bagian form edit ini.
     if(passwordWrap) passwordWrap.style.display = 'none';
+    const branchCb = document.getElementById('uf-is-branch-supervisor');
+    if(branchCb) branchCb.checked = !!u.isBranchSupervisor;
   } else {
     document.getElementById('user-form-title').textContent = 'Tambah user';
     document.getElementById('uf-name').value = '';
@@ -4501,6 +4545,8 @@ function openUserForm(id){
     document.getElementById('uf-email').title = '';
     roleSelect.value = 'sales';
     if(passwordWrap) passwordWrap.style.display = 'block';
+    const branchCb = document.getElementById('uf-is-branch-supervisor');
+    if(branchCb) branchCb.checked = false;
   }
   onUserFormRoleChange();
   document.getElementById('user-form-modal').style.display = 'flex';
@@ -4531,10 +4577,13 @@ async function submitUserForm(){
   }
   let branch = '';
   let team = [];
+  let isBranchSupervisor = false;
   if(role==='supervisor'){
     branch = document.getElementById('uf-branch').value;
     const checks = document.querySelectorAll('#uf-team-checklist input[type=checkbox]:checked');
     team = Array.from(checks).map(c=>c.value);
+    const branchCb = document.getElementById('uf-is-branch-supervisor');
+    isBranchSupervisor = !!(branchCb && branchCb.checked);
   }
 
   if(editingUserId){
@@ -4577,9 +4626,9 @@ async function submitUserForm(){
     if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
 
     const updatePayload = { name: name, role: (u.role!=='master_admin' ? role : u.role) };
-    if(role==='supervisor'){ updatePayload.branch = branch; updatePayload.team = team; }
-    else if(role==='super_admin'){ updatePayload.branch = null; updatePayload.team = superTeam; }
-    else { updatePayload.branch = null; updatePayload.team = null; }
+    if(role==='supervisor'){ updatePayload.branch = branch; updatePayload.team = team; updatePayload.is_branch_supervisor = isBranchSupervisor; }
+    else if(role==='super_admin'){ updatePayload.branch = null; updatePayload.team = superTeam; updatePayload.is_branch_supervisor = false; }
+    else { updatePayload.branch = null; updatePayload.team = null; updatePayload.is_branch_supervisor = false; }
 
     const { error: updErr } = await supabaseClient.from('profiles').update(updatePayload).eq('id', editingUserId);
     if(updErr){
@@ -4624,9 +4673,9 @@ async function submitUserForm(){
     // Update cache lokal biar tampilan langsung konsisten
     u.name = name;
     if(u.role!=='master_admin') u.role = role;
-    if(role==='supervisor'){ u.branch = branch; u.team = team; }
-    else if(role==='super_admin'){ u.team = superTeam; delete u.branch; }
-    else { delete u.branch; delete u.team; }
+    if(role==='supervisor'){ u.branch = branch; u.team = team; u.isBranchSupervisor = isBranchSupervisor; }
+    else if(role==='super_admin'){ u.team = superTeam; delete u.branch; u.isBranchSupervisor = false; }
+    else { delete u.branch; delete u.team; u.isBranchSupervisor = false; }
 
     if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
     syncAdminListFromUsers();
@@ -4661,7 +4710,7 @@ async function submitUserForm(){
   if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
 
   const { data, error } = await supabaseClient.functions.invoke('create-user-account', {
-    body: { name, email, password, role, team: (role==='supervisor'?team:undefined), branch: (role==='supervisor'?branch:undefined) }
+    body: { name, email, password, role, team: (role==='supervisor'?team:undefined), branch: (role==='supervisor'?branch:undefined), isBranchSupervisor: (role==='supervisor'?isBranchSupervisor:undefined) }
   });
 
   if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
@@ -5091,6 +5140,7 @@ function addProductLine(){
   updateSisaRealisasiDisplay();
   persistLeadFields(l, {products: l.products});
   renderProductList(l);
+  renderCabangProductList(l);
 }
 
 function removeProductLine(productId){
@@ -5103,6 +5153,183 @@ function removeProductLine(productId){
   if(removed) logActivity(l, 'Menghapus produk '+(PRODUCT_LABELS[removed.type]||removed.type));
   persistLeadFields(l, {products: l.products});
   renderProductList(l);
+  renderCabangProductList(l);
+}
+
+// ============================================================
+// FITUR "HARGA CABANG" -- SPV cabang (Supervisor yang ditandain
+// is_branch_supervisor) dan tim Sales di bawahnya nyatet harga jual
+// versi mereka sendiri (l.cabangProducts), TERPISAH dari harga resmi
+// perusahaan (l.products) yang tetap cuma diisi Master/Super Admin.
+// Proteksi beneran (siapa boleh nulis kolom apa) ada di trigger
+// database (lihat supabase-tambah-harga-cabang.sql) -- kode di sini
+// cuma ngatur TAMPILAN (field mana kelihatan/kesembunyiin per role).
+// ============================================================
+
+// Lead ini "milik" SPV cabang? -- admin-nya langsung SPV cabang itu,
+// atau admin-nya salah satu Sales di tim SPV cabang itu.
+function leadIsBranch(l){
+  if(!l || !l.admin) return false;
+  return userAccounts.some(u=> u.role==='supervisor' && u.isBranchSupervisor && (u.name===l.admin || (u.team && u.team.includes(l.admin))));
+}
+
+// Matrix akses buat lead TERTENTU (beda sama role global) -- lead yang
+// BUKAN cabang sama sekali gak kena, siapa aja yang udah bisa buka lead
+// itu tetep akses products kayak biasa (gak ada yang berubah).
+function cabangAccessLevel(l){
+  const isBranch = leadIsBranch(l);
+  if(!isBranch) return {isBranch:false, pusatVisible:true, pusatEditable:true, cabangVisible:false, cabangEditable:false};
+  const role = currentUser ? currentUser.role : null;
+  if(role==='master_admin' || role==='super_admin') return {isBranch:true, pusatVisible:true, pusatEditable:true, cabangVisible:true, cabangEditable:false};
+  if(role==='supervisor') return {isBranch:true, pusatVisible:true, pusatEditable:false, cabangVisible:true, cabangEditable:true};
+  if(role==='sales') return {isBranch:true, pusatVisible:false, pusatEditable:false, cabangVisible:true, cabangEditable:true};
+  return {isBranch:true, pusatVisible:false, pusatEditable:false, cabangVisible:false, cabangEditable:false};
+}
+
+// Nyalain/matiin field harga resmi vs harga cabang di form lead sesuai
+// matrix akses di atas. Dipanggil tiap buka/refresh form lead.
+function updateProductFormVisibility(l){
+  const acc = cabangAccessLevel(l);
+  const penawaranWrap = document.getElementById('f-product-penawaran-wrap');
+  const realisasiWrap = document.getElementById('f-product-realisasi-wrap');
+  const piutangDisplay = document.getElementById('product-piutang-display');
+  const productListEl = document.getElementById('product-list');
+  const submitBtn = document.getElementById('btn-product-submit');
+  const cancelBtn = document.getElementById('btn-product-cancel');
+  const typeSelect = document.getElementById('f-product-type');
+  const typeField = typeSelect ? typeSelect.closest('.field') : null;
+  [penawaranWrap, realisasiWrap, piutangDisplay, typeField].forEach(el=>{ if(el) el.style.display = acc.pusatVisible ? '' : 'none'; });
+  if(productListEl) productListEl.style.display = acc.pusatVisible ? '' : 'none';
+  if(submitBtn) submitBtn.style.display = acc.pusatEditable ? '' : 'none';
+  if(cancelBtn && !acc.pusatEditable) cancelBtn.style.display = 'none';
+
+  const cabangPanel = document.getElementById('product-cabang-panel');
+  const cabangListWrap = document.getElementById('product-cabang-list');
+  if(cabangPanel) cabangPanel.style.display = acc.cabangVisible ? 'block' : 'none';
+  if(cabangListWrap) cabangListWrap.style.display = acc.cabangVisible ? '' : 'none';
+  const cabangInput = document.getElementById('f-product-cabang');
+  const cabangSubmitBtn = document.getElementById('btn-product-cabang-submit');
+  const cabangTypeSelect = document.getElementById('f-product-cabang-type');
+  if(cabangInput) cabangInput.disabled = !acc.cabangEditable;
+  if(cabangTypeSelect) cabangTypeSelect.disabled = !acc.cabangEditable;
+  if(cabangSubmitBtn) cabangSubmitBtn.style.display = acc.cabangEditable ? '' : 'none';
+}
+
+function renderCabangProductList(l){
+  const wrap = document.getElementById('product-cabang-list');
+  if(!wrap) return;
+  const acc = cabangAccessLevel(l);
+  const items = l.cabangProducts || [];
+  wrap.innerHTML = items.length ? items.map(p=>{
+    const official = (l.products||[]).find(x=>x.type===p.type);
+    const hasOfficial = !!(official && official.realisasiOmzet>0);
+    let selisihHTML = '';
+    if(acc.pusatVisible){
+      if(hasOfficial){
+        const selisih = p.hargaCabang - official.realisasiOmzet;
+        selisihHTML = '<span class="product-price"><span class="lbl">Selisih</span><span class="val" style="color:'+(selisih>=0?'var(--success)':'var(--hot)')+'; font-weight:700;">'+formatRupiah(selisih)+'</span></span>';
+      } else {
+        selisihHTML = '<span class="product-price"><span class="lbl">Selisih</span><span class="val empty">Nunggu harga resmi diisi</span></span>';
+      }
+    }
+    const actionBtns = acc.cabangEditable
+      ? '<button class="product-edit" onclick="editCabangProductLine(\''+p.type+'\')" aria-label="Edit harga cabang">&#9998;</button><button class="product-remove" onclick="removeCabangProductLine(\''+p.type+'\')" aria-label="Hapus harga cabang">&times;</button>'
+      : '';
+    return '<div class="product-item">'
+      + '<span class="product-badge '+p.type+'">'+(PRODUCT_LABELS[p.type]||p.type)+'</span>'
+      + '<div class="product-info"><span class="product-price"><span class="lbl">Harga cabang</span><span class="val">'+formatRupiah(p.hargaCabang)+'</span></span>'+selisihHTML+'</div>'
+      + actionBtns
+      + '</div>';
+  }).join('') : '<div class="empty-note">Belum ada harga cabang ditambahkan.</div>';
+}
+
+function saveCabangProductPrice(){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l){
+    alert('Lead ini belum tersimpan. Simpan lead dulu baru isi harga cabang.');
+    return;
+  }
+  const type = document.getElementById('f-product-cabang-type').value;
+  const harga = unformatNumberInput(document.getElementById('f-product-cabang').value);
+  if(!harga){
+    alert('Isi harga cabang dulu.');
+    return;
+  }
+  if(!l.cabangProducts) l.cabangProducts = [];
+  const existing = l.cabangProducts.find(p=>p.type===type);
+  if(existing){
+    existing.hargaCabang = harga;
+    logActivity(l, 'Update harga cabang '+(PRODUCT_LABELS[type]||type)+' jadi '+formatRupiah(harga));
+  } else {
+    if(l.cabangProducts.length >= 2){
+      showToast('Maksimal 2 harga cabang per lead (SMK3 & ISO).');
+      return;
+    }
+    l.cabangProducts.push({type, hargaCabang: harga});
+    logActivity(l, 'Menambahkan harga cabang '+(PRODUCT_LABELS[type]||type)+' - '+formatRupiah(harga));
+  }
+  document.getElementById('f-product-cabang').value = '';
+  persistLeadFields(l, {cabang_products: l.cabangProducts});
+  renderCabangProductList(l);
+  showToast('Harga cabang disimpan');
+}
+
+function editCabangProductLine(type){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  const p = (l.cabangProducts||[]).find(x=>x.type===type);
+  if(!p) return;
+  document.getElementById('f-product-cabang-type').value = p.type;
+  document.getElementById('f-product-cabang').value = formatNumberInputValue(p.hargaCabang);
+}
+
+function removeCabangProductLine(type){
+  const l = leads.find(x=>x.id===currentEditId);
+  if(!l) return;
+  if(!confirm('Hapus harga cabang produk ini?')) return;
+  l.cabangProducts = (l.cabangProducts||[]).filter(p=>p.type!==type);
+  persistLeadFields(l, {cabang_products: l.cabangProducts});
+  logActivity(l, 'Menghapus harga cabang '+(PRODUCT_LABELS[type]||type));
+  renderCabangProductList(l);
+}
+
+// Kartu "Omzet cabang" + "Selisih harga" di Overview -- KHUSUS buat SPV
+// cabang sendiri (bukan buat Sales di bawahnya, bukan buat Master/Super).
+// "Omzet [cabang]" = total harga cabang yang kekumpul, jalan terus gak
+// peduli Master/Super udah isi harga resmi apa belum. "Selisih harga" =
+// cuma dihitung dari lead yang harga resminya (realisasiOmzet) UDAH diisi.
+function renderBranchOmzetCards(scoped){
+  const wrap = document.getElementById('section-branch-omzet');
+  const row = document.getElementById('branch-omzet-row');
+  if(!wrap || !row) return;
+  const isBranchSupervisorViewer = !!(currentUser && currentUser.role==='supervisor' && currentUserProfile && currentUserProfile.is_branch_supervisor);
+  if(!isBranchSupervisorViewer){
+    wrap.style.display = 'none';
+    row.innerHTML = '';
+    return;
+  }
+  let omzetCabang = 0;
+  let selisih = 0;
+  scoped.forEach(l=>{
+    (l.cabangProducts||[]).forEach(cp=>{
+      omzetCabang += (cp.hargaCabang||0);
+      const official = (l.products||[]).find(p=>p.type===cp.type);
+      if(official && official.realisasiOmzet>0){
+        selisih += (cp.hargaCabang||0) - official.realisasiOmzet;
+      }
+    });
+  });
+  row.innerHTML = `
+    <div class="card">
+      <div class="card-icon" style="background:var(--accent-soft); color:var(--accent-text);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="3"></circle></svg></div>
+      <div class="label">Omzet cabang (versi kamu)</div><div class="value" style="font-size:18px;">${formatRupiah(omzetCabang)}</div><div class="foot" style="color:var(--text-2)">total harga cabang yang kamu/tim kamu catet</div>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background:${selisih>=0?'var(--success-bg)':'var(--hot-bg)'}; color:${selisih>=0?'var(--success)':'var(--hot)'};"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg></div>
+      <div class="label">Selisih harga</div><div class="value" style="font-size:18px;">${formatRupiah(selisih)}</div><div class="foot" style="color:var(--text-2)">cuma dari lead yang harga resminya udah diisi Master/Super</div>
+    </div>
+  `;
+  wrap.style.display = '';
 }
 
 // ============================================================
@@ -5703,6 +5930,10 @@ function openLeadForm(id, force){
   renderHistory(l);
   renderProductList(l);
   renderScaleUpList(l);
+  document.getElementById('f-product-cabang-type').value = 'smk3';
+  document.getElementById('f-product-cabang').value = '';
+  updateProductFormVisibility(l);
+  renderCabangProductList(l);
   formDirty = false;
 
   if(originView === 'followup'){
@@ -5746,7 +5977,25 @@ function renderQuickAdminSelectOptions(){
   if(options.includes(current)) sel.value = current;
 }
 
+// Dipakai dari popup "Tambah lead cepat" -- belum ada object lead beneran
+// pas ini (masih mau dibikin), jadi cek "cabang" langsung dari nama admin
+// yang lagi dipilih di dropdown, bukan dari leadIsBranch(l).
+function adminIsBranch(adminName){
+  if(!adminName) return false;
+  return userAccounts.some(u=> u.role==='supervisor' && u.isBranchSupervisor && (u.name===adminName || (u.team && u.team.includes(adminName))));
+}
+
+function updateQuickProductVisibility(){
+  const adminName = document.getElementById('ql-admin').value;
+  const branch = adminIsBranch(adminName);
+  const productWrap = document.getElementById('ql-product-wrap');
+  const hintWrap = document.getElementById('ql-product-cabang-hint');
+  if(productWrap) productWrap.style.display = branch ? 'none' : '';
+  if(hintWrap) hintWrap.style.display = branch ? 'block' : 'none';
+}
+
 function handleQuickAdminSelectChange(sel){
+  updateQuickProductVisibility();
   if(currentUser && (currentUser.role==='sales' || currentUser.role==='supervisor')) return;
   if(sel.value === '__add_new__'){
     const name = prompt('Nama admin sales baru:');
@@ -5810,6 +6059,7 @@ function openQuickLeadModal(){
   document.getElementById('ql-admin').value = (currentUser && currentUser.name) ? currentUser.name : (ADMIN_LIST[0] || '');
   const adminWrap = document.getElementById('ql-admin-wrap');
   if(adminWrap) adminWrap.style.display = (currentUser && currentUser.role==='sales') ? 'none' : '';
+  updateQuickProductVisibility();
   document.getElementById('quick-lead-modal').style.display = 'flex';
 }
 
@@ -5848,7 +6098,12 @@ async function saveQuickLead(){
     });
     return;
   }
-  const quickPenawaran = unformatNumberInput(document.getElementById('ql-product-penawaran').value);
+  // Lead cabang (admin-nya SPV cabang/tim sales-nya) gak boleh kirim
+  // harga resmi dari sini sama sekali -- field-nya udah disembunyiin
+  // (updateQuickProductVisibility), ini jaga-jaga dobel biar gak kena
+  // tolak trigger database kalau somehow field-nya keisi juga.
+  const quickIsBranch = adminIsBranch(quickTargetAdmin);
+  const quickPenawaran = quickIsBranch ? 0 : unformatNumberInput(document.getElementById('ql-product-penawaran').value);
   const quickProduct = quickPenawaran > 0 ? {
     id: Date.now(),
     type: document.getElementById('ql-product-type').value,
@@ -5951,7 +6206,9 @@ async function saveLeadDataOnly(){
       });
       return false;
     }
-    const quickPenawaran = unformatNumberInput(document.getElementById('f-product-penawaran').value);
+    // Sama kayak saveQuickLead() -- lead cabang gak boleh kirim harga resmi
+    // dari sini, biar gak kena tolak trigger database.
+    const quickPenawaran = adminIsBranch(data.admin) ? 0 : unformatNumberInput(document.getElementById('f-product-penawaran').value);
     let quickProduct = null;
     if(quickPenawaran > 0){
       quickProduct = {
