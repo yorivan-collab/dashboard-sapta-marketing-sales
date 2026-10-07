@@ -2221,7 +2221,7 @@ function computeAdminPerformance(sourceLeads){
     const own = src.filter(l=>l.admin===name);
     const dpCount = own.filter(isDpLead).length;
     const omzet = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
-    const omzetPenawaran = own.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+    const omzetPenawaran = own.filter(l=>!l.cancelled).reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
     return {name, leadCount:own.length, dpCount, omzet, omzetPenawaran};
   }).sort((a,b)=> b.omzet - a.omzet);
 }
@@ -2858,7 +2858,7 @@ function renderDashboardView(){
   const actionable = mine.filter(l=>l.status==='hot'||l.status==='warm');
   const overdueCount = mine.filter(l=>matchesFilter(l,'overdue')).length;
   const noInteraction = mine.filter(isNoInteraction);
-  const totalPenawaran = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+  const totalPenawaran = mine.filter(l=>!l.cancelled).reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
   const totalRealisasi = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
   const totalPiutang = mine.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+Math.max(0,(p.hargaPenawaran||0)-(p.realisasiOmzet||0)),0), 0);
   const cold = mine.filter(l=>l.status==='cold');
@@ -2949,7 +2949,7 @@ function renderOverview(){
   const actionable = scoped.filter(l=>l.status==='hot'||l.status==='warm');
   const overdueCount = scoped.filter(l=>matchesFilter(l,'overdue')).length;
   const noInteraction = scoped.filter(isNoInteraction);
-  const totalPenawaran = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
+  const totalPenawaran = scoped.filter(l=>!l.cancelled).reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.hargaPenawaran||0),0), 0);
   const totalRealisasi = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+(p.realisasiOmzet||0),0), 0);
   const totalPiutang = scoped.reduce((sum,l)=> sum + (l.products||[]).reduce((s,p)=>s+Math.max(0,(p.hargaPenawaran||0)-(p.realisasiOmzet||0)),0), 0);
 
