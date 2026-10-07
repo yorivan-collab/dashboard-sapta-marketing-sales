@@ -153,6 +153,7 @@
         <span class="focus-filter-badge" id="master-focus-badge-overview" onclick="openFocusFilterModal()"></span>
         <select id="overview-pic-filter-select" onchange="setQuickFilterPic(this.value)"></select>
         <select id="overview-location-filter-select" onchange="setQuickFilterLocation(this.value)"></select>
+        <select id="overview-campaign-filter-select" onchange="setQuickFilterCampaign(this.value)" style="display:none;"></select>
         <select id="overview-date-field-select" onchange="setQuickFilterDateField(this.value)">
           <option value="entryDate">Tanggal input</option>
           <option value="followUp">Tanggal follow-up</option>
@@ -2723,7 +2724,7 @@ function renderAnalyticsDashboard(){
 
 function getOverviewScopedLeads(){
   const term = (document.getElementById('overview-search-input')?.value || '').toLowerCase();
-  return leads.filter(l => matchesSearchTerm(l, term) && matchesQuickFilters(l));
+  return leads.filter(l => matchesSearchTerm(l, term) && matchesQuickFilters(l) && matchesQuickFilterCampaign(l));
 }
 
 function computeMyOverviewStats(){
@@ -2940,7 +2941,7 @@ function renderDashboardView(){
 
 function renderOverview(){
   const scoped = getOverviewScopedLeads();
-  const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterAdmin!=='all' || !!quickFilterDateFrom || !!quickFilterDateTo || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
+  const isScoped = quickFilterPic!=='all' || quickFilterLocation!=='all' || quickFilterCampaign!=='all' || quickFilterAdmin!=='all' || !!quickFilterDateFrom || !!quickFilterDateTo || (document.getElementById('overview-search-input')?.value||'').trim()!=='';
   const total = scoped.length;
   const hot = scoped.filter(l=>l.status==='hot');
   const warm = scoped.filter(l=>l.status==='warm');
@@ -3074,8 +3075,10 @@ function getQuickFilteredLeads(){
   return leads.filter(l=> matchesSearchTerm(l, term) && matchesQuickFilters(l) && matchesQuickFilterCampaign(l));
 }
 
-// Filter Campaign sengaja DIPISAH dari matchesQuickFilters() -- itu dipakai
-// bareng sama Overview, dan filter Campaign ini KHUSUS Leads doang.
+// Filter Campaign sengaja DIPISAH dari matchesQuickFilters() (biar Dashboard
+// pribadi dan bagian lain yang pakai matchesQuickFilters gak ikut ke-filter),
+// tapi dipanggil eksplisit di Leads (getQuickFilteredLeads) dan Overview
+// (getOverviewScopedLeads).
 function matchesQuickFilterCampaign(l){
   if(quickFilterCampaign==='all') return true; // Semua lead -- bener-bener tanpa filter
   if(quickFilterCampaign==='none') return !l.campaignId; // Tanpa campaign
@@ -4184,23 +4187,25 @@ function populateQuickFilterDropdowns(){
     const el = document.getElementById(id);
     if(el) el.style.display = dateFilterActive ? 'inline-flex' : 'none';
   });
-  // Dropdown "Campaign" -- KHUSUS Leads, sengaja gak dimasukin loop di atas
-  // (yang itu semua dipakai bareng Overview juga). Cuma nongol kalau user
+  // Dropdown "Campaign" -- dipakai bareng di Leads dan Overview (satu state
+  // quickFilterCampaign, jadi pilihan di salah satu otomatis ikut di yang
+  // lain). Default "Semua lead" = tanpa filter. Cuma nongol kalau user
   // ini emang punya campaign yang bisa diliat (Master Admin, atau Super
   // Admin yang ditunjuk) -- Supervisor/Sales gak pernah punya campaign
   // buat dipilih, jadi dropdown-nya disembunyiin daripada bingungin.
-  const campaignSel = document.getElementById('campaign-filter-select');
-  if(campaignSel){
-    const visibleCampaigns = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+  const visibleCampaigns = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+  if(!visibleCampaigns.length) quickFilterCampaign = 'all';
+  ['campaign-filter-select','overview-campaign-filter-select'].forEach(id=>{
+    const campaignSel = document.getElementById(id);
+    if(!campaignSel) return;
     if(visibleCampaigns.length){
       campaignSel.innerHTML = '<option value="none">Tanpa campaign</option><option value="anycampaign">Semua campaign</option><option value="all">Semua lead</option>' + visibleCampaigns.map(c=>'<option value="'+c.id+'">'+c.name+(c.status==='selesai'?' (selesai)':'')+'</option>').join('');
       campaignSel.value = visibleCampaigns.some(c=>c.id===quickFilterCampaign) ? String(quickFilterCampaign) : (['all','anycampaign'].includes(quickFilterCampaign) ? quickFilterCampaign : 'none');
       campaignSel.style.display = '';
     } else {
       campaignSel.style.display = 'none';
-      quickFilterCampaign = 'all';
     }
-  }
+  });
 }
 
 function setQuickFilterDateField(val){
@@ -4246,12 +4251,13 @@ function setQuickFilterLocation(val){
   renderOverview();
 }
 
-// KHUSUS Leads -- sengaja gak panggil renderOverview() (Campaign gak boleh
-// ngaruh ke angka Overview/Dashboard, itu tetap ngitung semua lead).
+// Dipakai bareng Leads dan Overview (satu state). Dashboard pribadi tetap
+// ngitung semua lead -- gak ikut filter ini.
 function setQuickFilterCampaign(val){
   quickFilterCampaign = (val==='all' || val==='none' || val==='anycampaign') ? val : Number(val);
   populateQuickFilterDropdowns();
   refreshLeadsListing();
+  renderOverview();
 }
 
 function setQuickFilterAdmin(val){
