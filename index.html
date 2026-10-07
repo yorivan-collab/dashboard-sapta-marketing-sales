@@ -2112,7 +2112,7 @@ function goBack(action, force){
 }
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
-const PERIOD_LABELS = {minggu:'Minggu', bulan:'Bulan', enam_bulan:'6 Bulan', tahun:'Tahun', lima_tahun:'5 Tahun'};
+const PERIOD_LABELS = {harian:'Harian', minggu:'Minggu', bulan:'Bulan', enam_bulan:'6 Bulan', tahun:'Tahun', lima_tahun:'5 Tahun'};
 const STATUS_META = {total:{label:'Total lead baru'}, hot:{label:'Hot'}, warm:{label:'Warm'}, cold:{label:'Cold'}, closing:{label:'Closing rate'}};
 const STATUS_COLORS = {total:'#7c5cff', hot:'#e3436b', warm:'#c9820a', cold:'#6b7280', closing:'#1a9a6c'};
 
@@ -2126,7 +2126,14 @@ let growthActiveStatus = {total:true, hot:true, warm:true, cold:true, closing:tr
 function getPeriodBuckets(key){
   const now = new Date(); now.setHours(0,0,0,0);
   const buckets = [];
-  if(key==='minggu'){
+  if(key==='harian'){
+    // 30 hari terakhir (termasuk hari ini), 1 batang/titik per hari.
+    for(let i=29;i>=0;i--){
+      const start = new Date(now); start.setDate(now.getDate()-i);
+      const end = new Date(start); end.setDate(start.getDate()+1);
+      buckets.push({label:String(start.getDate()).padStart(2,'0')+'/'+String(start.getMonth()+1).padStart(2,'0'), start, end});
+    }
+  } else if(key==='minggu'){
     const day = now.getDay();
     const diffToMonday = (day===0 ? -6 : 1-day);
     const thisMonday = new Date(now); thisMonday.setDate(now.getDate()+diffToMonday);
