@@ -3294,7 +3294,7 @@ async function fetchCampaignsFromSupabase(){
 function canViewCampaign(c){
   if(!currentUser) return false;
   if(currentUser.role==='master_admin') return true;
-  if(currentUser.role==='super_admin') return c.assignedSuperAdmins.includes(currentUser.name);
+  if(currentUser.role==='super_admin') return true;
   return false;
 }
 
@@ -3883,11 +3883,13 @@ function applyRoleRestrictions(){
 
   // Menu Campaign: Master Admin selalu liat, Super Admin cuma kalau dia
   // ditunjuk di minimal satu campaign.
-  const canSeeCampaignMenu = isMaster || (currentUser && currentUser.role==='super_admin' && myVisibleCampaigns().length>0);
+  const isSuperAdmin = !!(currentUser && currentUser.role==='super_admin');
+  const canManageCampaign = isMaster || isSuperAdmin;
+  const canSeeCampaignMenu = canManageCampaign;
   const campaignNav = document.getElementById('nav-campaign-item');
   if(campaignNav) campaignNav.style.display = canSeeCampaignMenu ? '' : 'none';
   const campaignNewBtn = document.getElementById('btn-campaign-new');
-  if(campaignNewBtn) campaignNewBtn.style.display = isMaster ? '' : 'none';
+  if(campaignNewBtn) campaignNewBtn.style.display = canManageCampaign ? '' : 'none';
   if(!canSeeCampaignMenu && document.getElementById('view-campaign') && document.getElementById('view-campaign').classList.contains('active')) switchView('overview', true);
 }
 
@@ -5632,7 +5634,7 @@ function renderCampaignListView(){
   if(!wrap) return;
   const visible = myVisibleCampaigns().slice().sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
   if(!visible.length){
-    wrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada campaign'+(currentUser && currentUser.role==='super_admin' ? ' yang ditunjuk ke kamu' : '')+'.</div>';
+    wrap.innerHTML = '<div class="empty-note" style="text-align:center; padding:24px;">Belum ada campaign.</div>';
     return;
   }
   wrap.innerHTML = visible.map(c=>{
@@ -5673,9 +5675,9 @@ function openCampaignDetail(id){
   document.getElementById('campaign-detail-period').textContent = fmtDate(c.startDate)+' - '+fmtDate(c.endDate);
   document.getElementById('campaign-detail-status-wrap').innerHTML = campaignStatusBadgeHTML(c.status);
   document.getElementById('campaign-detail-assigned').textContent = c.assignedSuperAdmins.length ? ('Super Admin ditunjuk: '+c.assignedSuperAdmins.join(', ')) : 'Belum ada Super Admin yang ditunjuk -- cuma Master Admin yang bisa liat ini.';
-  const isMaster = !!(currentUser && currentUser.role==='master_admin');
+  const canManage = !!(currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin'));
   const editBtn = document.getElementById('btn-campaign-edit');
-  if(editBtn) editBtn.style.display = isMaster ? '' : 'none';
+  if(editBtn) editBtn.style.display = canManage ? '' : 'none';
   const k = campaignKPI(id);
   document.getElementById('campaign-detail-kpis').innerHTML = `
     <div class="card"><div class="label">Total lead</div><div class="value">${k.total}</div></div>
@@ -5810,8 +5812,8 @@ function renderCampaignAssignedChecklist(currentAssigned){
 }
 
 function openCampaignFormModal(editId){
-  const isMaster = !!(currentUser && currentUser.role==='master_admin');
-  if(!isMaster) return;
+  const canManage = !!(currentUser && (currentUser.role==='master_admin' || currentUser.role==='super_admin'));
+  if(!canManage) return;
   const editing = editId ? campaigns.find(c=>c.id===editId) : null;
   document.getElementById('campaign-form-title').textContent = editing ? 'Edit Campaign' : 'Buat Campaign';
   document.getElementById('cf-name').value = editing ? editing.name : '';
