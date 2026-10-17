@@ -184,7 +184,7 @@
         <div style="position:relative; height:220px;">
           <canvas id="growth-chart"></canvas>
         </div>
-        <div class="dash-hint">Batang ungu "Total lead baru" = jumlah lead yang masuk pada periode itu. Garis Hot/Warm/Cold = status lead-lead itu sekarang, garis putus-putus = closing rate periode itu.</div>
+        <div class="dash-hint">Batang ungu "Total lead baru" = jumlah lead yang masuk pada periode itu. Garis Hot/Warm/Cold = status lead-lead itu sekarang, garis putus-putus = closing rate periode itu. Batang hijau "Lead closing" = jumlah lead yang closing (realisasi omzet terisi) pada hari/periode itu.<span id="growth-hint-undated"></span></div>
       </div>
 
       <div id="section-omzet" class="dash-card">
@@ -1227,7 +1227,10 @@ function dbRowToLead(row, followUpHistory, scoreHistory){
       hargaPenawaran: p.hargaPenawaran || 0,
       // Data lama masih nyimpen "hargaDeal" -- kalau realisasiOmzet belum ada,
       // ambil dari situ biar angka lama gak ilang pas dibuka ulang.
-      realisasiOmzet: (p.realisasiOmzet !== undefined ? (p.realisasiOmzet || 0) : (p.hargaDeal || 0))
+      realisasiOmzet: (p.realisasiOmzet !== undefined ? (p.realisasiOmzet || 0) : (p.hargaDeal || 0)),
+      // Tanggal closing = hari realisasi omzet pertama kali terisi (yyyy-mm-dd).
+      // Kosong untuk data lama yang belum punya tanggal.
+      closingDate: p.closingDate || ''
     })),
     // Harga versi SPV cabang -- TERPISAH dari products di atas, diisi SPV
     // cabang/tim sales-nya, gak pernah ikut kehitung di Omzet/Dashboard
@@ -1418,6 +1421,8 @@ function initials(name){
   return (parts[0][0]+(parts[1]?parts[1][0]:'')).toUpperCase();
 }
 function todayIsoStr(){ return new Date().toISOString().slice(0,10); }
+// Tanggal HARI INI menurut zona waktu perangkat (bukan UTC) -- dipakai untuk tanggal closing.
+function localTodayIso(){ const d=new Date(), pad=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 
 // Ubah timestamp SERVER (created_at, timestamptz dari Postgres -- selalu
 // akurat, gak peduli jam device siapapun) jadi tanggal+jam lokal buat
@@ -1602,7 +1607,8 @@ function matchesFilter(l, key){
     case 'dp': return isDpLead(l) && !l.cancelled;
     case 'overdue': return (l.status==='hot'||l.status==='warm') && isTrulyOverdue(l) && !l.cancelled;
     case 'no-interaction': return isNoInteraction(l) && !l.cancelled;
-    case 'no-followup-date': return !l.followUp && !l.cancelled;
+    // Lead yang sudah ada realisasi omzet (DP/lunas) dianggap beres -- tidak masuk kategori ini.
+    case 'no-followup-date': return !l.followUp && !l.cancelled && !isDpLead(l);
     case 'has-product': return hasProduct(l) && !l.cancelled;
     case 'has-deal': return hasDealProduct(l) && !l.cancelled;
     case 'lunas': return isLunasLead(l) && !l.cancelled;
@@ -2110,15 +2116,15 @@ function goBack(action, force){
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
 const PERIOD_LABELS = {harian:'Harian', minggu:'Minggu', bulan:'Bulan', enam_bulan:'6 Bulan', tahun:'Tahun', lima_tahun:'5 Tahun'};
-const STATUS_META = {total:{label:'Total lead baru'}, hot:{label:'Hot'}, warm:{label:'Warm'}, cold:{label:'Cold'}, closing:{label:'Closing rate'}};
-const STATUS_COLORS = {total:'#7c5cff', hot:'#e3436b', warm:'#c9820a', cold:'#6b7280', closing:'#1a9a6c'};
+const STATUS_META = {total:{label:'Total lead baru'}, closed:{label:'Lead closing'}, hot:{label:'Hot'}, warm:{label:'Warm'}, cold:{label:'Cold'}, closing:{label:'Closing rate'}};
+const STATUS_COLORS = {total:'#7c5cff', closed:'#15803d', hot:'#e3436b', warm:'#c9820a', cold:'#6b7280', closing:'#1a9a6c'};
 
 let growthChartInstance = null;
 let omzetChartInstance = null;
 let produkChartInstance = null;
 let growthPeriod = 'bulan';
 let omzetPeriod = 'bulan';
-let growthActiveStatus = {total:true, hot:true, warm:true, cold:true, closing:true};
+let growthActiveStatus = {total:true, closed:true, hot:true, warm:true, cold:true, closing:true};
 
 function getPeriodBuckets(key){
   const now = new Date(); now.setHours(0,0,0,0);
@@ -2171,11 +2177,46 @@ function getPeriodBuckets(key){
   return buckets;
 }
 
+// Tanggal closing sebuah lead = tanggal realisasi omzet pertama terisi. Data lama
+// yang belum punya tanggal dicarikan dari Log Aktivitas (closingLogMap); kalau
+// tetap tidak ada, dikembalikan '' (tidak ditebak).
+let closingLogMap = null, closingLogLoading = false;
+async function loadClosingLogMap(){
+  if(closingLogMap || closingLogLoading) return;
+  closingLogLoading = true;
+  try{
+    const { data, error } = await supabaseClient.from('activity_log').select('company,note,created_at').ilike('note','%closing%').order('created_at',{ascending:true}).limit(2000);
+    if(error) throw error;
+    const m = {};
+    (data||[]).forEach(a=>{
+      if(!/closing --|langsung closing/.test(a.note||'')) return;
+      const k = (a.company||'').trim().toLowerCase();
+      if(!k || m[k] || !a.created_at) return;
+      m[k] = localDateTimeParts(a.created_at).date;
+    });
+    closingLogMap = m;
+  }catch(e){ console.warn('Gagal memuat log closing:', e && e.message); closingLogMap = {}; }
+  finally{ closingLogLoading = false; }
+}
+function leadClosingDate(l){
+  const ds = (l.products||[]).filter(p=>p.realisasiOmzet>0).map(p=>p.closingDate).filter(Boolean).sort();
+  if(ds.length) return ds[0];
+  if(isDpLead(l) && closingLogMap){ const k=(l.company||'').trim().toLowerCase(); if(closingLogMap[k]) return closingLogMap[k]; }
+  return '';
+}
+
 function computeGrowthSeries(key, sourceLeads){
   const src = sourceLeads || leads;
   const buckets = getPeriodBuckets(key);
-  const total=[],hot=[],warm=[],cold=[],closing=[];
+  const total=[],hot=[],warm=[],cold=[],closing=[],closedArr=[];
+  const undated = src.filter(l=> isDpLead(l) && !leadClosingDate(l)).length;
   buckets.forEach(b=>{
+    closedArr.push(src.filter(l=>{
+      const cd = leadClosingDate(l);
+      if(!cd) return false;
+      const d = new Date(cd+"T00:00:00");
+      return d>=b.start && d<b.end;
+    }).length);
     const inBucket = src.filter(l=>{
       if(!l.entryDate) return false;
       const d = new Date(l.entryDate+"T00:00:00");
@@ -2188,7 +2229,7 @@ function computeGrowthSeries(key, sourceLeads){
     const closed = inBucket.filter(isDpLead).length;
     closing.push(inBucket.length ? Math.round(closed/inBucket.length*100) : 0);
   });
-  return {labels:buckets.map(b=>b.label), total, hot, warm, cold, closing};
+  return {labels:buckets.map(b=>b.label), total, hot, warm, cold, closing, closed:closedArr, undated};
 }
 
 function computeOmzetSeries(key, sourceLeads){
@@ -2459,8 +2500,11 @@ function buildStatusToggle(){
 }
 
 function renderGrowthChart(){
+  if(!closingLogMap) loadClosingLogMap().then(()=>{ if(closingLogMap) renderGrowthChart(); });
   const d = computeGrowthSeries(growthPeriod, getOverviewScopedLeads());
   const ctx = document.getElementById('growth-chart');
+  const undatedEl = document.getElementById('growth-hint-undated');
+  if(undatedEl) undatedEl.textContent = d.undated ? ' ('+d.undated+' closing lama belum punya tanggal, belum masuk batang hijau.)' : '';
   if(!ctx) return;
   if(growthChartInstance){
     growthChartInstance.data.labels = d.labels;
@@ -2469,7 +2513,8 @@ function renderGrowthChart(){
     growthChartInstance.data.datasets[2].data = d.warm;
     growthChartInstance.data.datasets[3].data = d.cold;
     growthChartInstance.data.datasets[4].data = d.closing;
-    ['total','hot','warm','cold','closing'].forEach((key,i)=>{ growthChartInstance.data.datasets[i].hidden = !growthActiveStatus[key]; });
+    growthChartInstance.data.datasets[5].data = d.closed;
+    ['total','hot','warm','cold','closing','closed'].forEach((key,i)=>{ growthChartInstance.data.datasets[i].hidden = !growthActiveStatus[key]; });
     growthChartInstance.update();
   } else {
     growthChartInstance = new Chart(ctx, {
@@ -2480,7 +2525,8 @@ function renderGrowthChart(){
           {type:'line', label:'Hot', data:d.hot, borderColor:STATUS_COLORS.hot, backgroundColor:STATUS_COLORS.hot, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.hot},
           {type:'line', label:'Warm', data:d.warm, borderColor:STATUS_COLORS.warm, backgroundColor:STATUS_COLORS.warm, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.warm},
           {type:'line', label:'Cold', data:d.cold, borderColor:STATUS_COLORS.cold, backgroundColor:STATUS_COLORS.cold, tension:0.4, pointRadius:3, yAxisID:'y', hidden:!growthActiveStatus.cold},
-          {type:'line', label:'Closing rate', data:d.closing, borderColor:STATUS_COLORS.closing, backgroundColor:STATUS_COLORS.closing, borderDash:[5,4], tension:0.4, pointRadius:3, yAxisID:'y1', hidden:!growthActiveStatus.closing}
+          {type:'line', label:'Closing rate', data:d.closing, borderColor:STATUS_COLORS.closing, backgroundColor:STATUS_COLORS.closing, borderDash:[5,4], tension:0.4, pointRadius:3, yAxisID:'y1', hidden:!growthActiveStatus.closing},
+          {type:'bar', label:'Lead closing', data:d.closed, backgroundColor:STATUS_COLORS.closed+'55', borderColor:STATUS_COLORS.closed, borderWidth:1, borderRadius:4, maxBarThickness:26, yAxisID:'y', hidden:!growthActiveStatus.closed, order:5}
         ]
       },
       options:{
@@ -2934,7 +2980,7 @@ function renderDashboardView(){
     `;
   }
 
-  const noFollowupDate = mine.filter(l=>!l.followUp).length;
+  const noFollowupDate = mine.filter(l=>matchesFilter(l,'no-followup-date')).length;
   document.getElementById('dash-list-stats').innerHTML = `
     <div class="stat-list-row" onclick="goToFilterMine('no-followup-date')">
       <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Tanggal follow up kosong</span>
@@ -3023,7 +3069,7 @@ function renderOverview(){
     </div>
   `;
 
-  const noFollowupDate = scoped.filter(l=>!l.followUp).length;
+  const noFollowupDate = scoped.filter(l=>matchesFilter(l,'no-followup-date')).length;
   document.getElementById('section-list-stats').innerHTML = `
     <div class="stat-list-row" onclick="goToFilter('no-followup-date')">
       <span class="stat-list-label${noFollowupDate>0 ? ' blink-alert' : ''}">Tanggal follow up kosong</span>
@@ -5128,6 +5174,8 @@ function addProductLine(){
       p.type = type;
       p.hargaPenawaran = penawaran;
       p.realisasiOmzet = realisasi;
+      if(realisasi>0 && !wasClosing) p.closingDate = localTodayIso();
+      else if(realisasi<=0) p.closingDate = '';
     }
     editingProductId = null;
     resetProductSubmitButton();
@@ -5141,7 +5189,7 @@ function addProductLine(){
     }
     showToast('Produk diupdate');
   } else {
-    l.products.push({id: Date.now(), type, hargaPenawaran: penawaran, realisasiOmzet: realisasi});
+    l.products.push({id: Date.now(), type, hargaPenawaran: penawaran, realisasiOmzet: realisasi, closingDate: realisasi>0 ? localTodayIso() : ''});
     logActivity(l, 'Menambahkan produk '+(PRODUCT_LABELS[type]||type)+' - penawaran '+formatRupiah(penawaran)+(realisasi>0 ? ' (langsung closing, realisasi '+formatRupiah(realisasi)+')' : ''));
     showToast('Produk ditambahkan');
   }
