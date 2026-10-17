@@ -2065,13 +2065,10 @@ function refreshLeadsListing(){
 }
 
 function renderSplitNameList(){
-  const term = document.getElementById('search-input').value.toLowerCase();
-  const filtered = leads.filter(l=>{
-    const matchStatus = matchesFilter(l, currentFilter);
-    const matchTerm = l.company.toLowerCase().includes(term) || (l.pic||'').toLowerCase().includes(term);
-    return matchStatus && matchTerm;
-  });
-  filtered.sort((a,b)=> leadSortTimestamp(b) - leadSortTimestamp(a));
+  // Pakai fungsi filter yang SAMA dengan tabel Leads (status, pencarian, PIC,
+  // lokasi, admin/fokus, campaign, tanggal) supaya daftar nama di split view
+  // persis sama dengan tabel -- sebelumnya cuma status + pencarian.
+  const filtered = getFilteredLeads();
   document.getElementById('split-namelist').innerHTML = filtered.length ? filtered.map(l=>{
     const isActive = l.id === currentEditId;
     return `<div class="split-name-item${isActive?' active':''}" onclick="openLeadForm(${l.id})">
