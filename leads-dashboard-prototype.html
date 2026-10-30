@@ -472,8 +472,10 @@
               <div class="panel-title">Laporan follow up <span class="opt-pill">Opsional</span></div>
               <div class="field"><label>Sumber percakapan <span class="opt-pill">Opsional</span></label>
                 <select id="f-note-channel">
-                  <option value="wa">Pesan WhatsApp</option>
-                  <option value="website">Pesan dari website</option>
+                  <option value="wa_sapta">WhatsApp Sapta</option>
+                  <option value="wa_mandala">WhatsApp Mandala</option>
+                  <option value="web_sapta">Website Sapta</option>
+                  <option value="web_mandala">Website Mandala</option>
                   <option value="call">Catatan telepon</option>
                   <option value="lainnya">Lainnya</option>
                 </select>
@@ -1404,7 +1406,7 @@ let calendarSelectedDate = null;
 let selectedLeadIds = new Set();
 const MONTH_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const AVATAR_COLORS = ["#7c5cff","#0d9488","#2563eb","#f0653b","#d6336c","#16a34a","#475569","#c9820a"];
-const CHANNEL_LABELS = {wa:"WhatsApp", website:"Website", call:"Telepon", lainnya:"Lainnya"};
+const CHANNEL_LABELS = {wa_sapta:"WhatsApp Sapta", wa_mandala:"WhatsApp Mandala", web_sapta:"Website Sapta", web_mandala:"Website Mandala", wa:"WhatsApp (lama)", website:"Website (lama)", call:"Telepon", lainnya:"Lainnya"};
 const SOURCE_LABELS = {website:"Website", sosmed:"Sosial media", wa:"WhatsApp", langsung:"Kontak langsung"};
 const PRODUCT_LABELS = {smk3:"SMK3", iso:"ISO"};
 const FIELD_CHANGE_LABELS = {company:'Nama perusahaan', address:'Alamat', city:'Kota', province:'Provinsi', pic:'PIC', picSource:'Tipe PIC', phone:'No. telepon', email:'Email', source:'Sumber lead', admin:'Admin sales', score:'Skor lead'};
@@ -5971,7 +5973,7 @@ function openLeadForm(id, force){
   renderLeadCampaignSelectOptions(l.campaignId);
   autoExpandLengkapiNantiIfFilled(l);
   document.getElementById('f-company-hint').style.display = 'none';
-  document.getElementById('f-note-channel').value = 'wa';
+  document.getElementById('f-note-channel').value = 'wa_sapta';
   document.getElementById('f-new-note').value = '';
   document.getElementById('f-chatlog').value = l.chatLog || '';
   setChatLogHeight('medium');
